@@ -172,5 +172,5 @@ void start() {
 	if (no_window) {
 		return;
 	}
-	no::create_state<game_state>("Nordgard", 800, 600, 4);
+	no::create_state<game_state>("Einheri", 800, 600, 4);
 }
