@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+
+<head>
+	<title>Debug Log</title>
+	<style>
+		body {
+			margin: 0;
+			background: rgb(32, 32, 33);
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+
+		td {
+			border: 1px solid #333;
+			background: rgb(40, 40, 40);
+			color: rgb(160, 160, 160);
+			padding: 4px 8px 4px 8px;
+			font-family: Monospace;
+		}
+
+		.colhead td {
+			background: rgb(10, 10, 10);
+			border: 2px solid #222;
+		}
+
+		.message td {}
+
+		.warning td {
+			border-left: 2px solid #FFFF00;
+			border-right: 2px solid #FFFF00;
+		}
+
+		.critical td {
+			border-left: 2px solid #FF0000;
+			border-right: 2px solid #FF0000;
+		}
+
+		.info td {
+			border-left: 2px solid rgba(20, 200, 200, 0.9);
+			border-right: 2px solid rgba(20, 200, 200, 0.9);
+		}
+
+		.keyword {
+			color: rgb(50, 120, 250);
+		}
+
+		.class-name {
+			color: rgb(20, 200, 200);
+		}
+
+		.operator {
+			color: rgb(160, 140, 70);
+		}
+
+		.interesting {
+			color: rgb(100, 200, 90);
+		}
+
+		tr td:nth-child(3) {
+			width: 192px;
+		}
+	</style>
+	<script>
+		// This is really ugly, but makes signatures far more readable.
+		function clean_function_signature(string) {
+			string = string.replace(/\(void\)/g, '()');
+			string = string.replace(/__cdecl/g, '');
+			string = string.replace(/__thiscall/g, '');
+			string = string.replace(/__stdcall/g, '');
+			string = string.replace(/struct /g, '');
+			string = string.replace(/class /g, '');
+			string = string.replace(/enum /g, '');
+			string = string.replace(/,/g, ', ');
+			// Custom:
+			string = string.replace(/::vector2&lt;int&gt;/g, '::vector2i');
+			string = string.replace(/::vector2&lt;float&gt;/g, '::vector2f');
+			string = string.replace(/::vector3&lt;int&gt;/g, '::vector3i');
+			string = string.replace(/::vector3&lt;float&gt;/g, '::vector3f');
+			string = string.replace(/::vector4&lt;int&gt;/g, '::vector4i');
+			string = string.replace(/::vector4&lt;float&gt;/g, '::vector4f');
+			// GLM:
+			string = string.replace(/glm::tmat4x4&lt;float, 0&gt;/g, 'glm::mat4');
+			// Standard library:
+			string = string.replace(/std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;/g, 'std::string');
+			string = string.replace(/, std::allocator&lt;std::string &gt; /g, '');
+			string = string.replace(/, std::allocator&lt;no::vertex_array_data&lt;no::mesh_vertex&gt; &gt; /g, '');
+			// Windows:
+			string = string.replace(/HWND__ \*/g, 'HWND');
+			string = string.replace(/HDC__ \*/g, 'HDC');
+			string = string.replace(/long \( \*\)\(HWND, unsigned int, unsigned int, long\)/g, 'WNDPROC');
+			// Syntax highlighting:
+			const keywords = ['const', 'void', 'int', 'long', 'unsigned', 'short', 'bool', 'char', 'float', 'double'];
+			for (const keyword of keywords) {
+				string = string.replace(new RegExp(keyword + ' ', 'g'), '<span class="keyword">' + keyword + ' </span>');
+				string = string.replace(new RegExp(keyword + ',', 'g'), '<span class="keyword">' + keyword + '</span>,');
+				string = string.replace(new RegExp(keyword + '\\)', 'g'), '<span class="keyword">' + keyword + '</span>)');
+				string = string.replace(new RegExp(', ' + keyword, 'g'), '<span class="keyword"> ' + keyword + '</span>');
+			}
+			const classes = [
+				'::model',
+				'::vertex_array_data',
+				'::vertex_array',
+				'::mesh_vertex',
+				'::windows_gl_context',
+				'::audio_device',
+				'::font_face',
+				'::font',
+				'::shader_variable',
+				'::surface',
+				'::string',
+				'::scale_option',
+				'::perspective_camera',
+				'::ortho_camera',
+				'::transform',
+				'::io_socket',
+				'::io_stream',
+				'::winsock_state',
+				'::vector2i',
+				'::vector2f',
+				'::vector3i',
+				'::vector3f',
+				'::vector4i',
+				'::vector4f',
+				'::vector',
+				'::mat4',
+				'aiNode',
+				'aiScene',
+				'aiMesh',
+				'HDC',
+				'HWND',
+				'WNDPROC'
+			];
+			for (const className of classes) {
+				string = string.replace(new RegExp(className, 'g'), '<span class="class-name">' + className + '</span>');
+			}
+			const operators = ['&amp;', '::', '*'];
+			for (const operator of operators) {
+				string = string.replace(new RegExp('\\' + operator, 'g'), '<span class="operator">' + operator + '</span>');
+			}
+			return string;
+		}
+		function get_file_name(path) {
+			let parts = path.split('\\');
+			if (parts.length === 0) {
+				return path;
+			}
+			return parts[parts.length - 1];
+		}
+		function highlight_interesting_text(string) {
+			string = string.replace(/__glew/g, 'gl');
+			const interestings = [
+				'glGenVertexArrays',
+				'glBindVertexArray',
+				'glDeleteVertexArrays',
+				'glBufferData'
+			];
+			for (const interesting of interestings) {
+				string = string.replace(new RegExp(interesting, 'g'), '<span class="interesting">' + interesting + '</span>');
+			}
+			return string;
+		}
+		window.onload = () => {
+			let table = document.body.getElementsByTagName('table')[0];
+			for (let row of table.rows) {
+				if (row.classList.contains('colhead')) {
+					continue;
+				}
+				if (row.childNodes.length < 2) {
+					continue;
+				}
+				row.childNodes[0].style.width = '160px';
+				row.childNodes[1].innerHTML = highlight_interesting_text(row.childNodes[1].innerHTML);
+				row.childNodes[1].innerHTML = clean_function_signature(row.childNodes[1].innerHTML);
+				row.childNodes[2].innerHTML = get_file_name(row.childNodes[2].innerHTML);
+				row.childNodes[3].innerHTML = clean_function_signature(row.childNodes[3].innerHTML);
+				row.childNodes[3].style.minWidth = '672px';
+			}
+		};
+	</script>
+</head>
+
+<body>
+	<table>
+		<tr class="colhead">
+			<td>Time</td>
+			<td>Message</td>
+			<td>File</td>
+			<td style="width:25%;">Function</td>
+			<td>Line</td>
+		</tr>
+		<!-- DEBUG OUTPUT AFTER THIS LINE -->
