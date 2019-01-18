@@ -23,7 +23,7 @@ public:
 	keyboard keyboard;
 	mouse mouse;
 
-	window(const std::string& title, int width, int height, int samples);
+	window(const std::string& title, int width, int height, int samples, bool maximized);
 	window(const std::string& title);
 	window(const window&) = delete;
 	window(window&&);

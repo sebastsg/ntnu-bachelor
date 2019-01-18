@@ -91,6 +91,16 @@ void world_editor_state::update() {
 		world.is_dirty = false;
 	}
 	world.camera.size = window().size().to<float>();
+
+	brush_tiles.clear();
+	int offset_x = hovered_tile.x;
+	int offset_y = hovered_tile.y;
+	for (int x = 0; x < brush_size; x++) {
+		for (int y = 0; y < brush_size; y++) {
+			brush_tiles.emplace_back(x + offset_x, y + offset_y);
+		}
+	}
+
 	world.update();
 	update_editor();
 	update_imgui();
@@ -102,10 +112,14 @@ void world_editor_state::update_editor() {
 	}
 	if (keyboard().is_key_down(no::key::space)) {
 		if (mouse().is_button_down(no::mouse::button::left)) {
-			world.terrain.elevate_tile(hovered_tile, 0.5f);
+			for (auto& tile : brush_tiles) {
+				world.terrain.elevate_tile(tile, 0.1f);
+			}
 			world.is_dirty = true;
 		} else if (mouse().is_button_down(no::mouse::button::right)) {
-			world.terrain.elevate_tile(hovered_tile, -0.5f);
+			for (auto& tile : brush_tiles) {
+				world.terrain.elevate_tile(tile, -0.1f);
+			}
 			world.is_dirty = true;
 		}
 	}
@@ -125,6 +139,8 @@ void world_editor_state::update_imgui() {
 	ImGui::Text(CSTRING("Tile: " << hovered_tile));
 	ImGui::Text(CSTRING("Pixel: " << hovered_pixel));
 	ImGui::Checkbox("Show wireframe", &show_wireframe);
+	ImGui::InputInt("Brush size", &brush_size, 1, 1);
+	brush_size = std::min(std::max(brush_size, 1), 10);
 	ImGui::Separator();
 
 	ImGui::End();
@@ -137,10 +153,13 @@ void world_editor_state::draw() {
 	hovered_pixel.x--;
 	hovered_pixel.y--;
 	hovered_tile = hovered_pixel.xy + world.terrain.tile_heights.position();
-	renderer.highlight_tile = hovered_tile;
 	window().clear();
 	world.camera.size = window().size().to<float>();
 	renderer.draw();
+	renderer.draw_tile_highlight(hovered_tile);
+	for (auto& tile : brush_tiles) {
+		renderer.draw_tile_highlight(tile);
+	}
 	if (show_wireframe) {
 		no::set_polygon_render_mode(no::polygon_render_mode::wireframe);
 		renderer.draw_for_picking();
@@ -166,5 +185,5 @@ void start() {
 	if (no_window) {
 		return;
 	}
-	no::create_state<world_editor_state>("Toolkit", 800, 600, 4);
+	no::create_state<world_editor_state>("Toolkit", 800, 600, 4, true);
 }

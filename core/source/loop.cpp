@@ -173,8 +173,8 @@ std::string curent_local_date_string() {
 
 namespace internal {
 
-void create_state(const std::string& title, int width, int height, int samples, const make_state_function& make_state) {
-	loop.windows.emplace_back(new window(title, width, height, samples));
+void create_state(const std::string& title, int width, int height, int samples, bool maximized, const make_state_function& make_state) {
+	loop.windows.emplace_back(new window(title, width, height, samples, maximized));
 	auto state = loop.states.emplace_back(make_state());
 	loop.windows.back()->close.listen([state] {
 		loop.states_to_stop.push_back(state);

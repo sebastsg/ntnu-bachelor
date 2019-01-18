@@ -143,7 +143,7 @@ void game_state::update() {
 	world.update();
 	hud.set_debug(STRING("Tile: " << world.my_player().tile()));
 
-	renderer.highlight_tile = hovered_pixel.xy;
+	//renderer.highlight_tile = hovered_pixel.xy;
 }
 
 void game_state::draw() {
@@ -156,6 +156,9 @@ void game_state::draw() {
 	hovered_pixel.y--;
 	window().clear();
 	renderer.draw();
+	if (world.my_player_id != -1) {
+		renderer.draw_tile_highlight(world.my_player().tile());
+	}
 	hud.draw();
 }
 
@@ -172,5 +175,5 @@ void start() {
 	if (no_window) {
 		return;
 	}
-	no::create_state<game_state>("Einheri", 800, 600, 4);
+	no::create_state<game_state>("Einheri", 800, 600, 4, true);
 }

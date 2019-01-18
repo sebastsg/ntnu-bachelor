@@ -37,7 +37,8 @@ private:
 	no::vector3i hovered_pixel;
 	no::vector2i hovered_tile;
 
-	bool show_wireframe = true;
+	bool show_wireframe = false;
+	int brush_size = 1;
 
 	void update_editor();
 	void update_imgui();
@@ -46,6 +47,7 @@ private:
 	world_view renderer;
 
 	no::vector2i selected_tile = -1;
+	std::vector<no::vector2i> brush_tiles;
 	bool is_selected = false;
 
 	// todo: have an automatic attach/detach system in base class?

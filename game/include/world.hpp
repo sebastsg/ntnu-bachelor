@@ -62,12 +62,11 @@ public:
 class world_view {
 public:
 
-	no::vector2i highlight_tile = -1;
-
 	world_view(world_state& world);
 
 	void draw();
 	void draw_for_picking();
+	void draw_tile_highlight(no::vector2i tile);
 
 	void refresh_terrain();
 
@@ -77,7 +76,6 @@ private:
 
 	void draw_terrain();
 	void draw_players();
-	void draw_tile_highlight(no::vector2i tile);
 
 	int grass_texture = -1;
 	int heightmap_shader = -1;

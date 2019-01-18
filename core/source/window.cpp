@@ -5,8 +5,8 @@
 
 namespace no {
 
-window::window(const std::string& title, int width, int height, int samples) : mouse(this) {
-	platform = new platform::platform_window(this, title, width, height, samples, false);
+window::window(const std::string& title, int width, int height, int samples, bool maximized) : mouse(this) {
+	platform = new platform::platform_window(this, title, width, height, samples, maximized);
 }
 
 window::window(const std::string& title) : mouse(this) {

@@ -92,10 +92,6 @@ world_view::world_view(world_state& world) : world(world), player_render(world) 
 void world_view::draw() {
 	draw_terrain();
 	draw_players();
-	draw_tile_highlight(highlight_tile);
-	if (world.my_player_id != -1) {
-		draw_tile_highlight(world.my_player().tile());
-	}
 }
 
 void world_view::draw_for_picking() {
@@ -170,10 +166,10 @@ void world_view::draw_tile_highlight(no::vector2i tile) {
 	float x = (float)tile.x;
 	float z = (float)tile.y;
 
-	top_left.position = { x, world.terrain.elevation_at(tile) + 0.001f, z };
-	top_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1, 0 }) + 0.001f, z };
-	bottom_left.position = { x, world.terrain.elevation_at(tile + no::vector2i{ 0, 1 }) + 0.001f, z + 1.0f };
-	bottom_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1 }) + 0.001f, z + 1.0f };
+	top_left.position = { x, world.terrain.elevation_at(tile) + 0.01f, z };
+	top_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1, 0 }) + 0.01f, z };
+	bottom_left.position = { x, world.terrain.elevation_at(tile + no::vector2i{ 0, 1 }) + 0.01f, z + 1.0f };
+	bottom_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1 }) + 0.01f, z + 1.0f };
 
 	top_left.color = { 1.0f, 0.0f, 0.0f };
 	top_right.color = { 1.0f, 0.0f, 0.0f };
