@@ -3,15 +3,7 @@
 #include "surface.hpp"
 
 world_terrain::world_terrain(world_state& world) : world(world) {
-	tile_heights.resize_and_reset(64, 0.0f);
-	tile_heights.set(3, 3, 1.0f);
-	tile_heights.set(3, 4, 2.0f);
-	tile_heights.set(4, 3, 2.0f);
-	tile_heights.set(4, 4, 2.0f);
-	tile_heights.set(5, 4, 4.0f);
-	tile_heights.set(5, 5, 3.0f);
-	tile_heights.set(6, 4, 4.0f);
-	tile_heights.set(6, 5, 5.0f);
+	tile_heights.resize_and_reset(128, 0.0f);
 }
 
 bool world_terrain::is_out_of_bounds(no::vector2i tile) const {

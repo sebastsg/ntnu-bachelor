@@ -42,39 +42,12 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 		}
 	});
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		if (event.key == no::key::v) {
-			std::vector<float> heights;
-			for (int i = 0; i < world.terrain.tile_heights.rows(); i++) {
-				heights.push_back(4.0f + (float)i / 32.0f);
-			}
-			world.terrain.tile_heights.shift_left(heights);
-			world.is_dirty = true;
-		}
-		if (event.key == no::key::h) {
-			std::vector<float> heights;
-			for (int i = 0; i < world.terrain.tile_heights.rows(); i++) {
-				heights.push_back(12.0f + (float)i / 32.0f);
-			}
-			world.terrain.tile_heights.shift_right(heights);
-			world.is_dirty = true;
-		}
-		if (event.key == no::key::o) {
-			std::vector<float> heights;
-			for (int i = 0; i < world.terrain.tile_heights.columns(); i++) {
-				heights.push_back(4.0f + (float)i / 32.0f);
-			}
-			world.terrain.tile_heights.shift_up(heights);
-			world.is_dirty = true;
-		}
-		if (event.key == no::key::n) {
-			std::vector<float> heights;
-			for (int i = 0; i < world.terrain.tile_heights.columns(); i++) {
-				heights.push_back(8.0f + (float)i / 32.0f);
-			}
-			world.terrain.tile_heights.shift_down(heights);
-			world.is_dirty = true;
-		}
+		
 	});
+
+	no::file::read(no::asset_path("worlds/main.ew"), world_stream);
+	world.terrain.tile_heights.read(world_stream, 1024, 0.0f);
+	world.is_dirty = true;
 }
 
 world_editor_state::~world_editor_state() {
@@ -135,13 +108,38 @@ void world_editor_state::update_imgui() {
 	ImGui::SetNextWindowSize({ 320.0f, (float)window().height() }, ImGuiSetCond_Always);
 	ImGui::Begin("World", nullptr, imgui_flags);
 	ImGui::Text(CSTRING("FPS: " << frame_counter().current_fps()));
-	ImGui::Text(CSTRING("Position: " << world.terrain.tile_heights.x() << ", " << world.terrain.tile_heights.y()));
+	ImGui::Text(CSTRING("World offset: " << world.terrain.tile_heights.x() << ", " << world.terrain.tile_heights.y()));
 	ImGui::Text(CSTRING("Tile: " << hovered_tile));
-	ImGui::Text(CSTRING("Pixel: " << hovered_pixel));
 	ImGui::Checkbox("Show wireframe", &show_wireframe);
 	ImGui::InputInt("Brush size", &brush_size, 1, 1);
 	brush_size = std::min(std::max(brush_size, 1), 10);
 	ImGui::Separator();
+
+	if (ImGui::Button("Save")) {
+		world.terrain.tile_heights.write(world_stream, 1024, 0.0f);
+		world_stream.set_write_index(world_stream.size());
+		no::file::write(no::asset_path("worlds/main.ew"), world_stream);
+	}
+
+	ImGui::Separator();
+
+	if (ImGui::Button("/\\")) {
+		world.terrain.tile_heights.shift_up(world_stream, 1024, 0.0f);
+		world.is_dirty = true;
+	}
+	if (ImGui::Button("<-")) {
+		world.terrain.tile_heights.shift_left(world_stream, 1024, 0.0f);
+		world.is_dirty = true;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("->")) {
+		world.terrain.tile_heights.shift_right(world_stream, 1024, 0.0f);
+		world.is_dirty = true;
+	}
+	if (ImGui::Button("\\/")) {
+		world.terrain.tile_heights.shift_down(world_stream, 1024, 0.0f);
+		world.is_dirty = true;
+	}
 
 	ImGui::End();
 	no::imgui::end_frame();

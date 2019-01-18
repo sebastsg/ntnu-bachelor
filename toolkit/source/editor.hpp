@@ -34,6 +34,8 @@ public:
 
 private:
 
+	no::io_stream world_stream;
+
 	no::vector3i hovered_pixel;
 	no::vector2i hovered_tile;
 
