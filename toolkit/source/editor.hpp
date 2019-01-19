@@ -41,6 +41,7 @@ private:
 
 	bool show_wireframe = false;
 	int brush_size = 1;
+	float elevation_rate = 0.05f;
 
 	void update_editor();
 	void update_imgui();

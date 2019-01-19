@@ -86,12 +86,12 @@ void world_editor_state::update_editor() {
 	if (keyboard().is_key_down(no::key::space)) {
 		if (mouse().is_button_down(no::mouse::button::left)) {
 			for (auto& tile : brush_tiles) {
-				world.terrain.elevate_tile(tile, 0.1f);
+				world.terrain.elevate_tile(tile, elevation_rate);
 			}
 			world.is_dirty = true;
 		} else if (mouse().is_button_down(no::mouse::button::right)) {
 			for (auto& tile : brush_tiles) {
-				world.terrain.elevate_tile(tile, -0.1f);
+				world.terrain.elevate_tile(tile, -elevation_rate);
 			}
 			world.is_dirty = true;
 		}
@@ -113,6 +113,8 @@ void world_editor_state::update_imgui() {
 	ImGui::Checkbox("Show wireframe", &show_wireframe);
 	ImGui::InputInt("Brush size", &brush_size, 1, 1);
 	brush_size = std::min(std::max(brush_size, 1), 10);
+	ImGui::InputFloat("Elevation rate", &elevation_rate, 0.01f, 0.01f, 2);
+	elevation_rate = std::min(std::max(elevation_rate, 0.01f), 0.5f);
 	ImGui::Separator();
 
 	if (ImGui::Button("Save")) {
