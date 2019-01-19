@@ -142,8 +142,6 @@ void game_state::update() {
 	hud.set_fps(frame_counter().current_fps());
 	world.update();
 	hud.set_debug(STRING("Tile: " << world.my_player().tile()));
-
-	//renderer.highlight_tile = hovered_pixel.xy;
 }
 
 void game_state::draw() {

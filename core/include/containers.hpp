@@ -93,11 +93,8 @@ public:
 	void shift_left() {
 		for (int x = size.x - 1; x > 0; x--) {
 			for (int y = 0; y < size.y; y++) {
-				int current = y * size.x + x;
-				int before = current - 1;
-				T value = values[current];
-				values[current] = values[before];
-				values[before] = value;
+				int i = y * size.x + x;
+				std::swap(values[i], values[i - 1]);
 			}
 		}
 		offset.x--;
@@ -106,11 +103,8 @@ public:
 	void shift_right() {
 		for (int x = 0; x < size.x - 1; x++) {
 			for (int y = 0; y < size.y; y++) {
-				int current = y * size.x + x;
-				int before = current + 1;
-				T value = values[current];
-				values[current] = values[before];
-				values[before] = value;
+				int i = y * size.x + x;
+				std::swap(values[i], values[i + 1]);
 			}
 		}
 		offset.x++;
@@ -119,11 +113,7 @@ public:
 	void shift_up() {
 		for (int y = size.y - 1; y > 0; y--) {
 			for (int x = 0; x < size.x; x++) {
-				int current = y * size.x + x;
-				int before = (y - 1) * size.x + x;
-				T value = values[current];
-				values[current] = values[before];
-				values[before] = value;
+				std::swap(values[y * size.x + x], values[(y - 1) * size.x + x]);
 			}
 		}
 		offset.y--;
@@ -132,11 +122,7 @@ public:
 	void shift_down() {
 		for (int y = 0; y < size.y - 1; y++) {
 			for (int x = 0; x < size.x; x++) {
-				int current = y * size.x + x;
-				int before = (y + 1) * size.x + x;
-				T value = values[current];
-				values[current] = values[before];
-				values[before] = value;
+				std::swap(values[y * size.x + x], values[(y + 1) * size.x + x]);
 			}
 		}
 		offset.y++;
