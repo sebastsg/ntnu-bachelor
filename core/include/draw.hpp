@@ -3,12 +3,8 @@
 #include "platform.hpp"
 #include "transform.hpp"
 #include "containers.hpp"
-
 #include "timer.hpp"
-
-#include <vector>
-
-#include "glm/gtc/quaternion.hpp"
+#include "vertex.hpp"
 
 namespace no {
 
@@ -18,31 +14,10 @@ class surface;
 class ortho_camera;
 class perspective_camera;
 class shader_variable;
-class io_stream;
-struct model_data;
 
 enum class swap_interval { late, immediate, sync };
 enum class scale_option { nearest_neighbour, linear };
 enum class polygon_render_mode { fill, wireframe };
-
-// todo: make this an "int_to_float" and "byte_to_int" etc. type enum instead?
-enum class attribute_component { is_float, is_integer, is_byte };
-
-struct vertex_attribute_specification {
-
-	attribute_component type = attribute_component::is_float;
-	int components = 0;
-	bool normalized = false;
-
-	constexpr vertex_attribute_specification(int components) : components(components) {}
-	constexpr vertex_attribute_specification(attribute_component type, int components)
-		: type(type), components(components) {}
-	constexpr vertex_attribute_specification(attribute_component type, int components, bool normalized)
-		: type(type), components(components), normalized(normalized) {}
-
-};
-
-using vertex_specification = std::vector<vertex_attribute_specification>;
 
 int create_vertex_array(const vertex_specification& specification);
 void bind_vertex_array(int id);
@@ -77,112 +52,6 @@ long total_redundant_bind_calls();
 
 vector3i read_pixel_at(vector2i position);
 
-struct model_importer_options {
-	struct {
-		bool create_default = false;
-		std::string bone_name = "Bone";
-	} bones;
-};
-
-// deals only with nom models
-void export_model(const std::string& path, model_data& model);
-void import_model(const std::string& path, model_data& model);
-
-// exchange model format like COLLADA or OBJ to nom model format
-void convert_model(const std::string& source, const std::string& destination, model_importer_options options);
-void convert_model(const std::string& source, const std::string& destination);
-
-// if multiple models have identical vertex data, they can be merged into one model with all animations
-// source files must already be converted to nom format. validation is done during the merging process.
-void merge_model_animations(const std::string& source_directory, const std::string& destination);
-
-struct tiny_sprite_vertex {
-	static constexpr vertex_attribute_specification attributes[] = { 2, 2 };
-	vector2f position;
-	vector2f tex_coords;
-};
-
-struct sprite_vertex {
-	static constexpr vertex_attribute_specification attributes[] = { 2, 4, 2 };
-	vector2f position;
-	vector4f color = 1.0f;
-	vector2f tex_coords;
-};
-
-struct static_mesh_vertex {
-	static constexpr vertex_attribute_specification attributes[] = { 3, 3, 2 };
-	vector3f position;
-	vector3f color = 1.0f;
-	vector2f tex_coords;
-};
-
-struct mesh_vertex {
-	static constexpr vertex_attribute_specification attributes[] = {
-		3, 4, 2, 3, 3, 3, 4, 2, { attribute_component::is_integer, 4 }, { attribute_component::is_integer, 2 }
-	};
-	vector3f position;
-	vector4f color = 1.0f;
-	vector2f tex_coords;
-	vector3f normal;
-	vector3f tangent;
-	vector3f bitangent;
-	vector4f weights;
-	vector2f weights_extra;
-	vector4i bones;
-	vector2i bones_extra;
-};
-// todo: have a bone buffer, which can be used to add 2 attributes?
-
-struct height_map_vertex {
-	static constexpr vertex_attribute_specification attributes[] = { 3, 2 };
-	vector3f position;
-	vector2f tex_coords;
-};
-
-struct pick_vertex {
-	static constexpr vertex_attribute_specification attributes[] = { 3, 3 };
-	vector3f position;
-	vector3f color;
-};
-
-template<typename V>
-struct vertex_array_data {
-
-	std::vector<V> vertices;
-	std::vector<unsigned short> indices;
-
-	vertex_array_data() = default;
-	vertex_array_data(const vertex_array_data&) = delete;
-	vertex_array_data(vertex_array_data&& that) = default;
-
-	vertex_array_data& operator=(const vertex_array_data&) = delete;
-
-	bool operator==(const vertex_array_data& that) const {
-		if (vertices.size() != that.vertices.size()) {
-			return false;
-		}
-		if (indices.size() != that.indices.size()) {
-			return false;
-		}
-		for (size_t i = 0; i < vertices.size(); i++) {
-			if (memcmp(&vertices[i], &that.vertices[i], sizeof(V))) {
-				return false;
-			}
-		}
-		for (size_t i = 0; i < indices.size(); i++) {
-			if (indices[i] != that.indices[i]) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	bool operator!=(const vertex_array_data& that) const {
-		return !operator==(that);
-	}
-
-};
-
 class shader_variable {
 public:
 
@@ -208,12 +77,13 @@ template<typename V>
 class vertex_array {
 public:
 
+	friend class generic_vertex_array;
+
 	vertex_array() {
 		id = create_vertex_array(vertex_specification(std::begin(V::attributes), std::end(V::attributes)));
 	}
 
-	vertex_array(const std::vector<V>& vertices, const std::vector<unsigned short>& indices) {
-		id = create_vertex_array(vertex_specification(std::begin(V::attributes), std::end(V::attributes)));
+	vertex_array(const std::vector<V>& vertices, const std::vector<unsigned short>& indices) : vertex_array() {
 		set(vertices, indices);
 	}
 
@@ -278,45 +148,50 @@ private:
 
 };
 
-struct model_animation_channel {
+class generic_vertex_array {
+public:
 
-	using key_time = float;
+	generic_vertex_array() = default;
+	generic_vertex_array(const generic_vertex_array&) = delete;
+	generic_vertex_array(generic_vertex_array&& that) {
+		std::swap(id, that.id);
+	}
 
-	std::vector<std::pair<key_time, vector3f>> positions;
-	std::vector<std::pair<key_time, glm::quat>> rotations;
-	std::vector<std::pair<key_time, vector3f>> scales;
-	
-	int bone = -1;
+	template<typename V>
+	generic_vertex_array(vertex_array<V>&& that) {
+		std::swap(id, that.id);
+	}
 
-};
+	~generic_vertex_array() {
+		delete_vertex_array(id);
+	}
 
-struct model_animation {
+	generic_vertex_array& operator=(const generic_vertex_array&) = delete;
+	generic_vertex_array& operator=(generic_vertex_array&& that) {
+		std::swap(id, that.id);
+		return *this;
+	}
 
-	std::string name;
-	float duration = 0.0f;
-	float ticks_per_second = 0.0f;
-	std::vector<model_animation_channel> channels;
-	std::vector<int> transitions;
+	void bind() const {
+		bind_vertex_array(id);
+	}
 
-};
+	void draw() const {
+		draw_vertex_array(id);
+	}
 
-struct mesh_bone_weight {
-	int vertex = 0;
-	float weight = 0.0f;
-};
+	void draw(size_t offset, size_t count) const {
+		draw_vertex_array(id, offset, count);
+	}
 
-struct model_node {
-	std::string name;
-	glm::mat4 transform;
-	std::vector<int> children;
-};
+	bool exists() const {
+		return id != -1;
+	}
 
-struct model_data {
-	glm::mat4 transform;
-	vertex_array_data<mesh_vertex> shape;
-	std::vector<glm::mat4> bones;
-	std::vector<model_node> nodes;
-	std::vector<model_animation> animations;
+private:
+
+	int id = -1;
+
 };
 
 class model {
@@ -327,7 +202,6 @@ public:
 	model() = default;
 	model(const model&) = delete;
 	model(model&&);
-	model(const std::string& path);
 
 	~model() = default;
 
@@ -337,16 +211,66 @@ public:
 	int index_of_animation(const std::string& name);
 	int total_animations() const;
 
-	void load(const std::string& path);
+	template<typename V>
+	void load(const model_data<V>& model) {
+		if (model.shape.vertices.empty()) {
+			WARNING("Failed to load model");
+		}
+		mesh = { std::move(vertex_array<V>{model.shape.vertices, model.shape.indices }) };
+		root_transform = model.transform;
+		min_vertex = model.min;
+		max_vertex = model.max;
+		nodes = model.nodes;
+		bones = model.bones;
+		animations = model.animations;
+		size_t vertices = model.shape.vertices.size();
+		size_t indices = model.shape.indices.size();
+		drawable = (vertices > 0 && indices > 0);
+	}
+
+	template<typename V>
+	void load(const std::string& path) {
+		model_data<V> model;
+		import_model(path, model);
+		if (model.shape.vertices.empty()) {
+			WARNING("Failed to load model: " << path);
+			return;
+		}
+		load(model);
+		/*if (model.shape.vertices.empty()) {
+			WARNING("Failed to load model: " << path);
+		}
+		mesh = { std::move(vertex_array<V>{model.shape.vertices, model.shape.indices }) };
+		root_transform = model.transform;
+		min_vertex = model.min;
+		max_vertex = model.max;
+		nodes = model.nodes;
+		bones = model.bones;
+		animations = model.animations;
+		size_t vertices = model.shape.vertices.size();
+		size_t indices = model.shape.indices.size();
+		drawable = (vertices > 0 && indices > 0);*/
+	}
+	
+	void bind() const;
 	void draw() const;
+
+	bool is_drawable() const;
+
+	vector3f min() const;
+	vector3f max() const;
+	vector3f size() const;
 
 private:
 
-	vertex_array<mesh_vertex> mesh;
+	generic_vertex_array mesh;
 	glm::mat4 root_transform;
 	std::vector<glm::mat4> bones;
 	std::vector<model_node> nodes;
 	std::vector<model_animation> animations;
+	vector3f min_vertex;
+	vector3f max_vertex;
+	bool drawable = false;
 
 };
 
@@ -367,7 +291,6 @@ class model_instance {
 public:
 
 	model_instance(model& source);
-
 	model_instance(const model_instance&) = delete;
 	model_instance(model_instance&&);
 
@@ -379,6 +302,7 @@ public:
 	void animate();
 	void start_animation(int index);
 
+	void bind() const;
 	void draw() const;
 
 	int attach(int parent, model& attachment, vector3f position, glm::quat rotation);
@@ -423,12 +347,7 @@ struct model_attachment {
 	int parent = 0;
 	int id = 0;
 
-	model_attachment(model& attachment, glm::mat4 parent_bone, vector3f position, glm::quat rotation, int parent, int id) 
-		: attachment(attachment), parent_bone(parent_bone), position(position), rotation(rotation), parent(parent), id(id) {
-		glm::mat4 t = glm::translate(glm::mat4(1.0f), { position.x, position.y, position.z });
-		glm::mat4 r = glm::mat4_cast(glm::normalize(rotation));
-		attachment_bone = t * r;
-	}
+	model_attachment(model& attachment, glm::mat4 parent_bone, vector3f position, glm::quat rotation, int parent, int id);
 
 };
 
@@ -463,8 +382,11 @@ public:
 		vertices.set({ top_left, top_right, bottom_right, bottom_left }, { 0, 1, 2, 3, 2, 0 });
 	}
 
-	void draw() const {
+	void bind() const {
 		vertices.bind();
+	}
+
+	void draw() const {
 		vertices.draw();
 	}
 
@@ -481,7 +403,8 @@ public:
 	tiled_quad_array() = default;
 	tiled_quad_array(const tiled_quad_array&) = delete;
 	tiled_quad_array(tiled_quad_array&& that) : shape(std::move(that.shape)) {
-		std::swap(size, that.size);
+		std::swap(quad_count, that.quad_count);
+		std::swap(per_quad, that.per_quad);
 		std::swap(vertices, that.vertices);
 		std::swap(indices, that.indices);
 	}
@@ -489,10 +412,33 @@ public:
 	tiled_quad_array& operator=(const tiled_quad_array&) = delete;
 	tiled_quad_array& operator=(tiled_quad_array&&) = delete;
 
-	void resize_and_reset(vector2i size) {
-		this->size = size;
-		build_vertices();
-		build_indices();
+	void build(int vertices_per_quad, vector2i size, const std::function<void(int, int, std::vector<V>&, std::vector<unsigned short>&)>& builder) {
+		per_quad = vertices_per_quad;
+		quad_count = size;
+		vertices.clear();
+		vertices.reserve(size.x * size.y);
+		indices.clear();
+		indices.reserve(size.x * size.y);
+		for (int y = 0; y < size.y; y++) {
+			for (int x = 0; x < size.x; x++) {
+				builder(x, y, vertices, indices);
+			}
+		}
+		shape.set(vertices, indices);
+	}
+
+	void for_each(const std::function<void(int, int, int, std::vector<V>&)>& function) {
+		int i = 0;
+		for (int y = 0; y < quad_count.y; y++) {
+			for (int x = 0; x < quad_count.x; x++) {
+				function(i, x, y, vertices);
+				i += per_quad;
+			}
+		}
+	}
+
+	void refresh() {
+		shape.set_vertices(vertices);
 	}
 
 	void bind() const {
@@ -503,69 +449,21 @@ public:
 		shape.draw();
 	}
 
-	void refresh() {
-		shape.set_vertices(vertices);
-	}
-
-	void set_y(const shifting_2d_array<float>& ys) {
-		int i = 0;
-		for (int y = 0; y < ys.rows(); y++) {
-			for (int x = 0; x < ys.columns(); x++) {
-				vertices[i].position.y = ys.at(x + ys.x(), y + ys.y());
-				i++;
-			}
-		}
-	}
-
-	V& vertex(int x, int y) {
-		return vertices[y * size.x + x];
-	}
-
 	int width() const {
-		return size.x;
+		return quad_count.x;
 	}
 
 	int height() const {
-		return size.y;
+		return quad_count.y;
 	}
 
 private:
 
-	void build_vertices() {
-		vertices.clear();
-		vertices.insert(vertices.begin(), size.x * size.y, {});
-		for (int x = 0; x < size.x; x++) {
-			for (int y = 0; y < size.y; y++) {
-				vertices[y * size.x + x].position = { (float)x, 0.0f, (float)y };
-			}
-		}
-		shape.set_vertices(vertices);
-	}
-
-	void build_indices() {
-		indices.clear();
-		indices.reserve(size.x * size.y);
-		for (int x = 0; x < size.x - 1; x++) {
-			for (int y = 0; y < size.y - 1; y++) {
-				int top_left = y * size.x + x;
-				int top_right = y * size.x + x + 1;
-				int bottom_right = (y + 1) * size.x + x + 1;
-				int bottom_left = (y + 1) * size.x + x;
-				indices.push_back(top_left);
-				indices.push_back(top_right);
-				indices.push_back(bottom_right);
-				indices.push_back(top_left);
-				indices.push_back(bottom_left);
-				indices.push_back(bottom_right);
-			}
-		}
-		shape.set_indices(indices);
-	}
-
 	vertex_array<V> shape;
-	vector2i size;
+	vector2i quad_count;
 	std::vector<V> vertices;
 	std::vector<unsigned short> indices;
+	int per_quad = 1;
 
 };
 

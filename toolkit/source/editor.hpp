@@ -6,11 +6,10 @@
 #include "assets.hpp"
 #include "font.hpp"
 #include "world.hpp"
+#include "render.hpp"
 
 class editor_world : public world_state {
 public:
-
-	bool is_dirty = false;
 
 	editor_world();
 
@@ -31,6 +30,7 @@ public:
 	void draw() override;
 
 	bool is_mouse_over_ui() const;
+	no::vector3f world_position_for_tile(no::vector2i tile) const;
 
 private:
 
@@ -39,9 +39,20 @@ private:
 	no::vector3i hovered_pixel;
 	no::vector2i hovered_tile;
 
+	int tool = 0;
+
 	bool show_wireframe = false;
 	int brush_size = 1;
 	float elevation_rate = 0.05f;
+	bool limit_elevation = false;
+	float elevation_limit = 1.0f;
+
+	int current_type = 0;
+
+	int tool_current_object = 0;
+	std::vector<std::pair<std::string, std::string>> object_paths;
+	no::model tool_object;
+	int decorations_texture = 0;
 
 	void update_editor();
 	void update_imgui();

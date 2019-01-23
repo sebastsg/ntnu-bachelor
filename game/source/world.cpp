@@ -1,62 +1,158 @@
 #include "world.hpp"
-#include "assets.hpp"
-#include "surface.hpp"
 
 world_terrain::world_terrain(world_state& world) : world(world) {
-	tile_heights.resize_and_reset(128, 0.0f);
+	tile_array.resize_and_reset(128, {});
 }
 
 bool world_terrain::is_out_of_bounds(no::vector2i tile) const {
-	return tile_heights.is_out_of_bounds(tile.x, tile.y);
+	return tile_array.is_out_of_bounds(tile.x, tile.y);
 }
 
 float world_terrain::elevation_at(no::vector2i tile) const {
-	return tile_heights.at(tile.x, tile.y);
+	return tile_array.at(tile.x, tile.y).height;
 }
 
 void world_terrain::set_elevation_at(no::vector2i tile, float elevation) {
-	tile_heights.set(tile.x, tile.y, elevation);
+	tile_array.at(tile.x, tile.y).height = elevation;
+	dirty = true;
 }
 
 void world_terrain::elevate_tile(no::vector2i tile, float amount) {
 	if (is_out_of_bounds(tile)) {
 		return;
 	}
-	tile_heights.add(tile.x, tile.y, amount);
-	tile_heights.add(tile.x + 1, tile.y, amount);
-	tile_heights.add(tile.x, tile.y + 1, amount);
-	tile_heights.add(tile.x + 1, tile.y + 1, amount);
+	tile_array.at(tile.x, tile.y).height += amount;
+	tile_array.at(tile.x + 1, tile.y).height += amount;
+	tile_array.at(tile.x, tile.y + 1).height += amount;
+	tile_array.at(tile.x + 1, tile.y + 1).height += amount;
+	dirty = true;
+}
+
+void world_terrain::set_tile_type(no::vector2i tile, int type) {
+	if (is_out_of_bounds(tile)) {
+		return;
+	}
+	tile_array.at(tile.x, tile.y).type = type;
+	dirty = true;
+}
+
+no::vector2i world_terrain::offset() const {
+	return tile_array.position();
+}
+
+no::vector2i world_terrain::size() const {
+	return { tile_array.columns(), tile_array.rows() };
+}
+
+const no::shifting_2d_array<world_tile>& world_terrain::tiles() const {
+	return tile_array;
+}
+
+void world_terrain::read(no::io_stream& stream) {
+	tile_array.read(stream, 1024, {});
+	dirty = true;
+}
+
+void world_terrain::write(no::io_stream& stream) const {
+	tile_array.write(stream, 1024, {});
+}
+
+void world_terrain::shift_left(no::io_stream& stream) {
+	tile_array.shift_left(stream, 1024, {});
+	dirty = true;
+}
+
+void world_terrain::shift_right(no::io_stream& stream) {
+	tile_array.shift_right(stream, 1024, {});
+	dirty = true;
+}
+
+void world_terrain::shift_up(no::io_stream& stream) {
+	tile_array.shift_up(stream, 1024, {});
+	dirty = true;
+}
+
+void world_terrain::shift_down(no::io_stream& stream) {
+	tile_array.shift_down(stream, 1024, {});
+	dirty = true;
+}
+
+bool world_terrain::is_dirty() const {
+	return dirty;
+}
+
+void world_terrain::set_clean() {
+	dirty = false;
 }
 
 no::vector2i world_terrain::global_to_local_tile(no::vector2i tile) const {
-	return tile - tile_heights.position();
+	return tile - tile_array.position();
 }
 
 no::vector2i world_terrain::local_to_global_tile(no::vector2i tile) const {
-	return tile + tile_heights.position();
+	return tile + tile_array.position();
 }
 
 world_state::world_state() : terrain(*this) {
-	camera.transform.scale.xy = 1.0f;
-	camera.transform.rotation.x = 90.0f;
+	
 }
 
-player_object& world_state::add_player(int id) {
-	auto& player = players.emplace(id, player_object{ *this }).first->second;
-	player.player_id = id;
-	return player;
+world_state::~world_state() {
+	for (auto& player : players) {
+		delete player;
+	}
+	for (auto& decoration : decorations) {
+		delete decoration;
+	}
 }
 
-player_object& world_state::player(int id) {
-	return players.find(id)->second;
+void world_state::update() {
+	for (auto& player : players) {
+		player->update();
+	}
 }
 
-player_object& world_state::my_player() {
-	return players.find(my_player_id)->second;
+player_object* world_state::add_player(int id) {
+	auto object = player(id);
+	if (object) {
+		return object;
+	}
+	object = new player_object(*this);
+	players.push_back(object);
+	object->player_id = id;
+	return object;
 }
 
-const player_object& world_state::my_player() const {
-	return players.find(my_player_id)->second;
+void world_state::remove_player(int id) {
+	for (size_t i = 0; i < players.size(); i++) {
+		if (players[i]->player_id == id) {
+			delete players[i];
+			players.erase(players.begin() + i);
+			break;
+		}
+	}
+}
+
+player_object* world_state::player(int id) {
+	for (auto& player : players) {
+		if (player->player_id == id) {
+			return player;
+		}
+	}
+	return nullptr;
+}
+
+decoration_object* world_state::add_decoration() {
+	return decorations.emplace_back(new decoration_object(*this));
+}
+
+void world_state::remove_decoration(decoration_object* decoration) {
+	for (size_t i = 0; i < decorations.size(); i++) {
+		if (decorations[i] == decoration) {
+			delete decoration;
+			decorations.erase(decorations.begin() + i);
+		}
+	}
 }
 
 no::vector2i world_state::world_position_to_tile_index(float x, float z) const {
@@ -67,109 +163,6 @@ no::vector3f world_state::tile_index_to_world_position(int x, int z) const {
 	return { (float)x, 0.0f, (float)z };
 }
 
-world_view::world_view(world_state& world) : world(world), player_render(world) {
-	diffuse_shader = no::create_shader(no::asset_path("shaders/diffuse"));
-	heightmap_shader = no::create_shader(no::asset_path("shaders/heightmap"));
-	pick_shader = no::create_shader(no::asset_path("shaders/pick"));
-	basic_mesh_shader = no::create_shader(no::asset_path("shaders/basic_mesh"));
-	grass_texture = no::create_texture(no::surface(no::asset_path("textures/grass.png")), no::scale_option::nearest_neighbour, true);
-	no::surface blank_surface = { 2, 2, no::pixel_format::rgba };
-	blank_surface.clear(0xFFFFFFFF);
-	blank_texture = no::create_texture(blank_surface);
-	height_map.resize_and_reset({ world.terrain.tile_heights.columns(), world.terrain.tile_heights.rows() });
-	height_map_pick.resize_and_reset({ world.terrain.tile_heights.columns(), world.terrain.tile_heights.rows() });
-	refresh_terrain();
-}
-
-void world_view::draw() {
-	draw_terrain();
-	draw_players();
-}
-
-void world_view::draw_for_picking() {
-	no::bind_shader(pick_shader);
-	no::set_shader_view_projection(world.camera);
-	no::transform transform;
-	transform.position.x = (float)world.terrain.tile_heights.x();
-	transform.position.z = (float)world.terrain.tile_heights.y();
-	no::set_shader_model(transform);
-	height_map_pick.bind();
-	height_map_pick.draw();
-}
-
-void world_view::refresh_terrain() {
-	height_map.set_y(world.terrain.tile_heights);
-	height_map_pick.set_y(world.terrain.tile_heights);
-	no::vector2i size = { height_map.width(), height_map.height() };
-	for (int x = 0; x < size.x; x++) {
-		for (int y = 0; y < size.y; y++) {
-			auto& vertex = height_map.vertex(x, y);
-			if (x % 2 == 0 && y % 2 == 0) {
-				vertex.tex_coords = { 0.0f, 0.0f };
-			} else if (x % 2 != 0 && y % 2 == 0) {
-				vertex.tex_coords = { 1.0f, 0.0f };
-			} else if (x % 2 == 0 && y % 2 != 0) {
-				vertex.tex_coords = { 0.0f, 1.0f };
-			} else if (x % 2 != 0 && y % 2 != 0) {
-				vertex.tex_coords = { 1.0f, 1.0f };
-			}
-			height_map_pick.vertex(x, y).color.x = (float)x / 255.0f;
-			height_map_pick.vertex(x, y).color.y = (float)y / 255.0f;
-			height_map_pick.vertex(x, y).color.z = 1.0f;
-		}
-	}
-	height_map.refresh();
-	height_map_pick.refresh();
-}
-
-void world_view::draw_terrain() {
-	no::bind_shader(heightmap_shader);
-	no::set_shader_view_projection(world.camera);
-	no::bind_texture(grass_texture);
-	no::transform transform;
-	transform.position.x = (float)world.terrain.tile_heights.x();
-	transform.position.z = (float)world.terrain.tile_heights.y();
-	no::set_shader_model(transform);
-	height_map.bind();
-	height_map.draw();
-}
-
-void world_view::draw_players() {
-	no::bind_shader(diffuse_shader);
-	no::set_shader_view_projection(world.camera);
-	no::get_shader_variable("uni_Color").set({ 1.0f, 1.0f, 1.0f, 1.0f });
-	no::get_shader_variable("uni_LightPosition").set(world.camera.transform.position + world.camera.offset());
-	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
-	player_render.draw();
-}
-
-void world_view::draw_tile_highlight(no::vector2i tile) {
-	if (world.terrain.is_out_of_bounds(tile) || world.terrain.is_out_of_bounds(tile + 1)) {
-		return;
-	}
-	no::bind_shader(basic_mesh_shader);
-	no::set_shader_view_projection(world.camera);
-
-	no::static_mesh_vertex top_left;
-	no::static_mesh_vertex top_right;
-	no::static_mesh_vertex bottom_left;
-	no::static_mesh_vertex bottom_right;
-
-	float x = (float)tile.x;
-	float z = (float)tile.y;
-
-	top_left.position = { x, world.terrain.elevation_at(tile) + 0.01f, z };
-	top_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1, 0 }) + 0.01f, z };
-	bottom_left.position = { x, world.terrain.elevation_at(tile + no::vector2i{ 0, 1 }) + 0.01f, z + 1.0f };
-	bottom_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1 }) + 0.01f, z + 1.0f };
-
-	top_left.color = { 1.0f, 0.0f, 0.0f };
-	top_right.color = { 1.0f, 0.0f, 0.0f };
-	bottom_left.color = { 1.0f, 0.0f, 0.0f };
-	bottom_right.color = { 1.0f, 0.0f, 0.0f };
-
-	highlight_quad.set(top_left, top_right, bottom_left, bottom_right);
-
-	no::bind_texture(blank_texture);
-	highlight_quad.draw();
+int world_state::next_object_id() {
+	return ++object_id_counter;
 }

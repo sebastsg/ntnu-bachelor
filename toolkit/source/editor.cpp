@@ -10,17 +10,19 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
 
+#include <filesystem>
+
 editor_world::editor_world() {
 
 }
 
 void editor_world::update() {
-	camera.update();
+	
 }
 
 world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 	window().set_swap_interval(no::swap_interval::immediate);
-	set_synchronization(no::draw_synchronization::always);
+	set_synchronization(no::draw_synchronization::if_updated);
 
 	no::imgui::create(window());
 
@@ -28,6 +30,13 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 		if (event.button == no::mouse::button::left) {
 			selected_tile = hovered_tile;
 			is_selected = true;
+			if (tool == 2) {
+				decoration_object* obj = world.add_decoration();
+				obj->model = "models/decorations/" + object_paths[tool_current_object].first + ".nom";
+				obj->transform.scale = 0.01f;
+				obj->transform.position = world_position_for_tile(selected_tile);
+				renderer.decorations.add(obj);
+			}
 		}
 	});
 	mouse_release_id = mouse().release.listen([this](const no::mouse::release_message& event) {
@@ -38,7 +47,6 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 	mouse_scroll_id = mouse().scroll.listen([this](const no::mouse::scroll_message& event) {
 		if (is_selected) {
 			world.terrain.elevate_tile(selected_tile, (float)event.steps * 0.5f);
-			world.is_dirty = true;
 		}
 	});
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
@@ -46,8 +54,19 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 	});
 
 	no::file::read(no::asset_path("worlds/main.ew"), world_stream);
-	world.terrain.tile_heights.read(world_stream, 1024, 0.0f);
-	world.is_dirty = true;
+	world.terrain.read(world_stream);
+
+	auto directory = no::asset_path("models/decorations");
+	auto files = no::entries_in_directory(directory, no::entry_inclusion::only_files);
+	for (auto& file : files) {
+		auto extension = no::file_extension_in_path(file);
+		if (extension != ".nom") {
+			continue;
+		}
+		std::string name = std::filesystem::path(file).stem().string();
+		object_paths.emplace_back(name, file);
+	}
+	decorations_texture = no::create_texture(no::surface(no::asset_path("textures/decorations.png")), no::scale_option::nearest_neighbour, true);
 }
 
 world_editor_state::~world_editor_state() {
@@ -59,21 +78,13 @@ world_editor_state::~world_editor_state() {
 }
 
 void world_editor_state::update() {
-	if (world.is_dirty) {
-		renderer.refresh_terrain();
-		world.is_dirty = false;
-	}
-	world.camera.size = window().size().to<float>();
-
+	renderer.camera.size = window().size().to<float>();
 	brush_tiles.clear();
-	int offset_x = hovered_tile.x;
-	int offset_y = hovered_tile.y;
 	for (int x = 0; x < brush_size; x++) {
 		for (int y = 0; y < brush_size; y++) {
-			brush_tiles.emplace_back(x + offset_x, y + offset_y);
+			brush_tiles.emplace_back(x + hovered_tile.x, y + hovered_tile.y);
 		}
 	}
-
 	world.update();
 	update_editor();
 	update_imgui();
@@ -86,39 +97,95 @@ void world_editor_state::update_editor() {
 	if (keyboard().is_key_down(no::key::space)) {
 		if (mouse().is_button_down(no::mouse::button::left)) {
 			for (auto& tile : brush_tiles) {
-				world.terrain.elevate_tile(tile, elevation_rate);
+				if (tool == 0) {
+					if (limit_elevation) {
+						world.terrain.set_elevation_at(tile, elevation_limit);
+					} else {
+						world.terrain.elevate_tile(tile, elevation_rate);
+					}
+				} else if (tool == 1) {
+					world.terrain.set_tile_type(tile, current_type);
+				}
 			}
-			world.is_dirty = true;
 		} else if (mouse().is_button_down(no::mouse::button::right)) {
 			for (auto& tile : brush_tiles) {
-				world.terrain.elevate_tile(tile, -elevation_rate);
+				if (tool == 0) {
+					if (limit_elevation) {
+						world.terrain.set_elevation_at(tile, 0.0f);
+					} else {
+						world.terrain.elevate_tile(tile, -elevation_rate);
+					}
+				}
 			}
-			world.is_dirty = true;
 		}
 	}
-	dragger.update(world.camera);
-	rotater.update(world.camera, keyboard());
-	mover.update(world.camera, keyboard());
+	renderer.camera.size = window().size().to<float>();
+	renderer.camera.update();
+	dragger.update(renderer.camera);
+	rotater.update(renderer.camera, keyboard());
+	mover.update(renderer.camera, keyboard());
 }
 
 void world_editor_state::update_imgui() {
 	no::imgui::start_frame();
-	ImGuiWindowFlags imgui_flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
+	ImGuiWindowFlags imgui_flags 
+		= ImGuiWindowFlags_NoMove 
+		| ImGuiWindowFlags_NoResize 
+		| ImGuiWindowFlags_NoCollapse 
+		| ImGuiWindowFlags_NoTitleBar;
 	ImGui::SetNextWindowPos({ 0.0f, 0.0f }, ImGuiSetCond_Once);
 	ImGui::SetNextWindowSize({ 320.0f, (float)window().height() }, ImGuiSetCond_Always);
 	ImGui::Begin("World", nullptr, imgui_flags);
 	ImGui::Text(CSTRING("FPS: " << frame_counter().current_fps()));
-	ImGui::Text(CSTRING("World offset: " << world.terrain.tile_heights.x() << ", " << world.terrain.tile_heights.y()));
+	ImGui::Text(CSTRING("World offset: " << world.terrain.offset()));
 	ImGui::Text(CSTRING("Tile: " << hovered_tile));
+
+	ImGui::Separator();
+
 	ImGui::Checkbox("Show wireframe", &show_wireframe);
+
 	ImGui::InputInt("Brush size", &brush_size, 1, 1);
 	brush_size = std::min(std::max(brush_size, 1), 10);
-	ImGui::InputFloat("Elevation rate", &elevation_rate, 0.01f, 0.01f, 2);
-	elevation_rate = std::min(std::max(elevation_rate, 0.01f), 0.5f);
+
+	ImGui::Separator();
+
+	ImGui::RadioButton("Elevate", &tool, 0);
+	ImGui::RadioButton("Tile", &tool, 1);
+	ImGui::RadioButton("Object", &tool, 2);
+
+	ImGui::Separator();
+
+	if (tool == 0) {
+		ImGui::InputFloat("Elevation rate", &elevation_rate, 0.01f, 0.01f, 2, limit_elevation ? ImGuiInputTextFlags_ReadOnly : 0);
+		elevation_rate = std::min(std::max(elevation_rate, 0.01f), 0.5f);
+		ImGui::Checkbox("Limit##LimitElevationCheck", &limit_elevation);
+		ImGui::SameLine();
+		ImGui::InputFloat("##LimitElevationValue", &elevation_limit, 0.1f, 1.0f, 2, limit_elevation ? 0 : ImGuiInputTextFlags_ReadOnly);
+		elevation_limit = std::min(std::max(elevation_limit, 0.0f), 100.0f);
+	} else if (tool == 1) {
+		ImGui::RadioButton("Grass", &current_type, 0);
+		ImGui::RadioButton("Water", &current_type, 1);
+		ImGui::RadioButton("Road", &current_type, 2);
+		ImGui::RadioButton("Dirt", &current_type, 3);
+	} else if (tool == 2) {
+		int current_obj = tool_current_object;
+		ImGui::ListBox("Objects", &tool_current_object, [](void* data, int i, const char** out) -> bool {
+			auto& paths = *(std::vector<std::pair<std::string, std::string>>*)data;
+			if (i < 0 || i >= (int)paths.size()) {
+				return false;
+			}
+			*out = paths[i].first.c_str();
+			return true;
+		}, &object_paths, object_paths.size(), 20);
+		if (current_obj != tool_current_object) {
+			tool_object.load<no::static_textured_vertex>(object_paths[tool_current_object].second);
+		}
+	}
+
 	ImGui::Separator();
 
 	if (ImGui::Button("Save")) {
-		world.terrain.tile_heights.write(world_stream, 1024, 0.0f);
+		world.terrain.write(world_stream);
 		world_stream.set_write_index(world_stream.size());
 		no::file::write(no::asset_path("worlds/main.ew"), world_stream);
 	}
@@ -126,22 +193,20 @@ void world_editor_state::update_imgui() {
 	ImGui::Separator();
 
 	if (ImGui::Button("/\\")) {
-		world.terrain.tile_heights.shift_up(world_stream, 1024, 0.0f);
-		world.is_dirty = true;
+		world.terrain.shift_up(world_stream);
 	}
 	if (ImGui::Button("<-")) {
-		world.terrain.tile_heights.shift_left(world_stream, 1024, 0.0f);
-		world.is_dirty = true;
+		world.terrain.shift_left(world_stream);
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("->")) {
-		world.terrain.tile_heights.shift_right(world_stream, 1024, 0.0f);
-		world.is_dirty = true;
+		world.terrain.shift_right(world_stream);
 	}
 	if (ImGui::Button("\\/")) {
-		world.terrain.tile_heights.shift_down(world_stream, 1024, 0.0f);
-		world.is_dirty = true;
+		world.terrain.shift_down(world_stream);
 	}
+
+	ImGui::Separator();
 
 	ImGui::End();
 	no::imgui::end_frame();
@@ -150,16 +215,29 @@ void world_editor_state::update_imgui() {
 void world_editor_state::draw() {
 	renderer.draw_for_picking();
 	hovered_pixel = no::read_pixel_at({ mouse().x(), window().height() - mouse().y() });
+	window().clear();
+
 	hovered_pixel.x--;
 	hovered_pixel.y--;
-	hovered_tile = hovered_pixel.xy + world.terrain.tile_heights.position();
-	window().clear();
-	world.camera.size = window().size().to<float>();
+	hovered_tile = hovered_pixel.xy + world.terrain.offset();
+
 	renderer.draw();
+
+	if (tool_object.is_drawable() && !world.terrain.is_out_of_bounds(hovered_tile)) {
+		no::transform t;
+		t.scale = 0.01f;
+		t.position = world_position_for_tile(hovered_tile);
+		no::set_shader_model(t);
+		no::bind_texture(decorations_texture);
+		tool_object.bind();
+		tool_object.draw();
+	}
+
 	renderer.draw_tile_highlight(hovered_tile);
 	for (auto& tile : brush_tiles) {
 		renderer.draw_tile_highlight(tile);
 	}
+
 	if (show_wireframe) {
 		no::set_polygon_render_mode(no::polygon_render_mode::wireframe);
 		renderer.draw_for_picking();
@@ -172,18 +250,6 @@ bool world_editor_state::is_mouse_over_ui() const {
 	return mouse().position().x < 320;
 }
 
-void configure() {
-#if _DEBUG
-	no::set_asset_directory("../../../assets");
-#else
-	no::set_asset_directory("assets");
-#endif
-}
-
-void start() {
-	bool no_window = process_command_line();
-	if (no_window) {
-		return;
-	}
-	no::create_state<world_editor_state>("Toolkit", 800, 600, 4, true);
+no::vector3f world_editor_state::world_position_for_tile(no::vector2i tile) const {
+	return { (float)tile.x, world.terrain.elevation_at(tile), (float)tile.y };
 }

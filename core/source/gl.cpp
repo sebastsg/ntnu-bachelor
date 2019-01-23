@@ -382,6 +382,10 @@ int create_shader(const std::string& path) {
 }
 
 void bind_shader(int id) {
+	if (renderer.bound_shader == id) {
+		// todo: add to counter
+		return;
+	}
 	renderer.bound_shader = id;
 	CHECK_GL_ERROR(glUseProgram(renderer.shaders[id].id));
 }

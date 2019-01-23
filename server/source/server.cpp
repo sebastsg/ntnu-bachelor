@@ -5,7 +5,17 @@
 #include "assets.hpp"
 #include "packets.hpp"
 
+server_world::server_world(const std::string& name) {
+	no::file::read(no::asset_path("worlds/" + name + ".ew"), stream);
+}
+
+server_world::server_world(server_world&& that) : stream(std::move(that.stream)) {
+
+}
+
 server_state::server_state() {
+	worlds.emplace_back("main");
+	
 	establisher.container = &sockets;
 	establisher.listen("10.0.0.130", 7524); // todo: config file
 	establisher.events.established.listen([this](const no::connection_establisher::established_message& event) {

@@ -2,6 +2,7 @@
 
 #include "loop.hpp"
 #include "network.hpp"
+#include "world.hpp"
 
 class client_state {
 public:
@@ -27,6 +28,18 @@ private:
 
 };
 
+class server_world : public world_state {
+public:
+
+	server_world(const std::string& name);
+	server_world(server_world&&);
+
+private:
+
+	no::io_stream stream;
+
+};
+
 class server_state : public no::window_state {
 public:
 
@@ -46,5 +59,7 @@ private:
 	no::connection_establisher establisher;
 	no::socket_container sockets;
 	client_state clients[max_clients];
+
+	std::vector<server_world> worlds;
 
 };

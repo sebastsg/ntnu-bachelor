@@ -3,7 +3,7 @@
 #include <sstream>
 #include <vector>
 
-#define STRING(X) ((std::ostringstream&)(std::ostringstream{} << X)).str()
+#define STRING(X)  ((std::ostringstream&)(std::ostringstream{} << X)).str()
 #define CSTRING(X) STRING(X).c_str()
 
 namespace no {
@@ -122,6 +122,24 @@ public:
 		resize_if_needed(size);
 		memcpy(write_position, source, size);
 		write_position += size;
+	}
+
+	template<typename Dest, typename Src = Dest>
+	void write_array(const std::vector<Src>& values) {
+		write((int32_t)values.size());
+		for (auto& value : values) {
+			write((Dest)value);
+		}
+	}
+
+	template<typename Dest, typename Src = Dest>
+	std::vector<Dest> read_array() {
+		std::vector<Dest> values;
+		int32_t count = read<int32_t>();
+		for (int32_t i = 0; i < count; i++) {
+			values.push_back((Dest)read<Src>());
+		}
+		return std::move(values);
 	}
 
 	size_t read_line(char* destination, size_t max_size, bool remove_newline);

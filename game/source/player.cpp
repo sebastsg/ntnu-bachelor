@@ -4,20 +4,8 @@
 #include "assets.hpp"
 #include "surface.hpp"
 
-game_object::game_object(world_state& world) : world(world) {
-
-}
-
-no::vector2i game_object::tile() const {
-	return world.world_position_to_tile_index(x(), z());
-}
-
 player_object::player_object(world_state& world) : game_object(world) {
 	transform.scale = 0.5f;
-}
-
-player_object::~player_object() {
-
 }
 
 bool player_object::is_moving() const {
@@ -90,30 +78,4 @@ void player_object::update() {
 void player_object::start_movement_to(int x, int z) {
 	target_x = x;
 	target_z = z;
-}
-
-player_renderer::player_renderer(const world_state& world) : world(world) {
-	model.load(no::asset_path("models/player.nom"));
-	sword_model.load(no::asset_path("models/sword.nom"));
-	idle = model.index_of_animation("idle");
-	run = model.index_of_animation("run");
-}
-
-void player_renderer::draw() {
-	while (world.players.size() > animations.size()) {
-		animations.emplace_back(model);
-		animations.back().attach(15, sword_model, { 0.0761f, 0.5661f, 0.1151f }, { 0.595f, -0.476f, -0.464f, -0.452f });
-	}
-	int i = 0;
-	for (auto& player : world.players) {
-		if (player.second.is_moving()) {
-			animations[i].start_animation(run);
-		} else {
-			animations[i].start_animation(idle);
-		}
-		animations[i].animate();
-		no::set_shader_model(world.players.find(i)->second.transform);
-		animations[i].draw();
-		i++;
-	}
 }

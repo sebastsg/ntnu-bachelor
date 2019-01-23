@@ -50,16 +50,16 @@ public:
 		return (y - offset.y) * size.x + x - offset.x;
 	}
 
-	T at(int x, int y) const {
+	T& at(int x, int y) {
+		return values[local_index(x, y)];
+	}
+
+	const T& at(int x, int y) const {
 		return values[local_index(x, y)];
 	}
 
 	void set(int x, int y, T value) {
 		values[local_index(x, y)] = value;
-	}
-
-	void add(int x, int y, T value) {
-		values[local_index(x, y)] += value;
 	}
 
 	vector2i position() const {
@@ -186,13 +186,14 @@ public:
 		size_t old_read = stream.read_index();
 		for (int x = 0; x < size.x; x++) {
 			for (int y = 0; y < size.y; y++) {
+				const size_t i = y * size.x + x;
 				size_t read_index = ((offset.y + y) * stride + offset.x + x) * sizeof(T);
 				if (read_index + sizeof(T) > stream.size()) {
-					values[y * size.x + x] = filler;
+					values[i] = filler;
 					continue;
 				}
 				stream.set_read_index(read_index);
-				values[y * size.x + x] = stream.read<T>();
+				values[i] = stream.read<T>();
 			}
 		}
 		stream.set_read_index(old_read);
@@ -201,26 +202,28 @@ public:
 	void shift_left(io_stream& stream, int stride, T filler) {
 		shift_left();
 		for (int y = 0; y < size.y; y++) {
+			const size_t i = y * size.x;
 			size_t read_index = ((offset.y + y) * stride + offset.x) * sizeof(T);
 			if (read_index + sizeof(T) > stream.size()) {
-				values[y * size.x] = filler;
+				values[i] = filler;
 				continue;
 			}
 			stream.set_read_index(read_index);
-			values[y * size.x] = stream.read<T>();
+			values[i] = stream.read<T>();
 		}
 	}
 
 	void shift_right(io_stream& stream, int stride, T filler) {
 		shift_right();
 		for (int y = 0; y < size.y; y++) {
+			const size_t i = y * size.x + size.x - 1;
 			size_t read_index = ((offset.y + y) * stride + offset.x + size.x - 1) * sizeof(T);
 			if (read_index + sizeof(T) > stream.size()) {
-				values[y * size.x + size.x - 1] = filler;
+				values[i] = filler;
 				continue;
 			}
 			stream.set_read_index(read_index);
-			values[y * size.x + size.x - 1] = stream.read<T>();
+			values[i] = stream.read<T>();
 		}
 	}
 
@@ -240,13 +243,14 @@ public:
 	void shift_down(io_stream& stream, int stride, T filler) {
 		shift_down();
 		for (int x = 0; x < size.x; x++) {
+			const size_t i = (size.y - 1) * size.x + x;
 			size_t read_index = ((size.y - 1 + offset.y) * stride + offset.x + x) * sizeof(T);
 			if (read_index + sizeof(T) > stream.size()) {
-				values[(size.y - 1) * size.x + x] = filler;
+				values[i] = filler;
 				continue;
 			}
 			stream.set_read_index(read_index);
-			values[(size.y - 1) * size.x + x] = stream.read<T>();
+			values[i] = stream.read<T>();
 		}
 	}
 	

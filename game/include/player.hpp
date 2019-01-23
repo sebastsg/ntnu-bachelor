@@ -1,54 +1,29 @@
 #pragma once
 
-#include "transform.hpp"
-#include "draw.hpp"
+#include "object.hpp"
+#include "event.hpp"
 
-class world_state;
-
-class game_object {
-public:
-
-	no::transform transform;
-
-	game_object(world_state& world);
-
-	virtual ~game_object() = default;
-
-	virtual void update() = 0;
-
-	float x() const {
-		return transform.position.x;
-	}
-
-	float y() const {
-		return transform.position.y;
-	}
-
-	float z() const {
-		return transform.position.z;
-	}
-
-	no::vector2i tile() const;
-
-protected:
-
-	world_state& world;
-
-};
+enum class equipment_slot { left_hand, right_hand, body, legs, head, feet, neck, ring, back };
 
 class player_object : public game_object {
 public:
 
+	struct equip_event {
+		equipment_slot slot;
+		int item_id = -1;
+	};
+
+	struct {
+		no::message_event<equip_event> equip;
+	} events;
+
 	int player_id = 0;
 
 	player_object(world_state& world);
-	player_object(player_object&&) = default;
-	~player_object() override;
 
 	void update() override;
 
 	bool is_moving() const;
-
 	void start_movement_to(int x, int z);
 
 private:
@@ -59,25 +34,5 @@ private:
 	int target_z = -1;
 
 	bool moving = false;
-
-};
-
-class player_renderer {
-public:
-
-	player_renderer(const world_state& world);
-
-	void draw();
-
-private:
-
-	no::model model;
-	no::model sword_model;
-
-	int idle = 0;
-	int run = 0;
-
-	const world_state& world;
-	std::vector<no::model_instance> animations;
 
 };

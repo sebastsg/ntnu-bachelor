@@ -45,14 +45,12 @@ void hud_view::set_debug(const std::string& debug) {
 }
 
 game_world::game_world() {
-
+	no::file::read(no::asset_path("worlds/main.ew"), stream);
+	terrain.read(stream);
 }
 
-void game_world::update() {
-	for (auto& player : players) {
-		player.second.update();
-	}
-	camera.update();
+player_object* game_world::my_player() {
+	return player(my_player_id);
 }
 
 game_state::game_state() : renderer(world), dragger(mouse()) {
@@ -79,7 +77,7 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 	});
 
 	mouse_scroll_id = mouse().scroll.listen([this](const no::mouse::scroll_message& event) {
-		float& factor = world.camera.rotation_offset_factor;
+		float& factor = renderer.camera.rotation_offset_factor;
 		factor -= (float)event.steps;
 		if (factor > 12.0f) {
 			factor = 12.0f;
@@ -102,19 +100,20 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 		{
 			move_to_tile_packet packet;
 			packet.read(stream);
-			world.player(packet.player_id).start_movement_to(packet.tile_x, packet.tile_z);
+			world.player(packet.player_id)->start_movement_to(packet.tile_x, packet.tile_z);
 			break;
 		}
 		case session_packet::type:
 		{
 			session_packet packet;
 			packet.read(stream);
-			auto& player = world.add_player(packet.player_id);
+			auto player = world.add_player(packet.player_id);
 			if (packet.is_me) {
 				world.my_player_id = packet.player_id;
 			}
-			world.player(packet.player_id).transform.position.x = (float)packet.tile_x;
-			world.player(packet.player_id).transform.position.z = (float)packet.tile_z;
+			player->transform.position.x = (float)packet.tile_x;
+			player->transform.position.z = (float)packet.tile_z;
+			renderer.players.add(player);
 			break;
 		}
 		default:
@@ -130,18 +129,19 @@ game_state::~game_state() {
 }
 
 void game_state::update() {
-	world.camera.size = window().size().to<float>();
+	renderer.camera.size = window().size().to<float>();
 	hud.camera.transform.scale.xy = window().size().to<float>();
 	server.synchronise();
 	if (world.my_player_id == -1) {
 		return;
 	}
-	follower.update(world.camera, world.my_player().transform);
-	dragger.update(world.camera);
-	rotater.update(world.camera, keyboard());
+	follower.update(renderer.camera, world.my_player()->transform);
+	dragger.update(renderer.camera);
+	rotater.update(renderer.camera, keyboard());
 	hud.set_fps(frame_counter().current_fps());
 	world.update();
-	hud.set_debug(STRING("Tile: " << world.my_player().tile()));
+	renderer.camera.update();
+	hud.set_debug(STRING("Tile: " << world.my_player()->tile()));
 }
 
 void game_state::draw() {
@@ -155,7 +155,7 @@ void game_state::draw() {
 	window().clear();
 	renderer.draw();
 	if (world.my_player_id != -1) {
-		renderer.draw_tile_highlight(world.my_player().tile());
+		renderer.draw_tile_highlight(world.my_player()->tile());
 	}
 	hud.draw();
 }

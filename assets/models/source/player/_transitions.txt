@@ -1,2 +1,0 @@
-idle -> run = 6
-run -> idle = 0

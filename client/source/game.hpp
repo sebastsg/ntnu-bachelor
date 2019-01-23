@@ -2,6 +2,7 @@
 
 #include "player.hpp"
 #include "world.hpp"
+#include "render.hpp"
 
 #include "loop.hpp"
 #include "camera.hpp"
@@ -45,12 +46,16 @@ private:
 
 class game_world : public world_state {
 public:
+	
+	int my_player_id = -1;
 
 	game_world();
 
-	void update();
+	player_object* my_player();
 
 private:
+
+	no::io_stream stream;
 
 };
 
