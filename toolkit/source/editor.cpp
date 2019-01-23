@@ -119,7 +119,6 @@ void world_editor_state::update_editor() {
 			}
 		}
 	}
-	renderer.camera.size = window().size().to<float>();
 	renderer.camera.update();
 	dragger.update(renderer.camera);
 	rotater.update(renderer.camera, keyboard());

@@ -237,19 +237,6 @@ public:
 			return;
 		}
 		load(model);
-		/*if (model.shape.vertices.empty()) {
-			WARNING("Failed to load model: " << path);
-		}
-		mesh = { std::move(vertex_array<V>{model.shape.vertices, model.shape.indices }) };
-		root_transform = model.transform;
-		min_vertex = model.min;
-		max_vertex = model.max;
-		nodes = model.nodes;
-		bones = model.bones;
-		animations = model.animations;
-		size_t vertices = model.shape.vertices.size();
-		size_t indices = model.shape.indices.size();
-		drawable = (vertices > 0 && indices > 0);*/
 	}
 	
 	void bind() const;
@@ -290,6 +277,7 @@ struct model_animation_instance {
 class model_instance {
 public:
 
+	model_instance() = default;
 	model_instance(model& source);
 	model_instance(const model_instance&) = delete;
 	model_instance(model_instance&&);
@@ -297,7 +285,7 @@ public:
 	model_instance& operator=(const model_instance&) = delete;
 	model_instance& operator=(model_instance&&);
 
-	model& original() const;
+	void set_source(model& source);
 
 	void animate();
 	void start_animation(int index);
@@ -316,7 +304,7 @@ private:
 	void animate_node(int node, float time, const glm::mat4& transform);
 	void animate(const glm::mat4& transform);
 
-	model& source;
+	model* source = nullptr;
 	std::vector<glm::mat4> bones;
 	std::vector<model_animation_instance> animations;
 

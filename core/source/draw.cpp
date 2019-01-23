@@ -65,17 +65,12 @@ vector3f model::size() const {
 	return max_vertex - min_vertex;
 }
 
-model_instance::model_instance(model& source) : source(source), bones(source.bones) {
-	animation_timer.start();
-	for (auto& animation : source.animations) {
-		animations.emplace_back();
-		for (auto& node : animation.channels) {
-			animations.back().channels.emplace_back();
-		}
-	}
+model_instance::model_instance(model& source) {
+	set_source(source);
 }
 
-model_instance::model_instance(model_instance&& that) : source(std::move(that.source)) {
+model_instance::model_instance(model_instance&& that) {
+	std::swap(source, that.source);
 	std::swap(bones, that.bones);
 	std::swap(animations, that.animations);
 	std::swap(attachments, that.attachments);
@@ -101,12 +96,20 @@ model_instance& model_instance::operator=(model_instance&& that) {
 	return *this;
 }
 
-model& model_instance::original() const {
-	return source;
+void model_instance::set_source(model& source) {
+	this->source = &source;
+	bones = source.bones;
+	animation_timer.start();
+	for (auto& animation : source.animations) {
+		animations.emplace_back();
+		for (auto& node : animation.channels) {
+			animations.back().channels.emplace_back();
+		}
+	}
 }
 
 glm::mat4 model_instance::next_interpolated_position(int node_index, float time) {
-	auto& node = source.animations[animation_index].channels[node_index];
+	auto& node = source->animations[animation_index].channels[node_index];
 	for (int p = animations[animation_index].channels[node_index].last_position_key; p < (int)node.positions.size() - 1; p++) {
 		if (node.positions[p + 1].first > time) {
 			animations[animation_index].channels[node_index].last_position_key = p;
@@ -129,7 +132,7 @@ glm::mat4 model_instance::next_interpolated_position(int node_index, float time)
 }
 
 glm::mat4 model_instance::next_interpolated_rotation(int node_index, float time) {
-	auto& node = source.animations[animation_index].channels[node_index];
+	auto& node = source->animations[animation_index].channels[node_index];
 	for (int r = animations[animation_index].channels[node_index].last_rotation_key; r < (int)node.rotations.size() - 1; r++) {
 		if (node.rotations[r + 1].first > time) {
 			animations[animation_index].channels[node_index].last_rotation_key = r;
@@ -148,7 +151,7 @@ glm::mat4 model_instance::next_interpolated_rotation(int node_index, float time)
 }
 
 glm::mat4 model_instance::next_interpolated_scale(int node_index, float time) {
-	auto& node = source.animations[animation_index].channels[node_index];
+	auto& node = source->animations[animation_index].channels[node_index];
 	for (int s = animations[animation_index].channels[node_index].last_scale_key; s < (int)node.scales.size() - 1; s++) {
 		if (node.scales[s + 1].first > time) {
 			animations[animation_index].channels[node_index].last_scale_key = s;
@@ -172,8 +175,8 @@ glm::mat4 model_instance::next_interpolated_scale(int node_index, float time) {
 
 void model_instance::animate_node(int node_index, float time, const glm::mat4& transform) {
 	auto& state = animations[animation_index].channels[node_index];
-	auto& animation = source.animations[animation_index];
-	glm::mat4 node_transform = source.nodes[node_index].transform;
+	auto& animation = source->animations[animation_index];
+	glm::mat4 node_transform = source->nodes[node_index].transform;
 	auto& node = animation.channels[node_index];
 	if (node.positions.size() > 0 || node.rotations.size() > 0 || node.scales.size() > 0) {
 		if (is_new_loop) {
@@ -190,12 +193,12 @@ void model_instance::animate_node(int node_index, float time, const glm::mat4& t
 	if (node.bone != -1) {
 		// todo: there has to be a better way
 		if (!my_attachment) {
-			bones[node.bone] = source.root_transform * new_transform * source.bones[node.bone];
+			bones[node.bone] = source->root_transform * new_transform * source->bones[node.bone];
 		} else {
-			bones[node.bone] = new_transform * my_attachment->parent_bone * my_attachment->attachment_bone * source.root_transform;
+			bones[node.bone] = new_transform * my_attachment->parent_bone * my_attachment->attachment_bone * source->root_transform;
 		}
 	}
-	auto& children = source.nodes[node_index].children;
+	auto& children = source->nodes[node_index].children;
 	for (int child : children) {
 		animate_node(child, time, new_transform);
 	}
@@ -209,7 +212,7 @@ void model_instance::animate() {
 }
 
 void model_instance::animate(const glm::mat4& transform) {
-	auto& animation = source.animations[animation_index];
+	auto& animation = source->animations[animation_index];
 	double seconds = (double)animation_timer.milliseconds() * 0.001;
 	double play_duration = seconds * (double)animation.ticks_per_second;
 	is_new_loop = (play_duration >= (double)animation.duration) || is_new_animation;
@@ -223,11 +226,11 @@ void model_instance::start_animation(int index) {
 	if (index == animation_index) {
 		return;
 	}
-	if (index < 0 || index >= source.total_animations()) {
+	if (index < 0 || index >= source->total_animations()) {
 		index = 0; // avoid crash
 		WARNING("Invalid animation index passed: " << index);
 	}
-	new_animation_transition_frame = source.animations[animation_index].transitions[index];
+	new_animation_transition_frame = source->animations[animation_index].transitions[index];
 	animation_index = index;
 	animation_timer.start();
 	// todo: fix this up, since nodes[2] is not guaranteed to have frames
@@ -238,14 +241,14 @@ void model_instance::start_animation(int index) {
 }
 
 void model_instance::bind() const {
-	source.bind();
+	source->bind();
 }
 
 void model_instance::draw() const {
 	for (size_t b = 0; b < bones.size(); b++) {
 		get_shader_variable("uni_Bones[" + std::to_string(b) + "]").set(bones[b]);
 	}
-	source.draw();
+	source->draw();
 	for (size_t node_index : attachments) {
 		auto& node = animations[animation_index].channels[node_index];
 		for (auto& attachment : node.attachments) {
@@ -258,7 +261,7 @@ int model_instance::attach(int parent, model& attachment_model, vector3f positio
 	attachment_id_counter++;
 	for (auto& animation : animations) {
 		auto& channel = animation.channels[parent];
-		glm::mat4 bone = source.bones[source.animations[0].channels[parent].bone];
+		glm::mat4 bone = source->bones[source->animations[0].channels[parent].bone];
 		auto& attachment = channel.attachments.emplace_back(attachment_model, bone, position, rotation, parent, attachment_id_counter);
 		attachment.attachment.my_attachment = &attachment;
 		attachments.push_back(parent);
