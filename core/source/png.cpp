@@ -4,10 +4,14 @@
 #include <libpng/png.h>
 
 #include <cerrno>
+#include <filesystem>
 
 namespace no {
 
 surface load_png(const std::string& path) {
+	if (!std::filesystem::is_regular_file(path) || std::filesystem::path(path).extension() != ".png") {
+		return { 2, 2, pixel_format::rgba };
+	}
 	png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 	if (!png) {
 		WARNING("Failed to create read structure");

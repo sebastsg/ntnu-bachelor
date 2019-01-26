@@ -55,7 +55,6 @@ void player_renderer::draw() {
 		}
 		player.model.animate();
 		no::set_shader_model(player.object->transform);
-		player.model.bind();
 		player.model.draw();
 	}
 }

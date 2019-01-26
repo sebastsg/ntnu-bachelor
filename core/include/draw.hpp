@@ -210,11 +210,15 @@ public:
 
 	int index_of_animation(const std::string& name);
 	int total_animations() const;
+	model_animation& animation(int index);
+	model_node& node(int index);
+	int total_nodes() const;
 
 	template<typename V>
 	void load(const model_data<V>& model) {
 		if (model.shape.vertices.empty()) {
 			WARNING("Failed to load model");
+			return;
 		}
 		mesh = { std::move(vertex_array<V>{model.shape.vertices, model.shape.indices }) };
 		root_transform = model.transform;
@@ -223,6 +227,7 @@ public:
 		nodes = model.nodes;
 		bones = model.bones;
 		animations = model.animations;
+		texture = model.texture;
 		size_t vertices = model.shape.vertices.size();
 		size_t indices = model.shape.indices.size();
 		drawable = (vertices > 0 && indices > 0);
@@ -248,6 +253,8 @@ public:
 	vector3f max() const;
 	vector3f size() const;
 
+	std::string texture_name() const;
+
 private:
 
 	generic_vertex_array mesh;
@@ -258,6 +265,7 @@ private:
 	vector3f min_vertex;
 	vector3f max_vertex;
 	bool drawable = false;
+	std::string texture;
 
 };
 
@@ -267,7 +275,7 @@ struct model_animation_channel_state {
 	int last_position_key = 0;
 	int last_rotation_key = 0;
 	int last_scale_key = 0;
-	std::vector<model_attachment> attachments;
+	std::vector<model_attachment*> attachments;
 };
 
 struct model_animation_instance {
@@ -289,12 +297,13 @@ public:
 
 	void animate();
 	void start_animation(int index);
+	bool can_animate() const;
 
-	void bind() const;
 	void draw() const;
 
 	int attach(int parent, model& attachment, vector3f position, glm::quat rotation);
-	bool detach(int id);
+	void detach(int id);
+	void set_attachment_bone(int id, const no::vector3f& position, const glm::quat& rotation);
 
 private:
 
@@ -336,6 +345,8 @@ struct model_attachment {
 	int id = 0;
 
 	model_attachment(model& attachment, glm::mat4 parent_bone, vector3f position, glm::quat rotation, int parent, int id);
+
+	void update_bone();
 
 };
 

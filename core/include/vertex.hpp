@@ -135,6 +135,7 @@ struct model_node {
 	std::string name;
 	glm::mat4 transform;
 	std::vector<int> children;
+	int depth = 0;
 };
 
 template<typename V>
@@ -143,9 +144,11 @@ struct model_data {
 	vector3f min;
 	vector3f max;
 	vertex_array_data<V> shape;
+	std::vector<std::string> bone_names;
 	std::vector<glm::mat4> bones;
 	std::vector<model_node> nodes;
 	std::vector<model_animation> animations;
+	std::string texture;
 
 	template<typename T>
 	model_data<T> to(const std::function<T(V)>& mapper) const {
@@ -157,11 +160,14 @@ struct model_data {
 			that.shape.vertices.push_back(mapper(vertex));
 		}
 		that.shape.indices = shape.indices;
+		that.bone_names = bone_names;
 		that.bones = bones;
 		that.nodes = nodes;
 		that.animations = animations;
+		that.texture = texture;
 		return that;
 	}
+
 };
 
 struct model_import_options {
@@ -184,8 +190,10 @@ void export_model(const std::string& path, const model_data<V>& model) {
 	stream.write(model.transform);
 	stream.write(model.min);
 	stream.write(model.max);
+	stream.write(model.texture);
 	stream.write_array<V>(model.shape.vertices);
 	stream.write_array<uint16_t>(model.shape.indices);
+	stream.write_array<std::string>(model.bone_names);
 	stream.write_array<glm::mat4>(model.bones);
 	stream.write((int16_t)model.nodes.size());
 	for (auto& node : model.nodes) {
@@ -233,8 +241,10 @@ void import_model(const std::string& path, model_data<V>& model) {
 	model.transform = stream.read<glm::mat4>();
 	model.min = stream.read<vector3f>();
 	model.max = stream.read<vector3f>();
+	model.texture = stream.read<std::string>();
 	model.shape.vertices = stream.read_array<V>();
 	model.shape.indices = stream.read_array<uint16_t>();
+	model.bone_names = stream.read_array<std::string>();
 	model.bones = stream.read_array<glm::mat4>();
 	int16_t node_count = stream.read<int16_t>();
 	for (int16_t n = 0; n < node_count; n++) {
@@ -277,44 +287,32 @@ void import_model(const std::string& path, model_data<V>& model) {
 }
 
 template<typename V>
-void merge_model_animations(const std::string& source_directory, const std::string& destination) {
-	std::vector<std::string> loaded_paths; // can't use "paths", since some files may be invalid
-	std::vector<model_data<V>> models;
-	auto paths = entries_in_directory(source_directory, entry_inclusion::only_files);
-	for (auto& path : paths) {
-		if (file_extension_in_path(path) == ".nom") {
-			import_model(path, models.emplace_back());
-			loaded_paths.push_back(path);
-		}
-	}
+model_data<V> merge_model_animations(const std::vector<model_data<V>>& models) {
 	if (models.empty()) {
-		WARNING("No models were found in " << source_directory);
-		return;
+		return {};
 	}
 	if (models.size() == 1) {
-		WARNING("Only one model was found. It will be copied to its destination, but no merging is done.");
+		return models.front();
 	}
-	INFO("Using " << loaded_paths.front() << " as reference and output model.");
-	auto& output = models.front();
+	model_data<V> output = models.front();
 	for (size_t m = 1; m < models.size(); m++) {
-		auto& model_path = loaded_paths[m];
 		auto& model = models[m];
 		if (model.transform != output.transform) {
-			WARNING("Root transform not identical for " << model_path << ". Not skipped.");
+			WARNING("Root transform not identical. Not skipped.");
 		}
 		if (output.nodes.size() != model.nodes.size()) {
-			WARNING(model_path << " has different number of node transforms. Skipping.");
+			WARNING("Different number of node transforms. Skipping.");
 			continue;
 		}
 		bool equal = true;
 		for (size_t n = 0; n < output.nodes.size(); n++) {
 			if (output.nodes[n].transform != model.nodes[n].transform) {
-				WARNING(model_path << " has different node transform " << n << ". Skipping.");
+				WARNING("Different node transform " << n << ". Skipping.");
 				equal = false;
 				break;
 			}
 			if (output.nodes[n].children != model.nodes[n].children) {
-				WARNING(model_path << " has different node children " << n << ". Skipping.");
+				WARNING("Different node children " << n << ". Skipping.");
 				equal = false;
 				break;
 			}
@@ -323,24 +321,24 @@ void merge_model_animations(const std::string& source_directory, const std::stri
 			continue;
 		}
 		if (model.bones.size() != output.bones.size()) {
-			WARNING("Mesh not identical in " << model_path << ". Skipping.");
+			WARNING("Mesh not identical. Skipping.");
 			continue;
 		}
 		for (size_t i = 0; i < model.bones.size(); i++) {
 			if (model.bones[i] != output.bones[i]) {
-				WARNING("Mesh not identical in " << model_path << ". Skipping.");
+				WARNING("Mesh not identical. Skipping.");
 				continue;
 			}
 		}
 		if (model.shape != output.shape) {
-			WARNING("Mesh not identical in " << model_path << ". Skipping.");
+			WARNING("Mesh not identical. Skipping.");
 			continue;
 		}
 		for (auto& animation : model.animations) {
 			bool skip = false;
 			for (auto& existing_animation : output.animations) {
 				if (animation.name == existing_animation.name) {
-					WARNING(animation.name << " in " << model_path << " already exists. Skipping animation.");
+					WARNING(animation.name << " already exists. Skipping animation.");
 					skip = true;
 					continue;
 				}
@@ -356,70 +354,7 @@ void merge_model_animations(const std::string& source_directory, const std::stri
 	for (auto& animation : output.animations) {
 		animation.transitions = default_transitions;
 	}
-
-	io_stream transitions_stream;
-	std::string transitions_path = source_directory + "/transitions.txt";
-	file::read(transitions_path, transitions_stream);
-	int current_line = 0;
-	while (true) {
-		std::string line = transitions_stream.read_line(true);
-		if (line.empty()) {
-			break;
-		}
-		current_line++;
-
-		// todo: better off using regex here
-
-		size_t first_space = line.find(' ');
-		if (first_space == std::string::npos) {
-			WARNING(transitions_path << " error on line " << current_line);
-			continue;
-		}
-		std::string from = line.substr(0, first_space);
-		size_t arrow_begin = line.find("->", first_space);
-		if (arrow_begin == std::string::npos) {
-			WARNING(transitions_path << " error on line " << current_line << ". -> was not found.");
-			continue;
-		}
-		size_t arrow_end = arrow_begin + 2;
-		size_t equals_sign = line.find('=', arrow_end);
-		if (equals_sign == std::string::npos) {
-			WARNING(transitions_path << " error on line " << current_line << ". = was not found.");
-			continue;
-		}
-		std::string to = line.substr(arrow_end + 1, equals_sign - 1 - arrow_end - 1);
-		std::string frame = line.substr(equals_sign + 1);
-		if (from == to) {
-			WARNING(transitions_path << " error on line " << current_line << ". " << from << " -> " << to << " are identical.");
-			continue;
-		}
-		bool found_from = false;
-		for (auto& animation : output.animations) {
-			if (animation.name == from) {
-				bool found_to = false;
-				for (int to_index = 0; to_index < (int)output.animations.size(); to_index++) {
-					if (output.animations[to_index].name == to) {
-						animation.transitions[to_index] = std::stoi(frame);
-						found_to = true;
-						break;
-					}
-				}
-				if (!found_to) {
-					WARNING(transitions_path << " error for " << from << " -> " << to << ". " << to << " was not found.");
-				}
-				found_from = true;
-				break;
-			}
-		}
-		if (!found_from) {
-			WARNING(transitions_path << " error for " << from << " -> " << to << ". " << from << " was not found.");
-		}
-	}
-
-	if (file_extension_in_path(destination) != ".nom") {
-		WARNING("Output file " << destination << " does not end with the .nom extension");
-	}
-	export_model(destination, output);
+	return output;
 }
 
 }

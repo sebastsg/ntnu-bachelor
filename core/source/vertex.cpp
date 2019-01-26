@@ -73,7 +73,6 @@ private:
 
 	model_import_options options;
 	std::string file_name;
-	std::vector<std::string> bone_names;
 	aiScene* scene = nullptr;
 	int node_depth = 0;
 
@@ -128,8 +127,8 @@ void assimp_importer::load_animations() {
 		for (unsigned int c = 0; c < scene->mAnimations[a]->mNumChannels; c++) {
 			std::string animation_node_name = scene->mAnimations[a]->mChannels[c]->mNodeName.C_Str();
 			model_animation_channel node;
-			for (int bone_index = 0; bone_index < (int)bone_names.size(); bone_index++) {
-				if (bone_names[bone_index] == animation_node_name) {
+			for (int bone_index = 0; bone_index < (int)model.bone_names.size(); bone_index++) {
+				if (model.bone_names[bone_index] == animation_node_name) {
 					node.bone = bone_index;
 					break;
 				}
@@ -167,22 +166,17 @@ void assimp_importer::load_animations() {
 }
 
 void assimp_importer::load_node(aiNode* node) {
-#if DEBUG_ENABLED
-	/*std::string depth;
-	for (int i = 0; i < node_depth; i++) {
-		depth += " . ";
-	}
-	MESSAGE(depth << model.nodes.size() << " [b]" << node->mName.C_Str() << "[/b]: "
+	/*MESSAGE(std::string(node_depth, '.') << model.nodes.size() << " [b]" << node->mName.C_Str() << "[/b]: "
 			<< node->mNumMeshes << " meshes / " << node->mNumChildren << " children");*/
-#endif
-	node_depth++;
 	int index = (int)model.nodes.size();
 	model.nodes.emplace_back();
 	model.nodes[index].transform = ai_mat4_to_glm_mat4(node->mTransformation);
 	model.nodes[index].name = node->mName.C_Str();
+	model.nodes[index].depth = node_depth;
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		load_mesh(scene->mMeshes[node->mMeshes[i]]);
 	}
+	node_depth++;
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
 		model.nodes[index].children.push_back((int)model.nodes.size());
 		load_node(node->mChildren[i]);
@@ -234,7 +228,7 @@ void assimp_importer::load_mesh(aiMesh* mesh) {
 		std::string bone_name = mesh->mBones[b]->mName.C_Str();
 		//MESSAGE("Bone #" << b << " " << bone_name);
 		model.bones.emplace_back(ai_mat4_to_glm_mat4(mesh->mBones[b]->mOffsetMatrix));
-		bone_names.push_back(bone_name);
+		model.bone_names.push_back(bone_name);
 		for (unsigned int w = 0; w < mesh->mBones[b]->mNumWeights; w++) {
 			auto& weight = mesh->mBones[b]->mWeights[w];
 			if (weight.mVertexId >= model.shape.vertices.size()) {
@@ -297,7 +291,7 @@ void assimp_importer::load_mesh(aiMesh* mesh) {
 			vertex.weights.x = 1.0f;
 			vertex.bones.x = 0;
 		}
-		bone_names.push_back(options.bones.bone_name);
+		model.bone_names.push_back(options.bones.bone_name);
 	}
 	model.shape.indices.reserve(mesh->mNumFaces * 3);
 	for (unsigned int f = 0; f < mesh->mNumFaces; f++) {

@@ -15,6 +15,8 @@ model::model(model&& that) : mesh(std::move(that.mesh)) {
 	std::swap(bones, that.bones);
 	std::swap(nodes, that.nodes);
 	std::swap(animations, that.animations);
+	std::swap(drawable, that.drawable);
+	std::swap(texture, that.texture);
 }
 
 model& model::operator=(model&& that) {
@@ -25,6 +27,8 @@ model& model::operator=(model&& that) {
 	std::swap(bones, that.bones);
 	std::swap(nodes, that.nodes);
 	std::swap(animations, that.animations);
+	std::swap(drawable, that.drawable);
+	std::swap(texture, that.texture);
 	return *this;
 }
 
@@ -39,6 +43,18 @@ int model::index_of_animation(const std::string& name) {
 
 int model::total_animations() const {
 	return (int)animations.size();
+}
+
+model_animation& model::animation(int index) {
+	return animations[index];
+}
+
+model_node& model::node(int index) {
+	return nodes[index];
+}
+
+int model::total_nodes() const {
+	return (int)nodes.size();
 }
 
 void model::bind() const {
@@ -63,6 +79,10 @@ vector3f model::max() const {
 
 vector3f model::size() const {
 	return max_vertex - min_vertex;
+}
+
+std::string model::texture_name() const {
+	return texture;
 }
 
 model_instance::model_instance(model& source) {
@@ -203,7 +223,7 @@ void model_instance::animate_node(int node_index, float time, const glm::mat4& t
 		animate_node(child, time, new_transform);
 	}
 	for (auto& attachment : state.attachments) {
-		attachment.attachment.animate(new_transform);
+		attachment->attachment.animate(new_transform);
 	}
 }
 
@@ -240,19 +260,20 @@ void model_instance::start_animation(int index) {
 	is_new_animation = true;
 }
 
-void model_instance::bind() const {
-	source->bind();
+bool model_instance::can_animate() const {
+	return source && (int)source->animations.size() > animation_index && animation_index >= 0;
 }
 
 void model_instance::draw() const {
 	for (size_t b = 0; b < bones.size(); b++) {
 		get_shader_variable("uni_Bones[" + std::to_string(b) + "]").set(bones[b]);
 	}
+	source->bind();
 	source->draw();
 	for (size_t node_index : attachments) {
 		auto& node = animations[animation_index].channels[node_index];
 		for (auto& attachment : node.attachments) {
-			attachment.attachment.draw();
+			attachment->attachment.draw();
 		}
 	}
 }
@@ -262,30 +283,54 @@ int model_instance::attach(int parent, model& attachment_model, vector3f positio
 	for (auto& animation : animations) {
 		auto& channel = animation.channels[parent];
 		glm::mat4 bone = source->bones[source->animations[0].channels[parent].bone];
-		auto& attachment = channel.attachments.emplace_back(attachment_model, bone, position, rotation, parent, attachment_id_counter);
-		attachment.attachment.my_attachment = &attachment;
+		auto attachment = new model_attachment(attachment_model, bone, position, rotation, parent, attachment_id_counter);
+		channel.attachments.push_back(attachment);
+		attachment->attachment.my_attachment = attachment;
 		attachments.push_back(parent);
 	}
 	return attachment_id_counter;
 }
 
-bool model_instance::detach(int id) {
-	// pretty.
+void model_instance::detach(int id) {
 	for (auto& animation : animations) {
-		for (auto& node : animation.channels) {
-			for (size_t i = 0; i < node.attachments.size(); i++) {
-				if (node.attachments[i].id == id) {
-					node.attachments.erase(node.attachments.begin() + i);
-					return true;
+		for (int c = 0; c < (int)animation.channels.size(); c++) {
+			auto& channel = animation.channels[c];
+			for (size_t ca = 0; ca < channel.attachments.size(); ca++) {
+				if (channel.attachments[ca]->id == id) {
+					for (int a = 0; a < (int)attachments.size(); a++) {
+						if (attachments[a] == ca) {
+							attachments.erase(attachments.begin() + a);
+							a--;
+						}
+					}
+					delete channel.attachments[ca];
+					channel.attachments.erase(channel.attachments.begin() + ca);
 				}
 			}
 		}
 	}
-	return false;
+}
+
+void model_instance::set_attachment_bone(int id, const no::vector3f& position, const glm::quat& rotation) {
+	for (auto& animation : animations) {
+		for (auto& node : animation.channels) {
+			for (auto& attachment : node.attachments) {
+				if (attachment->id == id) {
+					attachment->position = position;
+					attachment->rotation = rotation;
+					attachment->update_bone();
+				}
+			}
+		}
+	}
 }
 
 model_attachment::model_attachment(model& attachment, glm::mat4 parent_bone, vector3f position, glm::quat rotation, int parent, int id)
 	: attachment(attachment), parent_bone(parent_bone), position(position), rotation(rotation), parent(parent), id(id) {
+	update_bone();
+}
+
+void model_attachment::update_bone() {
 	glm::mat4 t = glm::translate(glm::mat4(1.0f), { position.x, position.y, position.z });
 	glm::mat4 r = glm::mat4_cast(glm::normalize(rotation));
 	attachment_bone = t * r;
