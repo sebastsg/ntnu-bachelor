@@ -63,6 +63,8 @@ private:
 class attachments_tool {
 public:
 
+	attachments_tool();
+
 	void update();
 	void draw();
 

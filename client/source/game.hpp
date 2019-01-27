@@ -11,16 +11,6 @@
 #include "font.hpp"
 #include "network.hpp"
 
-/* notes:
- - fishing should be like in zelda
- - seidr, male/female differences
- - holmgang
-grave robbing: swords were bent to make them unusable when the owner died, to prevent grave robbing
-and this was kind of a tradition, "sword killing"
- - spear throwing attack
- - bow attack
-*/
-
 class hud_view {
 public:
 

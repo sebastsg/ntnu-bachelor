@@ -207,13 +207,20 @@ void converter_tool::draw() {
 	model.draw();
 }
 
+attachments_tool::attachments_tool() {
+	mappings.load(no::asset_path("models/attachments.noma"));
+}
+
 void attachments_tool::update() {
 	ImGui::Text("Attachments");
 
-	if (!root_model.is_drawable() && ImGui::Button("Import main NOM model")) {
-		std::string browsed_path = no::platform::open_file_browse_window();
-		root_model.load<no::animated_mesh_vertex>(browsed_path);
-		instance = { root_model };
+	if (!root_model.is_drawable()) {
+		if (ImGui::Button("Import main NOM model")) {
+			std::string browsed_path = no::platform::open_file_browse_window();
+			root_model.load<no::animated_mesh_vertex>(browsed_path);
+			instance = { root_model };
+		}
+		return;
 	} else {
 		ImGui::Text(CSTRING("Managing attachments for: " << root_model.name()));
 	}
@@ -229,15 +236,12 @@ void attachments_tool::update() {
 		}
 		*out = model.animation(i).name.data();
 		return true;
-	}, &root_model, root_model.total_animations(), 10);
+	}, &root_model, root_model.total_animations(), 15);
 	if (old_animation != animation) {
 		instance.start_animation(animation);
 	}
 
 	ImGui::Separator();
-
-	//reference.position = { 0.0761f, 0.5661f, 0.1151f };
-	//reference.rotation = { 0.595f, -0.476f, -0.464f, -0.452f };
 
 	if (root_model.total_animations() > 0 && ImGui::CollapsingHeader(CSTRING("Create new mapping for " << root_model.animation(animation).name))) {
 		ImGui::Text("Attachment model");
@@ -294,16 +298,18 @@ void attachments_tool::update() {
 
 	ImGui::Text("Existing mappings");
 	if (ImGui::BeginCombo("Selected mapping", current_mapping ? current_mapping->mapping_string().c_str() : "None")) {
-		mappings.for_each([&](no::model_attachment_mapping& mapping) {
-			if (mapping.root_animation != root_model.animation(animation).name) {
+		if (root_model.total_animations() > animation) {
+			mappings.for_each([&](no::model_attachment_mapping& mapping) {
+				if (mapping.root_animation != root_model.animation(animation).name) {
+					return true;
+				}
+				if (ImGui::Selectable(mapping.mapping_string().c_str())) {
+					current_mapping = &mapping;
+					apply_changes_to_other_animations = false;
+				}
 				return true;
-			}
-			if (ImGui::Selectable(mapping.mapping_string().c_str())) {
-				current_mapping = &mapping;
-				apply_changes_to_other_animations = false;
-			}
-			return true;
-		});
+			});
+		}
 		ImGui::EndCombo();
 	}
 
@@ -335,6 +341,35 @@ void attachments_tool::update() {
 		};
 		ImGui::InputFloat4("##AttachmentRotation", wxyz, 5);
 		current_mapping->rotation = { wxyz[0], wxyz[1], wxyz[2], wxyz[3] };
+
+		if (ImGui::Button("+##RotateXPlus")) {
+			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { 1.0f, 0.0f, 0.0f });
+		}
+		ImGui::SameLine();
+		ImGui::Text("X");
+		ImGui::SameLine();
+		if (ImGui::Button("-##RotateXMinus")) {
+			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { -1.0f, 0.0f, 0.0f });
+		}
+		if (ImGui::Button("+##RotateYPlus")) {
+			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { 0.0f, 1.0f, 0.0f });
+		}
+		ImGui::SameLine();
+		ImGui::Text("Y");
+		ImGui::SameLine();
+		if (ImGui::Button("-##RotateYMinus")) {
+			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { 0.0f, -1.0f, 0.0f });
+		}
+		if (ImGui::Button("+##RotateZPlus")) {
+			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { 0.0f, 0.0f, 1.0f });
+		}
+		ImGui::SameLine();
+		ImGui::Text("Z");
+		ImGui::SameLine();
+		if (ImGui::Button("-##RotateZMinus")) {
+			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { 0.0f, 0.0f, -1.0f });
+		}
+
 		ImGui::Checkbox("Apply changes to other animations", &apply_changes_to_other_animations);
 		if (apply_changes_to_other_animations) {
 			mappings.for_each([&](no::model_attachment_mapping& mapping) {
@@ -407,11 +442,12 @@ void attachments_tool::update() {
 		std::string browsed_path = no::platform::open_file_browse_window();
 		auto& attachment = active_attachments.emplace_back();
 		attachment.model->load<no::animated_mesh_vertex>(browsed_path);
-		ImGui::Separator();
 	}
 
+	ImGui::Separator();
+
 	if (ImGui::Button("Save attachment mappings")) {
-		mappings.save(no::asset_path("models/" + root_model.name() + ".noma"));
+		mappings.save(no::asset_path("models/attachments.noma"));
 	}
 }
 
@@ -467,7 +503,9 @@ void model_manager_state::update() {
 	ImGui::Separator();
 
 	ImGui::Text("Current tool:");
+	ImGui::SameLine();
 	ImGui::RadioButton("Converter", &current_tool, 0);
+	ImGui::SameLine();
 	ImGui::RadioButton("Attachments", &current_tool, 1);
 	ImGui::Separator();
 
