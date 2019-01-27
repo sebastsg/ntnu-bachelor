@@ -68,6 +68,7 @@ public:
 	void set(const glm::mat4& matrix);
 	void set(const transform& transform);
 	void set(vector2f* vector, size_t count);
+	void set(const std::vector<glm::mat4>& matrices);
 
 	bool exists() const;
 
@@ -194,6 +195,8 @@ private:
 
 };
 
+class model_attachment_mapping_list;
+
 class model {
 public:
 
@@ -213,6 +216,7 @@ public:
 	model_animation& animation(int index);
 	model_node& node(int index);
 	int total_nodes() const;
+	glm::mat4 bone(int index) const;
 
 	template<typename V>
 	void load(const model_data<V>& model) {
@@ -228,6 +232,7 @@ public:
 		bones = model.bones;
 		animations = model.animations;
 		texture = model.texture;
+		model_name = model.name;
 		size_t vertices = model.shape.vertices.size();
 		size_t indices = model.shape.indices.size();
 		drawable = (vertices > 0 && indices > 0);
@@ -254,6 +259,7 @@ public:
 	vector3f size() const;
 
 	std::string texture_name() const;
+	std::string name() const;
 
 private:
 
@@ -266,6 +272,7 @@ private:
 	vector3f max_vertex;
 	bool drawable = false;
 	std::string texture;
+	std::string model_name;
 
 };
 
@@ -301,9 +308,11 @@ public:
 
 	void draw() const;
 
-	int attach(int parent, model& attachment, vector3f position, glm::quat rotation);
+	//int attach(int parent, model& attachment, vector3f position, glm::quat rotation);
+	int attach(model& attachment, model_attachment_mapping_list& mappings);
 	void detach(int id);
 	void set_attachment_bone(int id, const no::vector3f& position, const glm::quat& rotation);
+	void update_attachment_bone(int id, const model_attachment_mapping_list& mappings);
 
 private:
 
@@ -341,12 +350,48 @@ struct model_attachment {
 	vector3f position;
 	glm::quat rotation;
 	glm::mat4 attachment_bone;
-	int parent = 0;
+	int parent = -1;
 	int id = 0;
 
+	model_attachment() = default;
 	model_attachment(model& attachment, glm::mat4 parent_bone, vector3f position, glm::quat rotation, int parent, int id);
 
 	void update_bone();
+
+};
+
+struct model_attachment_mapping {
+	std::string root_model;
+	std::string root_animation;
+	std::string attached_model;
+	std::string attached_animation;
+	int attached_to_channel = -1;
+	vector3f position;
+	glm::quat rotation;
+
+	bool is_same_mapping(const model_attachment_mapping& that) const;
+	std::string mapping_string() const;
+
+};
+
+class model_attachment_mapping_list {
+public:
+
+	void save(const std::string& path);
+	void load(const std::string& path);
+
+	void for_each(const std::function<bool(model_attachment_mapping&)>& handler);
+	void remove_if(const std::function<bool(model_attachment_mapping&)>& compare);
+
+	bool exists(const model_attachment_mapping& mapping);
+	void add(const model_attachment_mapping& mapping);
+	bool update(model& root, model_animation& animation, model& attachment_model, model_attachment& attachment) const;
+	
+	std::string find_root_animation(const std::string& root_model, const std::string& attached_model, const std::string& attached_animation) const;
+
+private:
+
+	std::vector<model_attachment_mapping> mappings;
 
 };
 

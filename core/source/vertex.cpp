@@ -72,7 +72,6 @@ private:
 	void load_node(aiNode* node);
 
 	model_import_options options;
-	std::string file_name;
 	aiScene* scene = nullptr;
 	int node_depth = 0;
 
@@ -102,7 +101,7 @@ assimp_importer::assimp_importer(const std::string& input, model_import_options 
 	if (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
 		WARNING("Scene flags incomplete. Error loading model \"" << input << "\". Error: " << importer.GetErrorString());
 	}
-	file_name = std::filesystem::path(input).filename().stem().string();
+	model.name = std::filesystem::path(input).filename().stem().string();
 	aiMatrix4x4 root_transform = scene->mRootNode->mTransformation;
 	model.transform = ai_mat4_to_glm_mat4(root_transform.Inverse());
 	load_node(scene->mRootNode);
@@ -116,7 +115,7 @@ void assimp_importer::load_animations() {
 		auto& animation = model.animations.emplace_back();
 		animation.name = scene->mAnimations[a]->mName.C_Str();
 		if (animation.name == "") {
-			animation.name = file_name;
+			animation.name = model.name;
 			if (a > 0) {
 				animation.name += std::to_string(a);
 			}

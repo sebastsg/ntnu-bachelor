@@ -463,6 +463,10 @@ void shader_variable::set(vector2f* vector, size_t count) {
 	CHECK_GL_ERROR(glUniform2fv(location, count, &vector[0].x));
 }
 
+void shader_variable::set(const std::vector<glm::mat4>& matrices) {
+	CHECK_GL_ERROR(glUniformMatrix4fv(location, matrices.size(), GL_FALSE, glm::value_ptr(matrices[0])));
+}
+
 bool shader_variable::exists() const {
 	return location != -1;
 }

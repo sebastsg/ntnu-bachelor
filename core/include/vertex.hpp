@@ -149,6 +149,7 @@ struct model_data {
 	std::vector<model_node> nodes;
 	std::vector<model_animation> animations;
 	std::string texture;
+	std::string name;
 
 	template<typename T>
 	model_data<T> to(const std::function<T(V)>& mapper) const {
@@ -165,6 +166,7 @@ struct model_data {
 		that.nodes = nodes;
 		that.animations = animations;
 		that.texture = texture;
+		that.name = name;
 		return that;
 	}
 
@@ -191,6 +193,7 @@ void export_model(const std::string& path, const model_data<V>& model) {
 	stream.write(model.min);
 	stream.write(model.max);
 	stream.write(model.texture);
+	stream.write(model.name);
 	stream.write_array<V>(model.shape.vertices);
 	stream.write_array<uint16_t>(model.shape.indices);
 	stream.write_array<std::string>(model.bone_names);
@@ -242,6 +245,7 @@ void import_model(const std::string& path, model_data<V>& model) {
 	model.min = stream.read<vector3f>();
 	model.max = stream.read<vector3f>();
 	model.texture = stream.read<std::string>();
+	model.name = stream.read<std::string>();
 	model.shape.vertices = stream.read_array<V>();
 	model.shape.indices = stream.read_array<uint16_t>();
 	model.bone_names = stream.read_array<std::string>();
@@ -354,6 +358,7 @@ model_data<V> merge_model_animations(const std::vector<model_data<V>>& models) {
 	for (auto& animation : output.animations) {
 		animation.transitions = default_transitions;
 	}
+	output.name = "";
 	return output;
 }
 

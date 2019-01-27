@@ -68,22 +68,44 @@ public:
 
 private:
 
-	struct attachment_data {
+	no::model root_model;
+
+	no::model_attachment_mapping_list mappings;
+	no::model_attachment_mapping* current_mapping = nullptr;
+
+	struct {
+		char model[100] = {};
+		char animation[100] = { "default" };
+		int channel = -1;
+	} temp_mapping;
+	bool reuse_default_mapping = false;
+	bool apply_changes_to_other_animations = false;
+
+	struct active_attachment_data {
 		int id = -1;
-		no::model model;
-		std::string name;
-		int channel = 0;
-		no::vector3f position;
-		glm::quat rotation;
+		no::model* model = nullptr;
+		active_attachment_data() {
+			model = new no::model();
+		}
+		active_attachment_data(const active_attachment_data&) = delete;
+		active_attachment_data(active_attachment_data&& that) {
+			std::swap(id, that.id);
+			std::swap(model, that.model);
+		}
+		~active_attachment_data() {
+			delete model;
+		}
+		active_attachment_data& operator=(const active_attachment_data&) = delete;
+		active_attachment_data& operator=(active_attachment_data&& that) {
+			std::swap(id, that.id);
+			std::swap(model, that.model);
+			return *this;
+		}
 	};
 
-	no::model main_model;
-	std::vector<attachment_data> attachments;
-	int current_attachment = 0;
-
+	std::vector<active_attachment_data> active_attachments;
 	no::model_instance instance;
 	int animation = 0;
-
 	int texture = -1;
 
 };

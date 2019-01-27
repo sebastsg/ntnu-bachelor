@@ -7,6 +7,7 @@
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
+#include "imgui/imgui_internal.h"
 
 #include <filesystem>
 
@@ -103,13 +104,13 @@ void converter_tool::update() {
 				continue;
 			}
 			std::string name = std::filesystem::path(file).stem().string();
-			no::convert_model(file, no::asset_path("models/decorations/" + name + ".nom"), options);
+			no::convert_model(file, no::asset_path("models/" + name + ".nom"), options);
 		}
 		auto merged_model = no::merge_model_animations<no::animated_mesh_vertex>(models);
-		model = { std::filesystem::path(browsed_path).stem().string(), import_options.vertex_type, merged_model };
-		if (models.size() > 1) {
-			model.name = std::filesystem::path(browsed_path).parent_path().stem().string();
+		if (import_options.vertex_type == loaded_model::animated) {
+			merged_model.name = std::filesystem::path(browsed_path).parent_path().stem().string();
 		}
+		model = { merged_model.name, import_options.vertex_type, merged_model };
 	}
 
 	ImGui::Separator();
@@ -209,61 +210,12 @@ void converter_tool::draw() {
 void attachments_tool::update() {
 	ImGui::Text("Attachments");
 
-	if (!main_model.is_drawable() && ImGui::Button("Import main NOM model")) {
+	if (!root_model.is_drawable() && ImGui::Button("Import main NOM model")) {
 		std::string browsed_path = no::platform::open_file_browse_window();
-		main_model.load<no::animated_mesh_vertex>(browsed_path);
-		instance = { main_model };
-	}
-
-	if (main_model.is_drawable() && ImGui::Button("Import attachment NOM model")) {
-		std::string browsed_path = no::platform::open_file_browse_window();
-		auto& attachment = attachments.emplace_back();
-		attachment.name = std::filesystem::path(browsed_path).stem().string();
-		attachment.model.load<no::animated_mesh_vertex>(browsed_path);
-		attachment.channel = 15;
-		attachment.position = { 0.0761f, 0.5661f, 0.1151f };
-		attachment.rotation = { 0.595f, -0.476f, -0.464f, -0.452f };
-		attachment.id = instance.attach(attachment.channel, attachment.model, attachment.position, attachment.rotation);
-	}
-
-	ImGui::Text("Loaded attachment models");
-
-	int old_attachment = current_attachment;
-	ImGui::ListBox("##AttachmentList", &current_attachment, [](void* data, int i, const char** out) -> bool {
-		auto& attachments = *(std::vector<attachment_data>*)data;
-		if (i < 0 || i >= (int)attachments.size()) {
-			return false;
-		}
-		*out = attachments[i].name.data();
-		return true;
-	}, &attachments, attachments.size(), 10);
-	if (attachments.size() > 0) {
-		auto& attachment = attachments[current_attachment];
-		ImGui::Separator();
-		int old_channel = attachment.channel;
-		ImGui::ListBox("##MainNodeList", &attachment.channel, [](void* data, int i, const char** out) -> bool {
-			auto& model = *(no::model*)data;
-			if (i < 0 || i >= model.total_nodes()) {
-				return false;
-			}
-			*out = model.node(i).name.data();
-			return true;
-		}, &main_model, main_model.total_nodes(), 10);
-		if (old_channel != attachment.channel) {
-			instance.detach(attachment.id);
-			attachment.id = instance.attach(attachment.channel, attachment.model, attachment.position, attachment.rotation);
-		}
-		ImGui::Text(attachment.name.data());
-		ImGui::Text(CSTRING("Attached to node " << main_model.node(attachment.channel).name << " (" << attachment.channel << ")"));
-		ImGui::Text("Position");
-		ImGui::SameLine();
-		ImGui::InputFloat3("##AttachmentPosition", &attachment.position.x, 5);
-		ImGui::Text("Rotation");
-		ImGui::SameLine();
-		float wxyz[4] = { attachment.rotation.w, attachment.rotation.x, attachment.rotation.y, attachment.rotation.z };
-		ImGui::InputFloat4("##AttachmentRotation", wxyz, 5);
-		attachment.rotation = { wxyz[0], wxyz[1], wxyz[2], wxyz[3] };
-		instance.set_attachment_bone(attachment.id, attachment.position, attachment.rotation);
+		root_model.load<no::animated_mesh_vertex>(browsed_path);
+		instance = { root_model };
+	} else {
+		ImGui::Text(CSTRING("Managing attachments for: " << root_model.name()));
 	}
 
 	ImGui::Separator();
@@ -277,17 +229,190 @@ void attachments_tool::update() {
 		}
 		*out = model.animation(i).name.data();
 		return true;
-	}, &main_model, main_model.total_animations(), 10);
+	}, &root_model, root_model.total_animations(), 10);
 	if (old_animation != animation) {
 		instance.start_animation(animation);
 	}
 
 	ImGui::Separator();
 
-	if (ImGui::Button("Save attachment details")) {
+	//reference.position = { 0.0761f, 0.5661f, 0.1151f };
+	//reference.rotation = { 0.595f, -0.476f, -0.464f, -0.452f };
 
+	if (root_model.total_animations() > 0 && ImGui::CollapsingHeader(CSTRING("Create new mapping for " << root_model.animation(animation).name))) {
+		ImGui::Text("Attachment model");
+		ImGui::InputText("##NewMappingModel", temp_mapping.model, 100);
+		ImGui::Text("Attachment animation");
+		ImGui::InputText("##NewMappingAnimation", temp_mapping.animation, 100);
+		std::string root_animation = mappings.find_root_animation(root_model.name(), temp_mapping.model, temp_mapping.animation);
+		if (root_animation != "") {
+			ImGui::Checkbox("Reuse default mapping", &reuse_default_mapping);
+		} else {
+			reuse_default_mapping = false;
+		}
+		if (!reuse_default_mapping) {
+			ImGui::Text("Attach to");
+			ImGui::SameLine();
+			if (ImGui::BeginCombo("##NewMappingAttachTo", CSTRING(temp_mapping.channel))) {
+				for (int i = 0; i < root_model.total_nodes(); i++) {
+					if (ImGui::Selectable(CSTRING(i << ": " << root_model.node(i).name))) {
+						temp_mapping.channel = i;
+					}
+				}
+				ImGui::EndCombo();
+			}
+		}
+		no::model_attachment_mapping new_mapping;
+		new_mapping.root_model = root_model.name();
+		new_mapping.root_animation = root_model.animation(animation).name;
+		new_mapping.attached_model = temp_mapping.model;
+		new_mapping.attached_animation = temp_mapping.animation;
+		bool already_exists = mappings.exists(new_mapping);
+		if (already_exists) {
+			ImGui::Text("This mapping already exists.");
+		}
+		if (!already_exists && ImGui::Button("Save##SaveNewMapping")) {
+			if (reuse_default_mapping) {
+				mappings.for_each([&](no::model_attachment_mapping& mapping) {
+					if (mapping.is_same_mapping(new_mapping)) {
+						new_mapping.attached_to_channel = mapping.attached_to_channel;
+						new_mapping.position = mapping.position;
+						new_mapping.rotation = mapping.rotation;
+						return false;
+					}
+					return true;
+				});
+			} else {
+				new_mapping.attached_to_channel = temp_mapping.channel;
+			}
+			current_mapping = nullptr;
+			mappings.add(new_mapping);
+			temp_mapping = {};
+		}
+		ImGui::Separator();
 	}
 
+	ImGui::Text("Existing mappings");
+	if (ImGui::BeginCombo("Selected mapping", current_mapping ? current_mapping->mapping_string().c_str() : "None")) {
+		mappings.for_each([&](no::model_attachment_mapping& mapping) {
+			if (mapping.root_animation != root_model.animation(animation).name) {
+				return true;
+			}
+			if (ImGui::Selectable(mapping.mapping_string().c_str())) {
+				current_mapping = &mapping;
+				apply_changes_to_other_animations = false;
+			}
+			return true;
+		});
+		ImGui::EndCombo();
+	}
+
+	ImGui::Separator();
+
+	if (current_mapping) {
+		ImGui::Text("Selected mapping:");
+		ImGui::Text(CSTRING(current_mapping->attached_model << " is attached to"));
+		ImGui::SameLine();
+		std::string node_name = STRING(current_mapping->attached_to_channel << ": " << root_model.node(current_mapping->attached_to_channel).name);
+		if (ImGui::BeginCombo("##SelectChannelCombo", node_name.c_str())) {
+			for (int i = 0; i < root_model.total_nodes(); i++) {
+				if (ImGui::Selectable(CSTRING(i << ": " << root_model.node(i).name))) {
+					current_mapping->attached_to_channel = i;
+				}
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::Text("Position");
+		ImGui::SameLine();
+		ImGui::InputFloat3("##AttachmentPosition", &current_mapping->position.x, 5);
+		ImGui::Text("Rotation");
+		ImGui::SameLine();
+		float wxyz[4] = {
+			current_mapping->rotation.w,
+			current_mapping->rotation.x,
+			current_mapping->rotation.y,
+			current_mapping->rotation.z
+		};
+		ImGui::InputFloat4("##AttachmentRotation", wxyz, 5);
+		current_mapping->rotation = { wxyz[0], wxyz[1], wxyz[2], wxyz[3] };
+		ImGui::Checkbox("Apply changes to other animations", &apply_changes_to_other_animations);
+		if (apply_changes_to_other_animations) {
+			mappings.for_each([&](no::model_attachment_mapping& mapping) {
+				if (mapping.is_same_mapping(*current_mapping)) {
+					mapping.position = current_mapping->position;
+					mapping.rotation = current_mapping->rotation;
+					mapping.attached_to_channel = current_mapping->attached_to_channel;
+				}
+				return true;
+			});
+		}
+		ImGui::Separator();
+	}
+
+	ImGui::Text("Loaded attachments");
+	for (int i = 0; i < (int)active_attachments.size(); i++) {
+		auto& attachment = active_attachments[i];
+		bool exists = false;
+		mappings.for_each([&](no::model_attachment_mapping& mapping) {
+			if (mapping.attached_model == attachment.model->name()) {
+				for (int i = 0; i < root_model.total_animations(); i++) {
+					if (root_model.animation(i).name == mapping.root_animation) {
+						exists = true;
+						break;
+					}
+				}
+			}
+			return !exists;
+		});
+		if (attachment.id == -1) {
+			if (!exists) {
+				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+			}
+			if (ImGui::Button(CSTRING("Attach##AttachToModel" << i))) {
+				attachment.id = instance.attach(*attachment.model, mappings);
+			}
+			if (!exists) {
+				ImGui::PopStyleVar();
+				ImGui::PopItemFlag();
+			}
+			ImGui::SameLine();
+		} else if (exists) {
+			instance.update_attachment_bone(attachment.id, mappings);
+			if (ImGui::Button(CSTRING("Detach##DetachFromModel" << i))) {
+				instance.detach(attachment.id);
+				attachment.id = -1;
+			}
+			ImGui::SameLine();
+		}
+		if (attachment.id != -1) {
+			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+		}
+		if (ImGui::Button(CSTRING("Remove##RemoveAttachmentModel" << i))) {
+			active_attachments.erase(active_attachments.begin() + i);
+			i--;
+			continue;
+		}
+		if (attachment.id != -1) {
+			ImGui::PopStyleVar();
+			ImGui::PopItemFlag();
+		}
+		ImGui::SameLine();
+		ImGui::Text(attachment.model->name().c_str());
+		ImGui::Separator();
+	}
+
+	if (root_model.is_drawable() && ImGui::Button("Load attachment")) {
+		std::string browsed_path = no::platform::open_file_browse_window();
+		auto& attachment = active_attachments.emplace_back();
+		attachment.model->load<no::animated_mesh_vertex>(browsed_path);
+		ImGui::Separator();
+	}
+
+	if (ImGui::Button("Save attachment mappings")) {
+		mappings.save(no::asset_path("models/" + root_model.name() + ".noma"));
+	}
 }
 
 void attachments_tool::draw() {

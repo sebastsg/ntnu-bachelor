@@ -57,6 +57,10 @@ int model::total_nodes() const {
 	return (int)nodes.size();
 }
 
+glm::mat4 model::bone(int index) const {
+	return bones[index];
+}
+
 void model::bind() const {
 	mesh.bind();
 }
@@ -83,6 +87,10 @@ vector3f model::size() const {
 
 std::string model::texture_name() const {
 	return texture;
+}
+
+std::string model::name() const {
+	return model_name;
 }
 
 model_instance::model_instance(model& source) {
@@ -211,11 +219,10 @@ void model_instance::animate_node(int node_index, float time, const glm::mat4& t
 	}
 	glm::mat4 new_transform = transform * node_transform;
 	if (node.bone != -1) {
-		// todo: there has to be a better way
-		if (!my_attachment) {
-			bones[node.bone] = source->root_transform * new_transform * source->bones[node.bone];
-		} else {
+		if (my_attachment) {
 			bones[node.bone] = new_transform * my_attachment->parent_bone * my_attachment->attachment_bone * source->root_transform;
+		} else {
+			bones[node.bone] = source->root_transform * new_transform * source->bones[node.bone];
 		}
 	}
 	auto& children = source->nodes[node_index].children;
@@ -265,9 +272,7 @@ bool model_instance::can_animate() const {
 }
 
 void model_instance::draw() const {
-	for (size_t b = 0; b < bones.size(); b++) {
-		get_shader_variable("uni_Bones[" + std::to_string(b) + "]").set(bones[b]);
-	}
+	get_shader_variable("uni_Bones").set(bones);
 	source->bind();
 	source->draw();
 	for (size_t node_index : attachments) {
@@ -278,23 +283,26 @@ void model_instance::draw() const {
 	}
 }
 
-int model_instance::attach(int parent, model& attachment_model, vector3f position, glm::quat rotation) {
+int model_instance::attach(model& attachment_model, model_attachment_mapping_list& mappings) {
 	attachment_id_counter++;
-	for (auto& animation : animations) {
-		auto& channel = animation.channels[parent];
-		glm::mat4 bone = source->bones[source->animations[0].channels[parent].bone];
-		auto attachment = new model_attachment(attachment_model, bone, position, rotation, parent, attachment_id_counter);
-		channel.attachments.push_back(attachment);
+	for (int i = 0; i < (int)animations.size(); i++) {
+		auto attachment = new model_attachment();
+		bool found = mappings.update(*source, source->animations[i], attachment_model, *attachment);
+		if (!found) {
+			delete attachment;
+			continue;
+		}
+		attachment->id = attachment_id_counter;
+		animations[i].channels[attachment->parent].attachments.push_back(attachment);
 		attachment->attachment.my_attachment = attachment;
-		attachments.push_back(parent);
+		attachments.push_back(attachment->parent);
 	}
 	return attachment_id_counter;
 }
 
 void model_instance::detach(int id) {
 	for (auto& animation : animations) {
-		for (int c = 0; c < (int)animation.channels.size(); c++) {
-			auto& channel = animation.channels[c];
+		for (auto& channel : animation.channels) {
 			for (size_t ca = 0; ca < channel.attachments.size(); ca++) {
 				if (channel.attachments[ca]->id == id) {
 					for (int a = 0; a < (int)attachments.size(); a++) {
@@ -325,6 +333,20 @@ void model_instance::set_attachment_bone(int id, const no::vector3f& position, c
 	}
 }
 
+void model_instance::update_attachment_bone(int id, const model_attachment_mapping_list& mappings) {
+	int i = 0;
+	for (auto& animation : animations) {
+		for (auto& node : animation.channels) {
+			for (auto& attachment : node.attachments) {
+				if (attachment->id == id) {
+					mappings.update(*source, source->animations[i], *attachment->attachment.source, *attachment);
+				}
+			}
+		}
+		i++;
+	}
+}
+
 model_attachment::model_attachment(model& attachment, glm::mat4 parent_bone, vector3f position, glm::quat rotation, int parent, int id)
 	: attachment(attachment), parent_bone(parent_bone), position(position), rotation(rotation), parent(parent), id(id) {
 	update_bone();
@@ -334,6 +356,125 @@ void model_attachment::update_bone() {
 	glm::mat4 t = glm::translate(glm::mat4(1.0f), { position.x, position.y, position.z });
 	glm::mat4 r = glm::mat4_cast(glm::normalize(rotation));
 	attachment_bone = t * r;
+}
+
+bool model_attachment_mapping::is_same_mapping(const model_attachment_mapping& that) const {
+	if (root_model != that.root_model) {
+		return false;
+	}
+	if (attached_model != that.attached_model || attached_animation != that.attached_animation) {
+		return false;
+	}
+	return true;
+}
+
+std::string model_attachment_mapping::mapping_string() const {
+	return root_model + "." + root_animation + " -> " + attached_model + "." + attached_animation;
+}
+
+void model_attachment_mapping_list::save(const std::string& path) {
+	no::io_stream stream;
+	stream.write((int32_t)mappings.size());
+	for (auto& attachment : mappings) {
+		stream.write(attachment.root_model);
+		stream.write(attachment.root_animation);
+		stream.write(attachment.attached_model);
+		stream.write(attachment.attached_animation);
+		stream.write((int32_t)attachment.attached_to_channel);
+		stream.write(attachment.position);
+		stream.write(attachment.rotation);
+	}
+	no::file::write(path, stream);
+}
+
+void model_attachment_mapping_list::load(const std::string& path) {
+	no::io_stream stream;
+	no::file::read(path, stream);
+	if (stream.write_index() == 0) {
+		return;
+	}
+	int32_t count = stream.read<int32_t>();
+	for (int32_t i = 0; i < count; i++) {
+		model_attachment_mapping mapping;
+		mapping.root_model = stream.read<std::string>();
+		mapping.root_animation = stream.read<std::string>();
+		mapping.attached_model = stream.read<std::string>();
+		mapping.attached_animation = stream.read<std::string>();
+		mapping.attached_to_channel = stream.read<int32_t>();
+		mapping.position = stream.read<no::vector3f>();
+		mapping.rotation = stream.read<glm::quat>();
+		mappings.push_back(mapping);
+	}
+}
+
+void model_attachment_mapping_list::for_each(const std::function<bool(model_attachment_mapping&)>& handler) {
+	for (auto& mapping : mappings) {
+		if (!handler(mapping)) {
+			break;
+		}
+	}
+}
+
+void model_attachment_mapping_list::remove_if(const std::function<bool(model_attachment_mapping&)>& compare) {
+	for (int i = 0; i < (int)mappings.size(); i++) {
+		if (compare(mappings[i])) {
+			mappings.erase(mappings.begin() + i);
+			i--;
+		}
+	}
+}
+
+bool model_attachment_mapping_list::exists(const model_attachment_mapping& other) {
+	for (auto& mapping : mappings) {
+		if (mapping.is_same_mapping(other) && mapping.root_animation == other.root_animation) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void model_attachment_mapping_list::add(const model_attachment_mapping& mapping) {
+	if (!exists(mapping)) {
+		mappings.push_back(mapping);
+	}
+}
+
+bool model_attachment_mapping_list::update(model& root, model_animation& animation, model& attachment_model, model_attachment& attachment) const {
+	for (auto& mapping : mappings) {
+		if (mapping.root_model != root.name()) {
+			continue;
+		}
+		if (mapping.attached_model != attachment_model.name()) {
+			continue;
+		}
+		if (mapping.root_animation != animation.name) {
+			continue;
+		}
+		attachment.attachment = { attachment_model };
+		attachment.parent = mapping.attached_to_channel;
+		attachment.parent_bone = root.bone(animation.channels[attachment.parent].bone);
+		attachment.position = mapping.position;
+		attachment.rotation = mapping.rotation;
+		attachment.update_bone();
+		return true;
+	}
+	return false;
+}
+
+std::string model_attachment_mapping_list::find_root_animation(const std::string& root_model, const std::string& attached_model, const std::string& attached_animation) const {
+	for (auto& mapping : mappings) {
+		if (mapping.root_model != root_model) {
+			continue;
+		}
+		if (mapping.attached_model != attached_model) {
+			continue;
+		}
+		if (mapping.attached_animation != attached_animation) {
+			continue;
+		}
+		return mapping.root_animation;
+	}
+	return "";
 }
 
 rectangle::rectangle() {

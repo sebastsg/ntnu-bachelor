@@ -29,7 +29,7 @@ void player_renderer::add(player_object* object) {
 			}
 			no::vector3f sword_offset = { 0.0761f, 0.5661f, 0.1151f };
 			glm::quat sword_rotation = { 0.595f, -0.476f, -0.464f, -0.452f };
-			players[i].right_hand_attachment = players[i].model.attach(15, sword_model, sword_offset, sword_rotation);
+			//players[i].right_hand_attachment = players[i].model.attach(15, sword_model, sword_offset, sword_rotation);
 		} else {
 			players[i].model.detach(players[i].right_hand_attachment);
 		}
