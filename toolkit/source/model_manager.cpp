@@ -331,6 +331,33 @@ void attachments_tool::update() {
 		ImGui::Text("Position");
 		ImGui::SameLine();
 		ImGui::InputFloat3("##AttachmentPosition", &current_mapping->position.x, 5);
+		glm::vec4 right = glm::inverse(glm::mat4_cast(current_mapping->rotation)) * glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) * 0.05f;
+		glm::vec4 forward = glm::inverse(glm::mat4_cast(current_mapping->rotation)) * glm::vec4(0.0f, 0.0f, -1.0f, 1.0f) * 0.05f;
+		glm::vec4 up = glm::inverse(glm::mat4_cast(current_mapping->rotation)) * glm::vec4(0.0f, 1.0f, 0.0f, 1.0f) * 0.05f;
+		if (ImGui::Button("Left##PositionLeft")) {
+			current_mapping->position -= { right.x, right.y, right.z };
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Right##PositionRight")) {
+			current_mapping->position += { right.x, right.y, right.z };
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Up##PositionUp")) {
+			current_mapping->position += { up.x, up.y, up.z };
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Down##PositionDown")) {
+			current_mapping->position -= { up.x, up.y, up.z };
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Forward##PositionForward")) {
+			current_mapping->position += { forward.x, forward.y, forward.z };
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Backwards##PositionBackwards")) {
+			current_mapping->position -= { forward.x, forward.y, forward.z };
+		}
+
 		ImGui::Text("Rotation");
 		ImGui::SameLine();
 		float wxyz[4] = {
@@ -351,6 +378,7 @@ void attachments_tool::update() {
 		if (ImGui::Button("-##RotateXMinus")) {
 			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { -1.0f, 0.0f, 0.0f });
 		}
+		ImGui::SameLine();
 		if (ImGui::Button("+##RotateYPlus")) {
 			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { 0.0f, 1.0f, 0.0f });
 		}
@@ -360,6 +388,7 @@ void attachments_tool::update() {
 		if (ImGui::Button("-##RotateYMinus")) {
 			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { 0.0f, -1.0f, 0.0f });
 		}
+		ImGui::SameLine();
 		if (ImGui::Button("+##RotateZPlus")) {
 			current_mapping->rotation = glm::rotate(current_mapping->rotation, 0.01f, { 0.0f, 0.0f, 1.0f });
 		}
