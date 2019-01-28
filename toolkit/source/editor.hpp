@@ -1,6 +1,6 @@
 #pragma once
 
-#include "loop.hpp"
+#include "menu.hpp"
 #include "camera.hpp"
 #include "draw.hpp"
 #include "assets.hpp"
@@ -20,7 +20,7 @@ private:
 
 };
 
-class world_editor_state : public no::window_state {
+class world_editor_state : public menu_bar_state {
 public:
 
 	world_editor_state();

@@ -115,6 +115,7 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 			player->transform.position.z = (float)packet.tile_z;
 			renderer.players.add(player);
 			player->events.equip.emit({ equipment_slot::right_hand, 0 });
+			player->events.equip.emit({ equipment_slot::left_hand, 1 });
 			break;
 		}
 		default:

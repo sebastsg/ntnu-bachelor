@@ -3,10 +3,19 @@
 #include "world.hpp"
 #include "draw.hpp"
 
+class world_view;
+
 class player_renderer {
 public:
 
-	player_renderer();
+	player_renderer(world_view& world);
+	player_renderer(const player_renderer&) = delete;
+	player_renderer(player_renderer&&) = delete;
+
+	~player_renderer();
+
+	player_renderer& operator=(const player_renderer&) = delete;
+	player_renderer& operator=(player_renderer&&) = delete;
 
 	void draw();
 
@@ -19,19 +28,21 @@ private:
 		player_object* object = nullptr;
 		no::model_instance model;
 		int equip_event = -1;
-		int right_hand_attachment = -1;
+		std::unordered_map<equipment_slot, int> attachments;
 
 		object_data() = default;
 		object_data(player_object* object, no::model& model) : object(object), model(model) {}
 	};
 
 	no::model model;
-	no::model sword_model;
+	std::unordered_map<int, no::model*> equipments;
 
 	int idle = 0;
 	int run = 0;
 
 	std::vector<object_data> players;
+
+	world_view& world;
 
 };
 
@@ -65,6 +76,7 @@ class world_view {
 public:
 
 	no::perspective_camera camera;
+	no::model_attachment_mapping_list mappings;
 
 	player_renderer players;
 	decoration_renderer decorations;

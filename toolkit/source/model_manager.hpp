@@ -1,6 +1,6 @@
 #pragma once
 
-#include "loop.hpp"
+#include "menu.hpp"
 #include "camera.hpp"
 #include "draw.hpp"
 
@@ -112,7 +112,7 @@ private:
 
 };
 
-class model_manager_state : public no::window_state {
+class model_manager_state : public menu_bar_state {
 public:
 
 	model_manager_state();

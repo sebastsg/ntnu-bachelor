@@ -98,16 +98,33 @@ static void destroy_stopped_states() {
 	for (auto& state : loop.states_to_stop) {
 		int index = state_index(state);
 		if (index != -1) {
-			// todo: find a better way to deal with audio streams. shouldn't have to stop them
-			loop.audio->stop_all_players();
+			bool is_closing = !loop.states[index]->has_next_state();
+			if (is_closing) {
+				loop.audio->stop_all_players();
+			}
 			delete loop.states[index];
 			loop.states.erase(loop.states.begin() + index);
-			delete loop.windows[index];
-			loop.windows.erase(loop.windows.begin() + index);
-			loop.audio->clear_players();
+			if (is_closing) {
+				delete loop.windows[index];
+				loop.windows.erase(loop.windows.begin() + index);
+				loop.audio->clear_players();
+			}
 		}
 	}
 	loop.states_to_stop.clear();
+}
+
+window_state::window_state() {
+	window_close_id = window().close.listen([this] {
+		loop.states_to_stop.push_back(this);
+	});
+}
+
+window_state::~window_state() {
+	window().close.ignore(window_close_id);
+	if (make_next_state) {
+		loop.states.emplace_back(make_next_state());
+	}
 }
 
 void window_state::stop() {
@@ -144,13 +161,12 @@ long window_state::redundant_bind_calls_this_frame() {
 }
 
 void window_state::change_state(const internal::make_state_function& make_state) {
-	int index = state_index(this);
-	delete loop.states[index];
-	auto state = make_state();
-	loop.states[index] = state;
-	loop.windows.back()->close.listen([state] {
-		loop.states_to_stop.push_back(state);
-	});
+	make_next_state = make_state;
+	loop.states_to_stop.push_back(this);
+}
+
+bool window_state::has_next_state() const {
+	return make_next_state.operator bool();
 }
 
 std::string current_local_time_string() {
@@ -175,10 +191,7 @@ namespace internal {
 
 void create_state(const std::string& title, int width, int height, int samples, bool maximized, const make_state_function& make_state) {
 	loop.windows.emplace_back(new window(title, width, height, samples, maximized));
-	auto state = loop.states.emplace_back(make_state());
-	loop.windows.back()->close.listen([state] {
-		loop.states_to_stop.push_back(state);
-	});
+	loop.states.emplace_back(make_state());
 }
 
 int run_main_loop() {

@@ -520,13 +520,14 @@ model_manager_state::~model_manager_state() {
 void model_manager_state::update() {
 	camera.size = window().size().to<float>();
 	no::imgui::start_frame();
+	menu_bar_state::update();
 	ImGuiWindowFlags imgui_flags
 		= ImGuiWindowFlags_NoMove
 		| ImGuiWindowFlags_NoResize
 		| ImGuiWindowFlags_NoCollapse
 		| ImGuiWindowFlags_NoTitleBar;
-	ImGui::SetNextWindowPos({ 0.0f, 0.0f }, ImGuiSetCond_Once);
-	ImGui::SetNextWindowSize({ 480.0f, (float)window().height() }, ImGuiSetCond_Always);
+	ImGui::SetNextWindowPos({ 0.0f, 20.0f }, ImGuiSetCond_Once);
+	ImGui::SetNextWindowSize({ 480.0f, (float)window().height() - 20.0f }, ImGuiSetCond_Always);
 	ImGui::Begin("##ModelManager", nullptr, imgui_flags);
 	ImGui::Text(CSTRING("FPS: " << frame_counter().current_fps()));
 	ImGui::Separator();
@@ -543,16 +544,15 @@ void model_manager_state::update() {
 	} else if (current_tool == 1) {
 		attachments.update();
 	}
+	if (!is_mouse_over_ui()) {
+		dragger.update(camera);
+	}
+	camera.update();
 
 	ImGui::Separator();
 
 	ImGui::End();
 	no::imgui::end_frame();
-
-	if (!is_mouse_over_ui()) {
-		dragger.update(camera);
-	}
-	camera.update();
 }
 
 void model_manager_state::draw() {

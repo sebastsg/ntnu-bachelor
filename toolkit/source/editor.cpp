@@ -127,13 +127,14 @@ void world_editor_state::update_editor() {
 
 void world_editor_state::update_imgui() {
 	no::imgui::start_frame();
+	menu_bar_state::update();
 	ImGuiWindowFlags imgui_flags 
 		= ImGuiWindowFlags_NoMove 
 		| ImGuiWindowFlags_NoResize 
 		| ImGuiWindowFlags_NoCollapse 
 		| ImGuiWindowFlags_NoTitleBar;
-	ImGui::SetNextWindowPos({ 0.0f, 0.0f }, ImGuiSetCond_Once);
-	ImGui::SetNextWindowSize({ 320.0f, (float)window().height() }, ImGuiSetCond_Always);
+	ImGui::SetNextWindowPos({ 0.0f, 20.0f }, ImGuiSetCond_Once);
+	ImGui::SetNextWindowSize({ 320.0f, (float)window().height() - 20.0f }, ImGuiSetCond_Always);
 	ImGui::Begin("World", nullptr, imgui_flags);
 	ImGui::Text(CSTRING("FPS: " << frame_counter().current_fps()));
 	ImGui::Text(CSTRING("World offset: " << world.terrain.offset()));

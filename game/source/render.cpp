@@ -12,26 +12,33 @@ static no::vector2f uv_for_type(uint8_t type) {
 	}
 }
 
-player_renderer::player_renderer() {
+player_renderer::player_renderer(world_view& world) : world(world) {
 	model.load<no::animated_mesh_vertex>(no::asset_path("models/player.nom"));
-	sword_model.load<no::animated_mesh_vertex>(no::asset_path("models/sword.nom"));
 	idle = model.index_of_animation("idle");
 	run = model.index_of_animation("run");
+	equipments[0] = new no::model();
+	equipments[0]->load<no::animated_mesh_vertex>(no::asset_path("models/sword.nom"));
+	equipments[1] = new no::model();
+	equipments[1]->load<no::animated_mesh_vertex>(no::asset_path("models/shield.nom"));
+}
+
+player_renderer::~player_renderer() {
+	for (auto& equipment : equipments) {
+		delete equipment.second;
+	}
 }
 
 void player_renderer::add(player_object* object) {
 	int i = (int)players.size();
 	auto& player = players.emplace_back(object, model);
 	player.equip_event = player.object->events.equip.listen([i, this](const player_object::equip_event& event) {
+		auto& attachment = players[i].attachments.find(event.slot);
+		if (attachment != players[i].attachments.end()) {
+			players[i].model.detach(attachment->second);
+			players[i].attachments.erase(attachment->first);
+		}
 		if (event.item_id != -1) {
-			if (players[i].right_hand_attachment != -1) {
-				players[i].model.detach(players[i].right_hand_attachment);
-			}
-			no::vector3f sword_offset = { 0.0761f, 0.5661f, 0.1151f };
-			glm::quat sword_rotation = { 0.595f, -0.476f, -0.464f, -0.452f };
-			//players[i].right_hand_attachment = players[i].model.attach(15, sword_model, sword_offset, sword_rotation);
-		} else {
-			players[i].model.detach(players[i].right_hand_attachment);
+			players[i].attachments[event.slot] = players[i].model.attach(*equipments[event.item_id], world.mappings);
 		}
 	});
 }
@@ -89,7 +96,8 @@ void decoration_renderer::draw() {
 	}
 }
 
-world_view::world_view(world_state& world) : world(world) {
+world_view::world_view(world_state& world) : world(world), players(*this) {
+	mappings.load(no::asset_path("models/attachments.noma"));
 	camera.transform.scale.xy = 1.0f;
 	camera.transform.rotation.x = 90.0f;
 	diffuse_shader = no::create_shader(no::asset_path("shaders/diffuse"));

@@ -53,7 +53,14 @@ enum class draw_synchronization { always, if_updated };
 class window_state {
 public:
 
-	virtual ~window_state() = default;
+	window_state();
+	window_state(const window_state&) = delete;
+	window_state(window_state&&) = delete;
+
+	virtual ~window_state();
+
+	window_state& operator=(const window_state&) = delete;
+	window_state& operator=(window_state&&) = delete;
 
 	virtual void update() = 0;
 	virtual void draw() = 0;
@@ -61,6 +68,8 @@ public:
 	window& window() const;
 	keyboard& keyboard() const;
 	mouse& mouse() const;
+
+	bool has_next_state() const;
 
 protected:
 
@@ -83,6 +92,9 @@ protected:
 private:
 
 	void change_state(const internal::make_state_function& make_state);
+
+	internal::make_state_function make_next_state;
+	int window_close_id = -1;
 
 };
 
