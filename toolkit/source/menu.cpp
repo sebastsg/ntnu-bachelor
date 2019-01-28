@@ -1,6 +1,7 @@
 #include "menu.hpp"
 #include "model_manager.hpp"
 #include "editor.hpp"
+#include "item_editor.hpp"
 
 #include "imgui/imgui.h"
 
@@ -13,10 +14,13 @@ void menu_bar_state::update() {
 		if (ImGui::MenuItem("Model manager")) {
 			change_state<model_manager_state>();
 		}
-		if (ImGui::MenuItem("Item creator")) {
+		if (ImGui::MenuItem("Item editor")) {
+			change_state<item_editor>();
+		}
+		if (ImGui::MenuItem("Object editor")) {
 
 		}
-		if (ImGui::MenuItem("Object creator")) {
+		if (ImGui::MenuItem("Dialogue editor")) {
 
 		}
 		ImGui::EndMenu();

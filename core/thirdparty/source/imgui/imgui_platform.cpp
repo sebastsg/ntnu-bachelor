@@ -26,6 +26,14 @@ static struct {
 	ImGuiMouseCursor last_mouse_cursor = ImGuiMouseCursor_COUNT;
 	int shader_id = -1;
 	int font_texture_id = -1;
+	int keyboard_repeated_press_id = -1;
+	int keyboard_release_id = -1;
+	int keybord_input_id = -1;
+	int mouse_scroll_id = -1;
+	int mouse_cursor_id = -1;
+	int mouse_press_id = -1;
+	int mouse_double_click_id = -1;
+	int mouse_release_id = -1;
 } data;
 
 struct imgui_vertex {
@@ -124,40 +132,40 @@ void create(window& window) {
 	io.KeyMap[ImGuiKey_X] = 'X';
 	io.KeyMap[ImGuiKey_Y] = 'Y';
 	io.KeyMap[ImGuiKey_Z] = 'Z';
-	window.keyboard.repeated_press.listen([&](const keyboard::repeated_press_message& event) {
+	data.keyboard_repeated_press_id = window.keyboard.repeated_press.listen([&](const keyboard::repeated_press_message& event) {
 		if ((int)event.key < 256) {
 			io.KeysDown[(int)event.key] = true;
 		}
 	});
-	window.keyboard.release.listen([&](const keyboard::release_message& event) {
+	data.keyboard_release_id = window.keyboard.release.listen([&](const keyboard::release_message& event) {
 		if ((int)event.key < 256) {
 			io.KeysDown[(int)event.key] = false;
 		}
 	});
-	window.keyboard.input.listen([&](const keyboard::input_message& event) {
+	data.keybord_input_id = window.keyboard.input.listen([&](const keyboard::input_message& event) {
 		if (event.character > 0 && event.character < 0x10000) {
 			io.AddInputCharacter(event.character);
 		}
 	});
-	window.mouse.scroll.listen([&](const mouse::scroll_message& event) {
+	data.mouse_scroll_id = window.mouse.scroll.listen([&](const mouse::scroll_message& event) {
 		io.MouseWheel += event.steps;
 	});
-	window.mouse.cursor.listen([] {
+	data.mouse_cursor_id = window.mouse.cursor.listen([] {
 		update_cursor_icon();
 	});
-	window.mouse.press.listen([&](const mouse::press_message& event) {
+	data.mouse_press_id = window.mouse.press.listen([&](const mouse::press_message& event) {
 		if (!ImGui::IsAnyMouseDown() && !GetCapture()) {
 			SetCapture(data.window->platform_window()->handle());
 		}
 		set_mouse_down(event.button, true);
 	});
-	window.mouse.double_click.listen([&](const mouse::double_click_message& event) {
+	data.mouse_double_click_id = window.mouse.double_click.listen([&](const mouse::double_click_message& event) {
 		if (!ImGui::IsAnyMouseDown() && !GetCapture()) {
 			SetCapture(data.window->platform_window()->handle());
 		}
 		set_mouse_down(event.button, true);
 	});
-	window.mouse.release.listen([&](const mouse::release_message& event) {
+	data.mouse_release_id = window.mouse.release.listen([&](const mouse::release_message& event) {
 		set_mouse_down(event.button, false);
 		if (!ImGui::IsAnyMouseDown() && GetCapture() == data.window->platform_window()->handle()) {
 			ReleaseCapture();
@@ -182,6 +190,14 @@ void create(window& window) {
 }
 
 void destroy() {
+	data.window->keyboard.repeated_press.ignore(data.keyboard_repeated_press_id);
+	data.window->keyboard.release.ignore(data.keyboard_release_id);
+	data.window->keyboard.input.ignore(data.keybord_input_id);
+	data.window->mouse.scroll.ignore(data.mouse_scroll_id);
+	data.window->mouse.cursor.ignore(data.mouse_cursor_id);
+	data.window->mouse.press.ignore(data.mouse_press_id);
+	data.window->mouse.double_click.ignore(data.mouse_double_click_id);
+	data.window->mouse.release.ignore(data.mouse_release_id);
 	delete_shader(data.shader_id);
 	delete_texture(data.font_texture_id);
 	data.shader_id = -1;

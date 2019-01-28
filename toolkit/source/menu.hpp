@@ -5,8 +5,8 @@
 class menu_bar_state : public no::window_state {
 public:
 
-	void update();
-	void draw();
+	void update() override;
+	void draw() override;
 
 };
 

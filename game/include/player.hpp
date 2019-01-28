@@ -1,9 +1,8 @@
 #pragma once
 
 #include "object.hpp"
+#include "item.hpp"
 #include "event.hpp"
-
-enum class equipment_slot { left_hand, right_hand, body, legs, head, feet, neck, ring, back };
 
 class player_object : public game_object {
 public:
