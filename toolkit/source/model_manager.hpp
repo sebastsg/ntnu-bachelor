@@ -64,6 +64,7 @@ class attachments_tool {
 public:
 
 	attachments_tool();
+	~attachments_tool();
 
 	void update();
 	void draw();

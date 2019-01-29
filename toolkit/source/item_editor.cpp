@@ -1,11 +1,13 @@
 #include "item_editor.hpp"
 #include "window.hpp"
+#include "assets.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
 
 item_editor::item_editor() {
 	no::imgui::create(window());
+	items.load(no::asset_path("items.data"));
 }
 
 item_editor::~item_editor() {
@@ -93,6 +95,12 @@ void item_editor::update() {
 	ui_create_item();
 	ImGui::Separator();
 	ui_select_item();
+
+	ImGui::Separator();
+	
+	if (ImGui::Button("Save")) {
+		items.save(no::asset_path("items.data"));
+	}
 
 	ImGui::End();
 	no::imgui::end_frame();

@@ -37,6 +37,8 @@ private:
 	no::model model;
 	std::unordered_map<int, no::model*> equipments;
 
+	int player_texture = -1;
+
 	int idle = 0;
 	int run = 0;
 

@@ -2,6 +2,7 @@
 #include "model_manager.hpp"
 #include "editor.hpp"
 #include "item_editor.hpp"
+#include "object_editor.hpp"
 
 #include "imgui/imgui.h"
 
@@ -18,7 +19,7 @@ void menu_bar_state::update() {
 			change_state<item_editor>();
 		}
 		if (ImGui::MenuItem("Object editor")) {
-
+			change_state<object_editor>();
 		}
 		if (ImGui::MenuItem("Dialogue editor")) {
 

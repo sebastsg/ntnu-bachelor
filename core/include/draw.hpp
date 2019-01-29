@@ -308,7 +308,6 @@ public:
 
 	void draw() const;
 
-	//int attach(int parent, model& attachment, vector3f position, glm::quat rotation);
 	int attach(model& attachment, model_attachment_mapping_list& mappings);
 	void detach(int id);
 	void set_attachment_bone(int id, const no::vector3f& position, const glm::quat& rotation);

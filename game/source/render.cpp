@@ -13,6 +13,7 @@ static no::vector2f uv_for_type(uint8_t type) {
 }
 
 player_renderer::player_renderer(world_view& world) : world(world) {
+	player_texture = no::create_texture(no::surface(no::asset_path("textures/player.png")), no::scale_option::nearest_neighbour, true);
 	model.load<no::animated_mesh_vertex>(no::asset_path("models/player.nom"));
 	idle = model.index_of_animation("idle");
 	run = model.index_of_animation("run");
@@ -26,6 +27,7 @@ player_renderer::~player_renderer() {
 	for (auto& equipment : equipments) {
 		delete equipment.second;
 	}
+	no::delete_texture(player_texture);
 }
 
 void player_renderer::add(player_object* object) {
@@ -54,6 +56,7 @@ void player_renderer::remove(player_object* object) {
 }
 
 void player_renderer::draw() {
+	no::bind_texture(player_texture);
 	for (auto& player : players) {
 		if (player.object->is_moving()) {
 			player.model.start_animation(run);

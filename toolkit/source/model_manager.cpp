@@ -211,6 +211,10 @@ attachments_tool::attachments_tool() {
 	mappings.load(no::asset_path("models/attachments.noma"));
 }
 
+attachments_tool::~attachments_tool() {
+	no::delete_texture(texture);
+}
+
 void attachments_tool::update() {
 	ImGui::Text("Attachments");
 
@@ -219,6 +223,8 @@ void attachments_tool::update() {
 			std::string browsed_path = no::platform::open_file_browse_window();
 			root_model.load<no::animated_mesh_vertex>(browsed_path);
 			instance = { root_model };
+			no::delete_texture(texture);
+			texture = no::create_texture(no::surface(no::asset_path("textures/" + root_model.texture_name() + ".png")), no::scale_option::nearest_neighbour, true);
 		}
 		return;
 	} else {
@@ -464,8 +470,9 @@ void attachments_tool::update() {
 		}
 		ImGui::SameLine();
 		ImGui::Text(attachment.model->name().c_str());
-		ImGui::Separator();
 	}
+
+	ImGui::Separator();
 
 	if (root_model.is_drawable() && ImGui::Button("Load attachment")) {
 		std::string browsed_path = no::platform::open_file_browse_window();

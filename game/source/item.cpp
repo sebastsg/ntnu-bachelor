@@ -34,8 +34,8 @@ void item_definition_list::save(const std::string& path) const {
 	no::io_stream stream;
 	stream.write((int32_t)definitions.size());
 	for (auto& definition : definitions) {
-		stream.write((uint32_t)definition.type);
-		stream.write((uint32_t)definition.slot);
+		stream.write((int32_t)definition.type);
+		stream.write((int32_t)definition.slot);
 		stream.write((int32_t)definition.max_stack);
 		stream.write((int64_t)definition.id);
 		stream.write(definition.name);
@@ -47,6 +47,9 @@ void item_definition_list::load(const std::string& path) {
 	definitions.clear();
 	no::io_stream stream;
 	no::file::read(path, stream);
+	if (stream.write_index() == 0) {
+		return;
+	}
 	int32_t count = stream.read<int32_t>();
 	for (int32_t i = 0; i < count; i++) {
 		item_definition definition;
