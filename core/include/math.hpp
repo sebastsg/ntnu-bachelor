@@ -498,7 +498,7 @@ no::vector2<T> operator*(T scalar, const no::vector2<T>& vector) {
 
 template<typename T>
 no::vector2<T> operator/(T scalar, const no::vector2<T>& vector) {
-	return no::vector2f(scalar) / vector;
+	return no::vector2<T>(scalar) / vector;
 }
 
 template<typename T>

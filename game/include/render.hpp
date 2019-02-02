@@ -92,6 +92,19 @@ public:
 	void refresh_terrain();
 
 private:
+	
+	struct {
+		int grid = 52;
+		int border = 24;
+		int per_row = 6;
+		int per_column = 6;
+		no::vector2i size;
+		int texture = -1;
+	} tileset;
+
+	no::vector2f uv_step() const;
+	no::vector2f uv_for_type(uint8_t type) const;
+	no::surface add_tile_borders(uint32_t* pixels, int width, int height, int grid, int border_size);
 
 	world_state& world;
 
@@ -99,7 +112,6 @@ private:
 	void draw_players();
 	void draw_decorations();
 
-	int tiles_texture = -1;
 	int diffuse_shader = -1;
 	int static_textured_shader = -1;
 	int pick_shader = -1;

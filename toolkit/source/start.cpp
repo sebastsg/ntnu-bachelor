@@ -16,5 +16,5 @@ void start() {
 	if (no_window) {
 		return;
 	}
-	no::create_state<model_manager_state>("Toolkit", 800, 600, 4, true);
+	no::create_state<world_editor_state>("Toolkit", 800, 600, 2, true);
 }

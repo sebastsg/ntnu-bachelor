@@ -84,6 +84,9 @@ glm::mat4 ortho_camera::view_projection() const {
 
 void perspective_camera::update() {
 	aspect_ratio = size.x / size.y;
+	if (aspect_ratio < 0.01f) {
+		aspect_ratio = 0.01f;
+	}
 	update_rotation();
 }
 

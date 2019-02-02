@@ -31,10 +31,6 @@ struct vertex_attribute_specification {
 
 using vertex_specification = std::vector<vertex_attribute_specification>;
 
-// if multiple models have identical vertex data, they can be merged into one model with all animations
-// source files must already be converted to nom format. validation is done during the merging process.
-void merge_model_animations(const std::string& source_directory, const std::string& destination);
-
 struct tiny_sprite_vertex {
 	static constexpr vertex_attribute_specification attributes[] = { 2, 2 };
 	vector2f position;
@@ -194,6 +190,7 @@ void export_model(const std::string& path, const model_data<V>& model) {
 	stream.write(model.max);
 	stream.write(model.texture);
 	stream.write(model.name);
+	stream.write((int32_t)sizeof(V));
 	stream.write_array<V>(model.shape.vertices);
 	stream.write_array<uint16_t>(model.shape.indices);
 	stream.write_array<std::string>(model.bone_names);
@@ -238,7 +235,7 @@ void import_model(const std::string& path, model_data<V>& model) {
 	io_stream stream;
 	file::read(path, stream);
 	if (stream.write_index() == 0) {
-		WARNING("Failed to open model file: " << path);
+		WARNING("Failed to open file: " << path);
 		return;
 	}
 	model.transform = stream.read<glm::mat4>();
@@ -246,6 +243,11 @@ void import_model(const std::string& path, model_data<V>& model) {
 	model.max = stream.read<vector3f>();
 	model.texture = stream.read<std::string>();
 	model.name = stream.read<std::string>();
+	int32_t vertex_size = stream.read<int32_t>();
+	if (vertex_size != sizeof(V)) {
+		WARNING(vertex_size << " != " << sizeof(V) << ". File: " << path);
+		return;
+	}
 	model.shape.vertices = stream.read_array<V>();
 	model.shape.indices = stream.read_array<uint16_t>();
 	model.bone_names = stream.read_array<std::string>();
@@ -290,6 +292,8 @@ void import_model(const std::string& path, model_data<V>& model) {
 	}
 }
 
+// if multiple models have identical vertex data, they can be merged into one model with all animations
+// source files must already be converted to nom format. validation is done during the merging process.
 template<typename V>
 model_data<V> merge_model_animations(const std::vector<model_data<V>>& models) {
 	if (models.empty()) {

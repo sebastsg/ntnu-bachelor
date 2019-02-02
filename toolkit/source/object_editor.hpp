@@ -2,6 +2,7 @@
 
 #include "menu.hpp"
 #include "object.hpp"
+#include "draw.hpp"
 
 class object_editor : public menu_bar_state {
 public:
@@ -14,6 +15,19 @@ public:
 
 private:
 
+	void object_type_combo(game_object_type& type, const std::string& ui_id);
 
+	void ui_create_object();
+	void ui_select_object();
+
+	game_object_definition_list objects;
+
+	int current_object = -1;
+
+	struct {
+		game_object_type type = game_object_type::decoration;
+		char name[100] = {};
+		no::model model;
+	} new_object;
 
 };

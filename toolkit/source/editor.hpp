@@ -47,7 +47,7 @@ private:
 	bool limit_elevation = false;
 	float elevation_limit = 1.0f;
 
-	int current_type = 0;
+	int current_type = 7;
 
 	int tool_current_object = 0;
 	std::vector<std::pair<std::string, std::string>> object_paths;

@@ -476,11 +476,14 @@ void set_polygon_render_mode(polygon_render_mode mode) {
 }
 
 vector3i read_pixel_at(vector2i position) {
+	int alignment = 0;
 	uint8_t pixel[3];
-	glFlush();
-	glFinish();
+	CHECK_GL_ERROR(glFlush());
+	CHECK_GL_ERROR(glFinish());
+	CHECK_GL_ERROR(glGetIntegerv(GL_UNPACK_ALIGNMENT, &alignment));
 	CHECK_GL_ERROR(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 	CHECK_GL_ERROR(glReadPixels(position.x, position.y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel));
+	CHECK_GL_ERROR(glPixelStorei(GL_UNPACK_ALIGNMENT, alignment));
 	return { pixel[0], pixel[1], pixel[2] };
 }
 

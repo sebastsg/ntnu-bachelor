@@ -14,7 +14,7 @@ class game_object;
 
 struct world_tile {
 	float height = 0.0f;
-	uint8_t type = 0;
+	uint8_t type = 7;
 };
 
 class world_terrain {

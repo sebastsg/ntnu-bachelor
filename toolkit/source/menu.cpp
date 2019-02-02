@@ -9,6 +9,7 @@
 void menu_bar_state::update() {
 	ImGui::BeginMainMenuBar();
 	if (ImGui::BeginMenu("Tool")) {
+		ImGui::PushItemWidth(360.0f);
 		if (ImGui::MenuItem("World editor")) {
 			change_state<world_editor_state>();
 		}
@@ -24,6 +25,7 @@ void menu_bar_state::update() {
 		if (ImGui::MenuItem("Dialogue editor")) {
 
 		}
+		ImGui::PopItemWidth();
 		ImGui::EndMenu();
 	}
 	ImGui::EndMainMenuBar();

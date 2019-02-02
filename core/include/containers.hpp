@@ -167,6 +167,7 @@ public:
 			for (int y = 0; y < size.y; y++) {
 				size_t write_index = ((offset.y + y) * stride + offset.x + x) * sizeof(T);
 				size_t old_size = stream.size();
+				stream.set_write_index(0);
 				stream.resize_if_needed(write_index + sizeof(T));
 				size_t new_size = stream.size();
 				if (new_size - old_size > 0) {

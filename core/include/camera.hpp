@@ -51,7 +51,7 @@ public:
 
 	float field_of_view = 60.0f;
 	float near_clipping_plane = 0.01f;
-	float far_clipping_plane = 500.0f;
+	float far_clipping_plane = 150.0f;
 
 	float rotation_offset_factor = 8.0f;
 
