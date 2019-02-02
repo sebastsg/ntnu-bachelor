@@ -104,7 +104,7 @@ private:
 
 	no::vector2f uv_step() const;
 	no::vector2f uv_for_type(uint8_t type) const;
-	no::surface add_tile_borders(uint32_t* pixels, int width, int height, int grid, int border_size);
+	no::surface add_tile_borders(uint32_t* pixels, int width, int height);
 
 	world_state& world;
 

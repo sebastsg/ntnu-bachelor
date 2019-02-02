@@ -97,7 +97,7 @@ world_view::world_view(world_state& world) : world(world), players(*this) {
 	pick_shader = no::create_shader(no::asset_path("shaders/pick"));
 	static_textured_shader = no::create_shader(no::asset_path("shaders/static_textured"));
 	no::surface temp_surface(no::asset_path("textures/tiles.png"));
-	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height(), 52, tileset.border);
+	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, false);
 	no::surface surface = { 2, 2, no::pixel_format::rgba };
 	surface.clear(0xFF0000FF);
@@ -207,7 +207,9 @@ no::vector2f world_view::uv_for_type(uint8_t type) const {
 
 // this exists to avoid issues with both multisampling and mipmapping
 // todo: wouldn't hurt to make this prettier.
-no::surface world_view::add_tile_borders(uint32_t* pixels, int width, int height, int grid, int border_size) {
+no::surface world_view::add_tile_borders(uint32_t* pixels, int width, int height) {
+	int grid = tileset.grid;
+	int border_size = tileset.border;
 	int new_width = width + (width / grid) * border_size * 2;
 	int new_height = height + (height / grid) * border_size * 2;
 	uint32_t* result = new uint32_t[new_width * new_height];
