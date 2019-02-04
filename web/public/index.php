@@ -1,17 +1,23 @@
 <?php
 
+require_once('../source/init.php');
 
+router_bind('/', function() {
+    return template_execute('main', [
+        'page' => template_execute('news')
+    ]);
+});
 
-?><!doctype html>
-<html>
-<head>
-    <title>Einheri</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body>
-    <main>
+router_bind('/ajax', function() {
+    return template_execute('news');
+});
 
-    </main>
-</body>
-</html>
+router_bind_pages([
+    'news',
+    'signup',
+    'download',
+    'leaderboard',
+    'world'
+]);
+
+echo router_execute();
