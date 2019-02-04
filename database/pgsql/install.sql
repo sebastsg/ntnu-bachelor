@@ -1,5 +1,3 @@
-set default_storage_engine = InnoDB;
-
 create table `player` (
     `id`            int unsigned not null auto_increment primary key,
     `display_name`  varchar(32)  not null unique,
