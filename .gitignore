@@ -5,4 +5,8 @@ client/project/VisualStudio15
 server/project/VisualStudio15
 toolkit/project/VisualStudio15
 
+# debug program database
 *.pdb
+
+# config
+web/config.php
