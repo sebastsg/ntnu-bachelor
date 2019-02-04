@@ -5,6 +5,8 @@ create or replace procedure register_player (
 )
 language plpgsql
 as $$
-    insert into `player` (`id`, `display_name`, `email`, `password_hash`)
+begin
+    insert into player (id, display_name, email, password_hash)
          values (0, in_display_name, in_email, in_password_hash);
+end;
 $$;
