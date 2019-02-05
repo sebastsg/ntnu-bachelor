@@ -96,6 +96,10 @@ input:focus {
     border: 1px solid #bbb;
 }
 
+input.error {
+    border: 1px solid darkred;
+}
+
 #signup_form tr td {
     background: transparent;
 }

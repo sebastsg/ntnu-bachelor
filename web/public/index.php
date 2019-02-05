@@ -8,16 +8,31 @@ router_bind('/', function() {
     ]);
 });
 
-router_bind('/ajax', function() {
+router_bind('/page', function() {
     return template_execute('news');
 });
 
-router_bind_pages([
-    'news',
-    'signup',
-    'download',
-    'leaderboard',
-    'world'
-]);
+router_bind_pages('page', ['news', 'signup', 'download', 'leaderboard', 'world']);
 
-echo router_execute();
+router_bind('/api/verify/{email}/{password}', function($email, $password) {
+    // todo: protection against mass attempts
+    return ['is_valid' => verify_login($email, $password)];
+});
+
+router_bind('/api/email_registered/{email}', function($email) {
+    return ['is_taken' => is_email_registered($email)];
+});
+
+router_bind('/api/name_taken/{name}', function($display_name) {
+    return ['is_taken' => is_display_name_taken($display_name)];
+});
+
+router_bind('/post/signup', function() {
+    if (!array_keys_exist($_POST, ['display_name', 'email', 'password'])) {
+        return ['status' => false];
+    }
+    $status = register_player($_POST['display_name'], $_POST['email'], $_POST['password']);
+    return ['status' => $status];
+});
+
+router_execute();

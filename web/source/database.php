@@ -13,9 +13,12 @@ function connect_database() {
         $db->exec('set names utf8');
         $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        return $db;
     } catch (PDOException $e) {
+        echo $e->getMessage();
         return false;
     } catch (Exception $e) {
+        echo $e->getMessage();
         return false;
     }
 }
@@ -100,6 +103,7 @@ function execute_sql_file($path) {
         echo '</pre>';
         return false;
     } catch (Exception $e) {
+        echo $e->getMessage();
         return false;
     }
 }

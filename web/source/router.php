@@ -64,14 +64,14 @@ function router_bind($path, $action) {
     ];
 }
 
-function router_bind_pages($pages) {
+function router_bind_pages($ajax_prefix, $pages) {
     foreach ($pages as $page) {
         router_bind('/' . $page, function() use ($page) {
             return template_execute('main', [
                 'page' => template_execute($page)
             ]);
         });
-        router_bind('/ajax/' . $page, function() use ($page) {
+        router_bind("/$ajax_prefix/$page", function() use ($page) {
             return template_execute($page);
         });
     }
@@ -118,5 +118,10 @@ function router_execute() {
         return false;
     }
     $router_status = ROUTER_STATUS_OKAY;
-    return call_user_func_array($current['action'], $args);
+    $output = call_user_func_array($current['action'], $args);
+    if (is_array($output)) {
+        echo json_encode($output);
+    } else {
+        echo $output;
+    }
 }
