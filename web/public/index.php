@@ -12,7 +12,7 @@ router_bind('/page', function() {
     return template_execute('news');
 });
 
-router_bind_pages('page', ['news', 'signup', 'download', 'leaderboard', 'world']);
+router_bind_pages('page', ['news', 'signup', 'leaderboard', 'world']);
 
 router_bind('/api/verify/{email}/{password}', function($email, $password) {
     // todo: protection against mass attempts

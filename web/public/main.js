@@ -15,7 +15,7 @@ function loadPage(link) {
 
 $(document).on('click', 'a', function(event) {
     const link = $(this).attr('href');
-    if (link === undefined || isExternalLink(link)) {
+    if (link === undefined || isExternalLink(link) || $(this).hasClass('external')) {
         return;
     }
     event.preventDefault();

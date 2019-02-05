@@ -11,6 +11,15 @@ h1, h2, h3, h4, h5 {
     color: #aaa;
 }
 
+a {
+    text-decoration: none;
+    color: #999;
+}
+
+a:hover {
+    color: #bbb;
+}
+
 header {
     background: #333;
     padding: 8px;
@@ -25,16 +34,17 @@ header h1 {
 }
 
 header a {
-    text-decoration: none;
-    color: #999;
     display: inline-block;
-    padding: 8px;
+    padding: 8px 16px;
     font-size: 1.1em;
     margin: 0 16px;
+    transition: 0.2s ease all;
+    border: 1px solid transparent;
 }
 
 header a:hover {
-    color: #bbb;
+    transition: 0.1s ease all;
+    border: 1px solid lightsteelblue;
 }
 
 header span {
@@ -122,4 +132,20 @@ button:hover {
     background: #333;
     border: 1px solid #2a2a2a;
     color: #888;
+}
+
+#download {
+    padding: 16px 32px;
+    background: steelblue;
+    color: #222;
+    font-size: 1.2em;
+    border: 1px solid transparent;
+    transition: 0.3s ease all;
+}
+
+#download:hover {
+    background: #333;
+    color: #999;
+    border: 1px solid lightsteelblue;
+    transition: 0.15s ease all;
 }
