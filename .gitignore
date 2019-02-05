@@ -10,3 +10,6 @@ toolkit/project/VisualStudio15
 
 # config
 web/config.php
+
+# public web files
+web/public/files
