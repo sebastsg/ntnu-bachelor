@@ -1,3 +1,4 @@
+drop table if exists player;
 create table player (
     id            serial       not null primary key,
     display_name  varchar(32)  not null unique,
