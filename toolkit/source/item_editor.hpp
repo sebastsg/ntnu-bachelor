@@ -23,6 +23,7 @@ private:
 	item_definition_list items;
 
 	int current_item = -1;
+	int ui_texture = -1;
 
 	struct {
 		char name[100] = {};

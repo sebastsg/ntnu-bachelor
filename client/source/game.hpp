@@ -3,6 +3,7 @@
 #include "player.hpp"
 #include "world.hpp"
 #include "render.hpp"
+#include "ui.hpp"
 
 #include "loop.hpp"
 #include "camera.hpp"
@@ -71,6 +72,7 @@ private:
 	game_world world;
 	world_view renderer;
 	hud_view hud;
+	user_interface_view ui;
 
 	no::perspective_camera::drag_controller dragger;
 	no::perspective_camera::rotate_controller rotater;

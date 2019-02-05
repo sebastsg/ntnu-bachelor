@@ -50,38 +50,35 @@ void server_state::connect(int index) {
 	INFO("Connecting client " << index);
 	clients[index] = { true };
 
-	session_packet session;
-	session.is_me = 1;
-	session.player_id = index;
-	session.tile_x = clients[index].tile_x;
-	session.tile_z = clients[index].tile_z;
+	player_joined_packet joined;
+	joined.is_me = 1;
+	joined.player_id = index;
+	joined.tile = clients[index].tile;
 	no::io_stream session_stream;
 	no::packetizer::start(session_stream);
-	session.write(session_stream);
+	joined.write(session_stream);
 	no::packetizer::end(session_stream);
 	sockets[index].send_async(session_stream);
 
 	for (int j = 0; j < max_clients; j++) {
 		if (clients[j].is_connected() && index != j) {
-			session.is_me = 0;
-			session.player_id = j;
-			session.tile_x = clients[j].tile_x;
-			session.tile_z = clients[j].tile_z;
+			joined.is_me = 0;
+			joined.player_id = j;
+			joined.tile = clients[j].tile;
 			session_stream = {};
 			no::packetizer::start(session_stream);
-			session.write(session_stream);
+			joined.write(session_stream);
 			no::packetizer::end(session_stream);
 			sockets[index].send_async(session_stream);
 		}
 	}
 
 	session_stream = {};
-	session.player_id = index;
-	session.is_me = 0;
-	session.tile_x = clients[index].tile_x;
-	session.tile_z = clients[index].tile_z;
+	joined.player_id = index;
+	joined.is_me = 0;
+	joined.tile = clients[index].tile;
 	no::packetizer::start(session_stream);
-	session.write(session_stream);
+	joined.write(session_stream);
 	no::packetizer::end(session_stream);
 	sockets.broadcast<false>(session_stream, index);
 
@@ -95,9 +92,7 @@ void server_state::connect(int index) {
 			packet.read(stream);
 
 			packet.player_id = index;
-
-			clients[index].tile_x = packet.tile_x;
-			clients[index].tile_z = packet.tile_z;
+			clients[index].tile = packet.tile;
 
 			no::io_stream packet_stream;
 			no::packetizer::start(packet_stream);

@@ -1,4 +1,5 @@
 #include "world.hpp"
+#include "assets.hpp"
 
 world_terrain::world_terrain(world_state& world) : world(world) {
 	tile_array.resize_and_reset(128, {});
@@ -94,7 +95,7 @@ no::vector2i world_terrain::local_to_global_tile(no::vector2i tile) const {
 }
 
 world_state::world_state() : terrain(*this) {
-	
+	item_definitions.load(no::asset_path("items.data"));
 }
 
 world_state::~world_state() {
@@ -165,4 +166,8 @@ no::vector3f world_state::tile_index_to_world_position(int x, int z) const {
 
 int world_state::next_object_id() {
 	return ++object_id_counter;
+}
+
+item_definition_list& world_state::items() {
+	return item_definitions;
 }

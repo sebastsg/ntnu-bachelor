@@ -1,6 +1,7 @@
 #include "item_editor.hpp"
 #include "window.hpp"
 #include "assets.hpp"
+#include "surface.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
@@ -8,14 +9,16 @@
 item_editor::item_editor() {
 	no::imgui::create(window());
 	items.load(no::asset_path("items.data"));
+	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));
 }
 
 item_editor::~item_editor() {
+	no::delete_texture(ui_texture);
 	no::imgui::destroy();
 }
 
 void item_editor::item_type_combo(item_type& target, const std::string& ui_id) {
-	if (ImGui::BeginCombo(CSTRING("Item type##ItemType" << ui_id), CSTRING(new_item.type))) {
+	if (ImGui::BeginCombo(CSTRING("Item type##ItemType" << ui_id), CSTRING(target))) {
 		for (int type_value = 0; type_value < (int)item_type::total_types; type_value++) {
 			item_type type = (item_type)type_value;
 			if (ImGui::Selectable(CSTRING(type << "##ItemType" << ui_id << type_value))) {
@@ -27,7 +30,7 @@ void item_editor::item_type_combo(item_type& target, const std::string& ui_id) {
 }
 
 void item_editor::equipment_slot_combo(equipment_slot& slot, const std::string& ui_id) {
-	if (ImGui::BeginCombo(CSTRING("Equipment slot##ItemSlot" << ui_id), CSTRING(new_item.slot))) {
+	if (ImGui::BeginCombo(CSTRING("Equipment slot##ItemSlot" << ui_id), CSTRING(slot))) {
 		for (int slot_value = 0; slot_value < (int)equipment_slot::total_slots; slot_value++) {
 			equipment_slot slot = (equipment_slot)slot_value;
 			if (ImGui::Selectable(CSTRING(slot << "##ItemSlot" << ui_id << slot_value))) {
@@ -78,6 +81,10 @@ void item_editor::ui_select_item() {
 	selected.max_stack = (long long)max_stack;
 	item_type_combo(selected.type, "Edit");
 	equipment_slot_combo(selected.slot, "Edit");
+	ImGui::InputFloat2("UV##EditItemUV", &selected.uv.x, 0);
+	no::vector2f uv_start = selected.uv / no::texture_size(ui_texture).to<float>();
+	no::vector2f uv_end = (selected.uv + 32.0f) / no::texture_size(ui_texture).to<float>();
+	ImGui::Image((ImTextureID)ui_texture, { 64.0f, 64.0f }, { uv_start }, { uv_end }, { 1.0f }, { 1.0f });
 }
 
 void item_editor::update() {

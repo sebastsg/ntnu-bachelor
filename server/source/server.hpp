@@ -7,8 +7,7 @@
 class client_state {
 public:
 
-	int tile_x = 15;
-	int tile_z = 15;
+	no::vector2i tile = 15;
 
 	client_state() = default;
 	client_state(bool connected) : connected(connected) {}

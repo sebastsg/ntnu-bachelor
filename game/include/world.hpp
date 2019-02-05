@@ -82,10 +82,13 @@ public:
 
 	int next_object_id();
 
+	item_definition_list& items();
+
 private:
 
 	int object_id_counter = 0;
 	std::vector<player_object*> players;
 	std::vector<decoration_object*> decorations;
+	item_definition_list item_definitions;
 
 };

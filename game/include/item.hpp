@@ -2,6 +2,7 @@
 
 #include "io.hpp"
 #include "math.hpp"
+#include "event.hpp"
 
 #include <unordered_map>
 
@@ -35,11 +36,11 @@ struct item_definition {
 	item_type type = item_type::other;
 	equipment_slot slot = equipment_slot::none;
 	std::string name;
+	no::vector2f uv;
 };
 
 struct item_instance {
 	long long definition_id = -1;
-	long long instance_id = -1;
 	long long stack = 0;
 };
 
@@ -66,6 +67,21 @@ private:
 
 class item_container {
 public:
+
+	struct add_event {
+		item_instance item;
+		no::vector2i slot;
+	};
+
+	struct remove_event {
+		item_instance item;
+		no::vector2i slot;
+	};
+
+	struct {
+		no::message_event<add_event> add;
+		no::message_event<remove_event> remove;
+	} events;
 
 	item_container(item_definition_list& definitions, no::vector2i size);
 

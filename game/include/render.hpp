@@ -35,7 +35,7 @@ private:
 	};
 
 	no::model model;
-	std::unordered_map<int, no::model*> equipments;
+	std::unordered_map<long long, no::model*> equipments;
 
 	int player_texture = -1;
 

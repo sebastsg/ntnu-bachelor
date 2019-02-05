@@ -4,7 +4,9 @@
 #include "assets.hpp"
 #include "surface.hpp"
 
-player_object::player_object(world_state& world) : game_object(world) {
+player_object::player_object(world_state& world) : game_object(world), 
+	inventory(world.items(), { 4, 6 }), 
+	equipment(world.items(), { 3, 3 }) {
 	transform.scale = 0.5f;
 }
 

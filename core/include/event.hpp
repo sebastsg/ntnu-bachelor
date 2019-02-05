@@ -53,6 +53,11 @@ public:
 		}
 	}
 
+	template<typename... Args>
+	void emit(Args... args) const {
+		emit(M{ std::forward<Args>(args)... });
+	}
+
 	void ignore(int id) {
 		if (id >= 0 && id < (int)handlers.size()) {
 			handlers[id] = {};

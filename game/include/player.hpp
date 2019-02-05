@@ -9,8 +9,11 @@ public:
 
 	struct equip_event {
 		equipment_slot slot;
-		int item_id = -1;
+		long long item_id = -1;
 	};
+
+	item_container inventory;
+	item_container equipment;
 
 	struct {
 		no::message_event<equip_event> equip;

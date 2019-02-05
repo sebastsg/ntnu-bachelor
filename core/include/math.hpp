@@ -83,43 +83,43 @@ struct vector2 {
 
 	T x, y;
 
-	vector2() : x((T)0), y((T)0) {}
-	vector2(T i) : x(i), y(i) {}
-	vector2(T x, T y) : x(x), y(y) {}
+	constexpr vector2() : x((T)0), y((T)0) {}
+	constexpr vector2(T i) : x(i), y(i) {}
+	constexpr vector2(T x, T y) : x(x), y(y) {}
 
-	vector2<T> operator-() const {
+	constexpr vector2<T> operator-() const {
 		return { -x, -y };
 	}
 
-	vector2<T> operator+(const vector2<T>& v) const {
+	constexpr vector2<T> operator+(const vector2<T>& v) const {
 		return { x + v.x, y + v.y };
 	}
 
-	vector2<T> operator-(const vector2<T>& v) const {
+	constexpr vector2<T> operator-(const vector2<T>& v) const {
 		return { x - v.x, y - v.y };
 	}
 
-	vector2<T> operator*(const vector2<T>& v) const {
+	constexpr vector2<T> operator*(const vector2<T>& v) const {
 		return { x * v.x, y * v.y };
 	}
 
-	vector2<T> operator/(const vector2<T>& v) const {
+	constexpr vector2<T> operator/(const vector2<T>& v) const {
 		return { x / v.x, y / v.y };
 	}
 
-	vector2<T> operator+(T s) const {
+	constexpr vector2<T> operator+(T s) const {
 		return { x + s, y + s };
 	}
 
-	vector2<T> operator-(T s) const {
+	constexpr vector2<T> operator-(T s) const {
 		return { x - s, y - s };
 	}
 
-	vector2<T> operator*(T s) const {
+	constexpr vector2<T> operator*(T s) const {
 		return { x * s, y * s };
 	}
 
-	vector2<T> operator/(T s) const {
+	constexpr vector2<T> operator/(T s) const {
 		return { x / s, y / s };
 	}
 
@@ -143,27 +143,27 @@ struct vector2 {
 		y /= v.y;
 	}
 
-	bool operator>(const vector2<T>& v) const {
+	constexpr bool operator>(const vector2<T>& v) const {
 		return x > v.x && y > v.y;
 	}
 
-	bool operator<(const vector2<T>& v) const {
+	constexpr bool operator<(const vector2<T>& v) const {
 		return x < v.x && y < v.y;
 	}
 
-	bool operator>=(const vector2<T>& v) const {
+	constexpr bool operator>=(const vector2<T>& v) const {
 		return x >= v.x && y >= v.y;
 	}
 
-	bool operator<=(const vector2<T>& v) const {
+	constexpr bool operator<=(const vector2<T>& v) const {
 		return x <= v.x && y <= v.y;
 	}
 
-	bool operator==(const vector2<T>& v) const {
+	constexpr bool operator==(const vector2<T>& v) const {
 		return x == v.x && y == v.y;
 	}
 
-	T distance_to(const vector2<T>& v) const {
+	constexpr T distance_to(const vector2<T>& v) const {
 		const T dx = x - v.x;
 		const T dy = y - v.y;
 		return std::sqrt(dx * dx + dy * dy);
@@ -180,19 +180,19 @@ struct vector2 {
 	}
 
 	template<typename U>
-	vector2<U> to() const {
+	constexpr vector2<U> to() const {
 		return vector2<U>((U)x, (U)y);
 	}
 
-	T magnitude() const {
+	constexpr T magnitude() const {
 		return std::sqrt(x * x + y * y);
 	}
 
-	T squared_magnitude() const {
+	constexpr T squared_magnitude() const {
 		return x * x + y * y;
 	}
 
-	vector2<T> normalized() const {
+	constexpr vector2<T> normalized() const {
 		const T m = magnitude();
 		if (m == (T)0) {
 			return {};
@@ -200,7 +200,7 @@ struct vector2 {
 		return { x / m, y / m };
 	}
 
-	T dot(const vector2<T>& v) const {
+	constexpr T dot(const vector2<T>& v) const {
 		return x * v.x + y * v.y;
 	}
 
@@ -223,27 +223,27 @@ struct vector3 {
 		};
 	};
 
-	vector3() : x((T)0), y((T)0), z((T)0) {}
-	vector3(T i) : x(i), y(i), z(i) {}
-	vector3(T x, T y, T z) : x(x), y(y), z(z) {}
+	constexpr vector3() : x((T)0), y((T)0), z((T)0) {}
+	constexpr vector3(T i) : x(i), y(i), z(i) {}
+	constexpr vector3(T x, T y, T z) : x(x), y(y), z(z) {}
 
-	vector3<T> operator-() const {
+	constexpr vector3<T> operator-() const {
 		return { -x, -y, -z };
 	}
 
-	vector3<T> operator+(const vector3<T>& v) const {
+	constexpr vector3<T> operator+(const vector3<T>& v) const {
 		return { x + v.x, y + v.y, z + v.z };
 	}
 
-	vector3<T> operator-(const vector3<T>& v) const {
+	constexpr vector3<T> operator-(const vector3<T>& v) const {
 		return { x - v.x, y - v.y, z - v.z };
 	}
 
-	vector3<T> operator*(const vector3<T>& v) const {
+	constexpr vector3<T> operator*(const vector3<T>& v) const {
 		return { x * v.x, y * v.y, z * v.z };
 	}
 
-	vector3<T> operator/(const vector3<T>& v) const {
+	constexpr vector3<T> operator/(const vector3<T>& v) const {
 		return { x / v.x, y / v.y, z / v.z };
 	}
 
@@ -271,27 +271,27 @@ struct vector3 {
 		z /= v.z;
 	}
 
-	bool operator>(const vector3<T>& v) const {
+	constexpr bool operator>(const vector3<T>& v) const {
 		return x > v.x && y > v.y && z > v.z;
 	}
 
-	bool operator<(const vector3<T>& v) const {
+	constexpr bool operator<(const vector3<T>& v) const {
 		return x < v.x && y < v.y && z < v.z;
 	}
 
-	bool operator>=(const vector3<T>& v) const {
+	constexpr bool operator>=(const vector3<T>& v) const {
 		return x >= v.x && y >= v.y && z >= v.z;
 	}
 
-	bool operator<=(const vector3<T>& v) const {
+	constexpr bool operator<=(const vector3<T>& v) const {
 		return x <= v.x && y <= v.y && z <= v.z;
 	}
 
-	bool operator==(const vector3<T>& v) const {
+	constexpr bool operator==(const vector3<T>& v) const {
 		return x == v.x && y == v.y && z == v.z;
 	}
 
-	T distance_to(const vector3<T>& v) const {
+	constexpr T distance_to(const vector3<T>& v) const {
 		const T dx = x - v.x;
 		const T dy = y - v.y;
 		const T dz = z - v.z;
@@ -311,19 +311,19 @@ struct vector3 {
 	}
 
 	template<typename U>
-	vector3<U> to() const {
+	constexpr vector3<U> to() const {
 		return vector3<U>((U)x, (U)y, (U)z);
 	}
 
-	T magnitude() const {
+	constexpr T magnitude() const {
 		return std::sqrt(x * x + y * y + z * z);
 	}
 
-	T squared_magnitude() const {
+	constexpr T squared_magnitude() const {
 		return x * x + y * y + z * z;
 	}
 
-	vector3<T> normalized() const {
+	constexpr vector3<T> normalized() const {
 		const T m = magnitude();
 		if (m == (T)0) {
 			return {};
@@ -331,7 +331,7 @@ struct vector3 {
 		return { x / m, y / m, z / m };
 	}
 
-	T dot(const vector3<T>& v) const {
+	constexpr T dot(const vector3<T>& v) const {
 		return x * v.x + y * v.y + z * v.z;
 	}
 
@@ -357,29 +357,34 @@ struct vector4 {
 			vector3<T> xyz;
 			T _placeholder_w_2;
 		};
+		struct {
+			T _placeholder_x_0;
+			T _placeholder_y_0;
+			vector2<T> zw;
+		};
 	};
 
-	vector4() : x((T)0), y((T)0), z((T)0), w((T)0) {}
-	vector4(T i) : x(i), y(i), z(i), w(i) {}
-	vector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+	constexpr vector4() : x((T)0), y((T)0), z((T)0), w((T)0) {}
+	constexpr vector4(T i) : x(i), y(i), z(i), w(i) {}
+	constexpr vector4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
 
-	vector4<T> operator-() const {
+	constexpr vector4<T> operator-() const {
 		return { -x, -y, -z, -w };
 	}
 
-	vector4<T> operator+(const vector4<T>& v) const {
+	constexpr vector4<T> operator+(const vector4<T>& v) const {
 		return { x + v.x, y + v.y, z + v.z, w + v.w };
 	}
 
-	vector4<T> operator-(const vector4<T>& v) const {
+	constexpr vector4<T> operator-(const vector4<T>& v) const {
 		return { x - v.x, y - v.y, z - v.z, w - v.w };
 	}
 
-	vector4<T> operator*(const vector4<T>& v) const {
+	constexpr vector4<T> operator*(const vector4<T>& v) const {
 		return { x * v.x, y * v.y, z * v.z, w * v.w };
 	}
 
-	vector4<T> operator/(const vector4<T>& v) const {
+	constexpr vector4<T> operator/(const vector4<T>& v) const {
 		return { x / v.x, y / v.y, z / v.z, w / v.w };
 	}
 
@@ -411,27 +416,27 @@ struct vector4 {
 		w /= v.w;
 	}
 
-	bool operator>(const vector4<T>& v) const {
+	constexpr bool operator>(const vector4<T>& v) const {
 		return x > v.x && y > v.y && z > v.z && w > v.w;
 	}
 
-	bool operator<(const vector4<T>& v) const {
+	constexpr bool operator<(const vector4<T>& v) const {
 		return x < v.x && y < v.y && z < v.z && w < v.w;
 	}
 
-	bool operator>=(const vector4<T>& v) const {
+	constexpr bool operator>=(const vector4<T>& v) const {
 		return x >= v.x && y >= v.y && z >= v.z && w >= v.w;
 	}
 
-	bool operator<=(const vector4<T>& v) const {
+	constexpr bool operator<=(const vector4<T>& v) const {
 		return x <= v.x && y <= v.y && z <= v.z && w <= v.w;
 	}
 
-	bool operator==(const vector4<T>& v) const {
+	constexpr bool operator==(const vector4<T>& v) const {
 		return x == v.x && y == v.y && z == v.z && w == v.w;
 	}
 
-	T distance_to(const vector4<T>& v) const {
+	constexpr T distance_to(const vector4<T>& v) const {
 		const T dx = x - v.x;
 		const T dy = y - v.y;
 		const T dz = z - v.z;
@@ -454,19 +459,19 @@ struct vector4 {
 	}
 
 	template<typename U>
-	vector4<U> to() const {
+	constexpr vector4<U> to() const {
 		return vector4<U>((U)x, (U)y, (U)z, (U)w);
 	}
 
-	T magnitude() const {
+	constexpr T magnitude() const {
 		return std::sqrt(x * x + y * y + z * z + w * w);
 	}
 
-	T squared_magnitude() const {
+	constexpr T squared_magnitude() const {
 		return x * x + y * y + z * z + w * w;
 	}
 
-	vector4<T> normalized() const {
+	constexpr vector4<T> normalized() const {
 		const T m = magnitude();
 		if (m == (T)0) {
 			return {};
@@ -474,7 +479,7 @@ struct vector4 {
 		return { x / m, y / m, z / m, w / m };
 	}
 
-	T dot(const vector4<T>& v) const {
+	constexpr T dot(const vector4<T>& v) const {
 		return x * v.x + y * v.y + z * v.z + w * v.w;
 	}
 

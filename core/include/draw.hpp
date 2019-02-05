@@ -397,6 +397,7 @@ private:
 class rectangle {
 public:
 
+	rectangle(float x, float y, float width, float height);
 	rectangle();
 
 	void set_tex_coords(float x, float y, float width, float height);

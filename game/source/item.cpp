@@ -36,8 +36,9 @@ void item_definition_list::save(const std::string& path) const {
 	for (auto& definition : definitions) {
 		stream.write((int32_t)definition.type);
 		stream.write((int32_t)definition.slot);
-		stream.write((int32_t)definition.max_stack);
+		stream.write((int64_t)definition.max_stack);
 		stream.write((int64_t)definition.id);
+		stream.write(definition.uv);
 		stream.write(definition.name);
 	}
 	no::file::write(path, stream);
@@ -56,7 +57,8 @@ void item_definition_list::load(const std::string& path) {
 		definition.type = (item_type)stream.read<int32_t>();
 		definition.slot = (equipment_slot)stream.read<int32_t>();
 		definition.max_stack = stream.read<int64_t>();
-		definition.id = stream.read<int32_t>();
+		definition.id = stream.read<int64_t>();
+		definition.uv = stream.read<no::vector2f>();
 		definition.name = stream.read<std::string>();
 		definitions.push_back(definition);
 	}
@@ -101,23 +103,32 @@ void item_container::add_from(item_instance& other_item) {
 		other_item = {};
 		return;
 	}
+	no::vector2i slot;
 	for (auto& my_item : items) {
 		if (my_item.definition_id == -1 || my_item.stack < 1) {
 			my_item.definition_id = other_item.definition_id;
 			my_item.stack = other_item.stack;
+			events.add.emit(other_item, slot);
 			other_item.stack = 0;
 			other_item.definition_id = -1;
-			return;
+			break;
 		} else if (my_item.definition_id == other_item.definition_id) {
 			long long can_hold = definitions.get(my_item.definition_id).max_stack - my_item.stack;
 			if (can_hold >= other_item.stack) {
 				my_item.stack += other_item.stack;
+				events.add.emit(other_item, slot);
 				other_item = {};
-				return;
+				break;
 			} else {
 				my_item.stack += can_hold;
 				other_item.stack -= can_hold;
+				events.add.emit(item_instance{ other_item.definition_id, can_hold }, slot);
 			}
+		}
+		slot.x++;
+		if (slot.x == size.x) {
+			slot.x = 0;
+			slot.y++;
 		}
 	}
 }
@@ -127,17 +138,28 @@ void item_container::remove_to(long long stack, item_instance& other_item) {
 		return;
 	}
 	long long remaining = stack;
+	no::vector2i slot;
 	for (auto& item : items) {
 		if (item.definition_id == other_item.definition_id) {
 			if (item.stack > remaining) {
 				item.stack -= remaining;
 				other_item.stack += remaining;
 				remaining = 0;
+				events.remove.emit(item, slot);
 				break;
 			} else {
 				remaining -= item.stack;
+				remove_event event;
+				event.item = item;
+				event.slot = slot;
 				item = {};
+				events.remove.emit(event);
 			}
+		}
+		slot.x++;
+		if (slot.x == size.x) {
+			slot.x = 0;
+			slot.y++;
 		}
 	}
 }
@@ -158,7 +180,6 @@ void item_container::write(no::io_stream& stream) const {
 	stream.write(size);
 	for (auto& item : items) {
 		stream.write<int64_t>(item.definition_id);
-		stream.write<int64_t>(item.instance_id);
 		stream.write<int64_t>(item.stack);
 	}
 }
@@ -168,7 +189,6 @@ void item_container::read(no::io_stream& stream) {
 	for (int i = 0; i < count(); i++) {
 		auto& item = items.emplace_back();
 		item.definition_id = stream.read<int64_t>();
-		item.instance_id = stream.read<int64_t>();
 		item.stack = stream.read<int64_t>();
 	}
 }

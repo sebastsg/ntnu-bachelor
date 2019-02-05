@@ -53,7 +53,7 @@ player_object* game_world::my_player() {
 	return player(my_player_id);
 }
 
-game_state::game_state() : renderer(world), dragger(mouse()) {
+game_state::game_state() : renderer(world), dragger(mouse()), ui(world) {
 	window().set_swap_interval(no::swap_interval::immediate);
 	set_synchronization(no::draw_synchronization::always);
 
@@ -65,8 +65,7 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 		if (tile.x != -1) {
 			move_to_tile_packet packet;
 			packet.timestamp = 0;
-			packet.tile_x = tile.x;
-			packet.tile_z = tile.y;
+			packet.tile = tile;
 
 			no::io_stream stream;
 			no::packetizer::start(stream);
@@ -100,22 +99,36 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 		{
 			move_to_tile_packet packet;
 			packet.read(stream);
-			world.player(packet.player_id)->start_movement_to(packet.tile_x, packet.tile_z);
+			world.player(packet.player_id)->start_movement_to(packet.tile.x, packet.tile.y);
 			break;
 		}
-		case session_packet::type:
+		case player_joined_packet::type:
 		{
-			session_packet packet;
+			player_joined_packet packet;
 			packet.read(stream);
 			auto player = world.add_player(packet.player_id);
 			if (packet.is_me) {
 				world.my_player_id = packet.player_id;
+				ui.listen(world.my_player());
 			}
-			player->transform.position.x = (float)packet.tile_x;
-			player->transform.position.z = (float)packet.tile_z;
+			player->transform.position.x = (float)packet.tile.x;
+			player->transform.position.z = (float)packet.tile.y;
 			renderer.players.add(player);
 			player->events.equip.emit({ equipment_slot::right_hand, 0 });
 			player->events.equip.emit({ equipment_slot::left_hand, 1 });
+			item_instance item;
+			item.definition_id = 0;
+			item.stack = 1;
+			player->inventory.add_from(item);
+			item.definition_id = 1;
+			item.stack = 1;
+			player->inventory.add_from(item);
+			item.definition_id = 2;
+			item.stack = 1;
+			player->inventory.add_from(item);
+			item.definition_id = 3;
+			item.stack = 1;
+			player->inventory.add_from(item);
 			break;
 		}
 		default:
@@ -133,6 +146,7 @@ game_state::~game_state() {
 void game_state::update() {
 	renderer.camera.size = window().size().to<float>();
 	hud.camera.transform.scale.xy = window().size().to<float>();
+	ui.camera.transform.scale.xy = window().size().to<float>();
 	server.synchronise();
 	if (world.my_player_id == -1) {
 		return;
@@ -159,6 +173,7 @@ void game_state::draw() {
 	if (world.my_player_id != -1) {
 		renderer.draw_tile_highlight(world.my_player()->tile());
 	}
+	ui.draw();
 	hud.draw();
 }
 
