@@ -63,6 +63,10 @@ private:
 
 	inventory_view inventory;
 
+	no::rectangle hud_background;
+	
+	void draw_hud() const;
+
 	void draw_tabs() const;
 	void draw_tab(int index, const no::rectangle& tab) const;
 

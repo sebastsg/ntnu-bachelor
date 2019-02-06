@@ -13,6 +13,8 @@ constexpr no::vector2f tab_inventory_uv = { 160.0f, 24.0f };
 constexpr no::vector2f tab_equipment_uv = { 224.0f, 24.0f };
 constexpr no::vector2f tab_quests_uv = { 192.0f, 24.0f };
 constexpr no::vector2f tab_size = 24.0f;
+constexpr no::vector2f hud_uv = { 108.0f, 128.0f };
+constexpr no::vector2f hud_size = { 88.0f, 68.0f };
 
 static void set_ui_uv(no::rectangle& rectangle, no::vector2f uv, no::vector2f uv_size) {
 	rectangle.set_tex_coords(uv.x / ui_size.x, uv.y / ui_size.y, uv_size.x / ui_size.x, uv_size.y / ui_size.y);
@@ -95,6 +97,7 @@ user_interface_view::user_interface_view(game_state& game, world_state& world)
 	set_ui_uv(tabs.inventory, tab_inventory_uv, tab_size);
 	set_ui_uv(tabs.equipment, tab_equipment_uv, tab_size);
 	set_ui_uv(tabs.quests, tab_quests_uv, tab_size);
+	set_ui_uv(hud_background, hud_uv, hud_size);
 }
 
 user_interface_view::~user_interface_view() {
@@ -161,6 +164,16 @@ void user_interface_view::draw() const {
 		break;
 	}
 	draw_tabs();
+	draw_hud();
+}
+
+void user_interface_view::draw_hud() const {
+	no::transform transform;
+	transform.position.xy = 8.0f;
+	transform.scale.xy = hud_size;
+	no::set_shader_model(transform);
+	hud_background.bind();
+	hud_background.draw();
 }
 
 void user_interface_view::draw_tabs() const {

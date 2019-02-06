@@ -20,7 +20,7 @@ void hud_view::draw() const {
 	no::get_shader_variable("uni_Color").set({ 1.0f, 1.0f, 1.0f, 1.0f });
 
 	no::transform transform;
-	transform.position.xy = 4.0f;
+	transform.position.xy = { 300.0f, 4.0f };
 	transform.scale.xy = no::texture_size(fps_texture).to<float>();
 	no::bind_texture(fps_texture);
 	no::set_shader_model(transform);
