@@ -431,39 +431,39 @@ shader_variable::shader_variable(unsigned int program_id, const std::string& nam
 	CHECK_GL_ERROR(location = glGetUniformLocation(program_id, name.c_str()));
 }
 
-void shader_variable::set(int value) {
+void shader_variable::set(int value) const {
 	CHECK_GL_ERROR(glUniform1i(location, value));
 }
 
-void shader_variable::set(float value) {
+void shader_variable::set(float value) const {
 	CHECK_GL_ERROR(glUniform1f(location, value));
 }
 
-void shader_variable::set(const vector2f& vector) {
+void shader_variable::set(const vector2f& vector) const {
 	CHECK_GL_ERROR(glUniform2fv(location, 1, &vector.x));
 }
 
-void shader_variable::set(const vector3f& vector) {
+void shader_variable::set(const vector3f& vector) const {
 	CHECK_GL_ERROR(glUniform3fv(location, 1, &vector.x));
 }
 
-void shader_variable::set(const vector4f& vector) {
+void shader_variable::set(const vector4f& vector) const {
 	CHECK_GL_ERROR(glUniform4fv(location, 1, &vector.x));
 }
 
-void shader_variable::set(const glm::mat4& matrix) {
+void shader_variable::set(const glm::mat4& matrix) const {
 	CHECK_GL_ERROR(glUniformMatrix4fv(location, 1, false, glm::value_ptr(matrix)));
 }
 
-void shader_variable::set(const transform& transform) {
+void shader_variable::set(const transform& transform) const {
 	set(transform_to_glm_mat4(transform));
 }
 
-void shader_variable::set(vector2f* vector, size_t count) {
+void shader_variable::set(vector2f* vector, size_t count) const {
 	CHECK_GL_ERROR(glUniform2fv(location, count, &vector[0].x));
 }
 
-void shader_variable::set(const std::vector<glm::mat4>& matrices) {
+void shader_variable::set(const std::vector<glm::mat4>& matrices) const {
 	CHECK_GL_ERROR(glUniformMatrix4fv(location, matrices.size(), GL_FALSE, glm::value_ptr(matrices[0])));
 }
 

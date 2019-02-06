@@ -53,7 +53,7 @@ player_object* game_world::my_player() {
 	return player(my_player_id);
 }
 
-game_state::game_state() : renderer(world), dragger(mouse()), ui(world) {
+game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 	window().set_swap_interval(no::swap_interval::immediate);
 	set_synchronization(no::draw_synchronization::always);
 

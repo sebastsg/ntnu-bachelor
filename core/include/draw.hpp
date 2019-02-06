@@ -60,15 +60,17 @@ public:
 	shader_variable() = default;
 	shader_variable(unsigned int program_id, const std::string& name);
 
-	void set(int value);
-	void set(float value);
-	void set(const vector2f& vector);
-	void set(const vector3f& vector);
-	void set(const vector4f& vector);
-	void set(const glm::mat4& matrix);
-	void set(const transform& transform);
-	void set(vector2f* vector, size_t count);
-	void set(const std::vector<glm::mat4>& matrices);
+	// debatable whether or not these should be const
+	// it's useful for const draw functions
+	void set(int value) const;
+	void set(float value) const;
+	void set(const vector2f& vector) const;
+	void set(const vector3f& vector) const;
+	void set(const vector4f& vector) const;
+	void set(const glm::mat4& matrix) const;
+	void set(const transform& transform) const;
+	void set(vector2f* vector, size_t count) const;
+	void set(const std::vector<glm::mat4>& matrices) const;
 
 	bool exists() const;
 
