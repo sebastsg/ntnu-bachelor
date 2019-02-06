@@ -61,6 +61,9 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 		if (event.button != no::mouse::button::left) {
 			return;
 		}
+		if (ui.is_mouse_over_any()) {
+			return;
+		}
 		no::vector2i tile = hovered_pixel.xy;
 		if (tile.x != -1) {
 			move_to_tile_packet packet;
@@ -114,8 +117,6 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 			player->transform.position.x = (float)packet.tile.x;
 			player->transform.position.z = (float)packet.tile.y;
 			renderer.players.add(player);
-			player->events.equip.emit({ equipment_slot::right_hand, 0 });
-			player->events.equip.emit({ equipment_slot::left_hand, 1 });
 			item_instance item;
 			item.definition_id = 0;
 			item.stack = 1;

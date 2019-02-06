@@ -85,8 +85,11 @@ public:
 
 	item_container(item_definition_list& definitions, no::vector2i size);
 
+	item_instance at(no::vector2i slot) const;
+
 	void add_from(item_instance& item);
 	void remove_to(long long stack, item_instance& item);
+	long long take_all(long long id);
 
 	long long can_hold_more(long long id) const;
 

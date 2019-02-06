@@ -98,6 +98,14 @@ item_container::item_container(item_definition_list& definitions, no::vector2i s
 	}
 }
 
+item_instance item_container::at(no::vector2i slot) const {
+	int index = slot.y * size.x + slot.x;
+	if (index < 0 || index >= count()) {
+		return {};
+	}
+	return items[index];
+}
+
 void item_container::add_from(item_instance& other_item) {
 	if (other_item.stack <= 0) {
 		other_item = {};
@@ -162,6 +170,27 @@ void item_container::remove_to(long long stack, item_instance& other_item) {
 			slot.y++;
 		}
 	}
+}
+
+long long item_container::take_all(long long id) {
+	long long total = 0;
+	no::vector2i slot;
+	for (auto& item : items) {
+		if (item.definition_id == id) {
+			total += item.stack;
+			remove_event event;
+			event.item = item;
+			event.slot = slot;
+			item = {};
+			events.remove.emit(event);
+		}
+		slot.x++;
+		if (slot.x == size.x) {
+			slot.x = 0;
+			slot.y++;
+		}
+	}
+	return total;
 }
 
 long long item_container::can_hold_more(long long id) const {

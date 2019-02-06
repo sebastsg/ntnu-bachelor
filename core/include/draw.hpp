@@ -513,6 +513,13 @@ private:
 
 };
 
+template<typename T>
+void draw_shape(const T& shape, const transform& transform) {
+	set_shader_model(transform);
+	shape.bind();
+	shape.draw();
+}
+
 }
 
 std::ostream& operator<<(std::ostream& out, no::swap_interval interval);
