@@ -136,6 +136,8 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 			break;
 		}
 	});
+
+	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });
 }
 
 game_state::~game_state() {

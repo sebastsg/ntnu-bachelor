@@ -84,6 +84,13 @@ struct terrain_vertex {
 class world_view {
 public:
 
+	struct {
+		float start = 30.0f;
+		float distance = 70.0f;
+		no::shader_variable var_start;
+		no::shader_variable var_distance;
+	} fog;
+
 	no::perspective_camera camera;
 	no::model_attachment_mapping_list mappings;
 

@@ -97,9 +97,13 @@ world_view::world_view(world_state& world) : world(world), players(*this) {
 	pick_shader = no::create_shader(no::asset_path("shaders/pick"));
 	static_textured_shader = no::create_shader(no::asset_path("shaders/static_textured"));
 	terrain_shader = no::create_shader(no::asset_path("shaders/terrain"));
+	fog.var_start = no::get_shader_variable("uni_FogStart");
+	fog.var_distance = no::get_shader_variable("uni_FogDistance");
 	no::surface temp_surface(no::asset_path("textures/tiles.png"));
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 3, 1);
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 4, 2);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 5, 1);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 6, 2);
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, false);
 	no::surface surface = { 2, 2, no::pixel_format::rgba };
@@ -289,8 +293,10 @@ void world_view::draw_terrain() {
 	}
 	no::bind_shader(terrain_shader);
 	no::set_shader_view_projection(camera);
-	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + no::vector3f{ 0.0f, 5.0f, 0.0f });
+	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + no::vector3f{ 0.0f, 4.0f, 0.0f });
 	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
+	fog.var_start.set(fog.start);
+	fog.var_distance.set(fog.distance);
 	no::bind_texture(tileset.texture);
 	no::transform transform;
 	transform.position.x = (float)world.terrain.offset().x;

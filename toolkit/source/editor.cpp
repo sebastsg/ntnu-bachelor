@@ -67,6 +67,8 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 		object_paths.emplace_back(name, file);
 	}
 	decorations_texture = no::create_texture(no::surface(no::asset_path("textures/decorations.png")), no::scale_option::nearest_neighbour, true);
+	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });
+	renderer.fog.start = 100.0f;
 }
 
 world_editor_state::~world_editor_state() {
