@@ -1,6 +1,55 @@
 #include "world.hpp"
 #include "assets.hpp"
 
+world_autotiler::world_autotiler() {
+	add_main(grass);
+	add_main(dirt);
+	add_main(water);
+	row++;
+	row += 2;
+	add_group(grass, dirt);
+	add_group(grass, water);
+}
+
+void world_autotiler::add_main(int tile) {
+	uv_indices[packed_corners(tile, tile, tile, tile)] = { tile, 0 };
+}
+
+void world_autotiler::add_group(int primary, int secondary) {
+	uv_indices[packed_corners(primary, primary, primary, secondary)] = { 0, row };
+	uv_indices[packed_corners(primary, primary, secondary, primary)] = { 1, row };
+	uv_indices[packed_corners(primary, secondary, secondary, primary)] = { 2, row };
+	uv_indices[packed_corners(secondary, primary, primary, secondary)] = { 3, row };
+	uv_indices[packed_corners(secondary, secondary, secondary, primary)] = { 4, row };
+	uv_indices[packed_corners(secondary, secondary, primary, primary)] = { 5, row };
+	uv_indices[packed_corners(secondary, secondary, primary, secondary)] = { 6, row };
+	uv_indices[packed_corners(secondary, primary, secondary, primary)] = { 7, row };
+	row++;
+	uv_indices[packed_corners(primary, secondary, primary, primary)] = { 0, row };
+	uv_indices[packed_corners(secondary, primary, primary, primary)] = { 1, row };
+	uv_indices[packed_corners(secondary, primary, primary, secondary)] = { 2, row };
+	uv_indices[packed_corners(primary, secondary, secondary, primary)] = { 3, row };
+	uv_indices[packed_corners(secondary, primary, secondary, secondary)] = { 4, row };
+	uv_indices[packed_corners(primary, primary, secondary, secondary)] = { 5, row };
+	uv_indices[packed_corners(primary, secondary, secondary, secondary)] = { 6, row };
+	uv_indices[packed_corners(primary, secondary, primary, secondary)] = { 7, row };
+	row++;
+}
+
+uint32_t world_autotiler::packed_corners(int top_left, int top_right, int bottom_left, int bottom_right) const {
+	uint32_t result = 0;
+	result += (uint32_t)(top_left & 0xFF) << 24;
+	result += (uint32_t)(top_right & 0xFF) << 16;
+	result += (uint32_t)(bottom_left & 0xFF) << 8;
+	result += (uint32_t)(bottom_right & 0xFF);
+	return result;
+}
+
+no::vector2i world_autotiler::uv_index(uint32_t corners) const {
+	auto it = uv_indices.find(corners);
+	return it != uv_indices.end() ? it->second : 0;
+}
+
 world_terrain::world_terrain(world_state& world) : world(world) {
 	tile_array.resize_and_reset(128, {});
 }
@@ -30,10 +79,57 @@ void world_terrain::elevate_tile(no::vector2i tile, float amount) {
 }
 
 void world_terrain::set_tile_type(no::vector2i tile, int type) {
-	if (is_out_of_bounds(tile)) {
-		return;
+	// Top left
+	tile -= 1;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).corners[3] = type;
 	}
-	tile_array.at(tile.x, tile.y).type = type;
+	// Top middle
+	tile.x++;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).corners[2] = type;
+		tile_array.at(tile.x, tile.y).corners[3] = type;
+	}
+	// Top right
+	tile.x++;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).corners[2] = type;
+	}
+	// Middle left
+	tile.x -= 2;
+	tile.y++;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).corners[1] = type;
+		tile_array.at(tile.x, tile.y).corners[3] = type;
+	}
+	// Middle
+	tile.x++;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).set(type);
+	}
+	// Middle right
+	tile.x++;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).corners[0] = type;
+		tile_array.at(tile.x, tile.y).corners[2] = type;
+	}
+	// Bottom left
+	tile.x -= 2;
+	tile.y++;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).corners[1] = type;
+	}
+	// Bottom middle
+	tile.x++;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).corners[0] = type;
+		tile_array.at(tile.x, tile.y).corners[1] = type;
+	}
+	// Bottom right
+	tile.x++;
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).corners[0] = type;
+	}
 	dirty = true;
 }
 

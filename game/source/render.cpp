@@ -96,14 +96,17 @@ world_view::world_view(world_state& world) : world(world), players(*this) {
 	diffuse_shader = no::create_shader(no::asset_path("shaders/diffuse"));
 	pick_shader = no::create_shader(no::asset_path("shaders/pick"));
 	static_textured_shader = no::create_shader(no::asset_path("shaders/static_textured"));
+	terrain_shader = no::create_shader(no::asset_path("shaders/terrain"));
 	no::surface temp_surface(no::asset_path("textures/tiles.png"));
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 3, 1);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 4, 2);
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, false);
 	no::surface surface = { 2, 2, no::pixel_format::rgba };
 	surface.clear(0xFF0000FF);
 	highlight_texture = no::create_texture(surface);
 
-	height_map.build(4, world.terrain.size(), [this](int x, int y, std::vector<no::static_textured_vertex>& vertices, std::vector<unsigned short>& indices) {
+	height_map.build(4, world.terrain.size(), [this](int x, int y, std::vector<terrain_vertex>& vertices, std::vector<unsigned short>& indices) {
 		int i = (int)vertices.size();
 		indices.push_back(i);
 		indices.push_back(i + 1);
@@ -152,10 +155,11 @@ void world_view::draw_for_picking() {
 }
 
 void world_view::refresh_terrain() {
-	height_map.for_each([this](int i, int x, int y, std::vector<no::static_textured_vertex>& vertices) {
+	height_map.for_each([this](int i, int x, int y, std::vector<terrain_vertex>& vertices) {
 		auto& tiles = world.terrain.tiles();
 		auto& tile = tiles.at(tiles.x() + x, tiles.y() + y);
-		no::vector2f uv = uv_for_type(tile.type);
+		auto packed = world.terrain.autotiler.packed_corners(tile.corners[0], tile.corners[1], tile.corners[2], tile.corners[3]);
+		no::vector2f uv = uv_for_type(world.terrain.autotiler.uv_index(packed));
 		no::vector2f step = uv_step();
 		vertices[i].position.y = tile.height;
 		vertices[i].tex_coords = uv;
@@ -168,6 +172,14 @@ void world_view::refresh_terrain() {
 		vertices[i + 1].tex_coords = uv + no::vector2f{ step.x, 0.0f };
 		vertices[i + 2].tex_coords = uv + step;
 		vertices[i + 3].tex_coords = uv + no::vector2f{ 0.0f, step.y };
+
+		no::vector3f a_to_c = vertices[i + 2].position - vertices[i].position;
+		no::vector3f b_to_d = vertices[i + 1].position - vertices[i + 3].position;
+		no::vector3f normal = a_to_c.cross(b_to_d).normalized();
+		vertices[i].normal = normal;
+		vertices[i + 1].normal = normal;
+		vertices[i + 2].normal = normal;
+		vertices[i + 3].normal = normal;
 	});
 	height_map_pick.for_each([this](int i, int x, int y, std::vector<no::pick_vertex>& vertices) {
 		auto& tiles = world.terrain.tiles();
@@ -193,9 +205,11 @@ no::vector2f world_view::uv_step() const {
 	return (float)tileset.grid / tileset.size.to<float>();
 }
 
-no::vector2f world_view::uv_for_type(uint8_t type) const {
-	float col = (float)(type % tileset.per_row);
-	float row = (float)(type / tileset.per_row);
+no::vector2f world_view::uv_for_type(no::vector2i index) const {
+	//float col = (float)(uv_index % tileset.per_row);
+	//float row = (float)(uv_index / tileset.per_row);
+	float col = (float)index.x;
+	float row = (float)index.y;
 	float full_size = (float)(tileset.grid + tileset.border * 2);
 	no::vector2f outer = full_size / tileset.size.to<float>();
 	no::vector2f border_step = (float)tileset.border / tileset.size.to<float>();
@@ -252,12 +266,31 @@ no::surface world_view::add_tile_borders(uint32_t* pixels, int width, int height
 	return no::surface(result, new_width, new_height, no::pixel_format::rgba, no::surface::construct_by::move);
 }
 
+void world_view::repeat_tile_under_row(uint32_t* pixels, int width, int height, int tile, int new_row, int row) {
+	for (int col = 0; col < tileset.per_row; col++) {
+		int col_top_left = new_row * tileset.grid * width + col * tileset.grid;
+		for (int y = 0; y < tileset.grid; y++) {
+			// main tile:
+			memcpy(pixels + col_top_left + y * width, pixels + y * width + tile * tileset.grid, sizeof(uint32_t) * tileset.grid);
+			// overlay foreground:
+			for (int x = 0; x < tileset.grid; x++) {
+				uint32_t source = pixels[(tileset.grid * row + y) * width + col * tileset.grid + x];
+				if (source != 0x00FFFFFF) {
+					pixels[col_top_left + y * width + x] = source;
+				}
+			}
+		}
+	}
+}
+
 void world_view::draw_terrain() {
 	if (world.terrain.is_dirty()) {
 		refresh_terrain();
 	}
-	no::bind_shader(static_textured_shader);
+	no::bind_shader(terrain_shader);
 	no::set_shader_view_projection(camera);
+	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + no::vector3f{ 0.0f, 5.0f, 0.0f });
+	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
 	no::bind_texture(tileset.texture);
 	no::transform transform;
 	transform.position.x = (float)world.terrain.offset().x;
@@ -270,7 +303,6 @@ void world_view::draw_terrain() {
 void world_view::draw_players() {
 	no::bind_shader(diffuse_shader);
 	no::set_shader_view_projection(camera);
-	no::get_shader_variable("uni_Color").set({ 1.0f, 1.0f, 1.0f, 1.0f });
 	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + camera.offset());
 	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
 	players.draw();

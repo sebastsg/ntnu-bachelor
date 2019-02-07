@@ -14,11 +14,41 @@ class game_object;
 
 struct world_tile {
 	float height = 0.0f;
-	uint8_t type = 7;
+	uint8_t corners[4] = {};
+	void set(int type) {
+		corners[0] = (uint8_t)type;
+		corners[1] = (uint8_t)type;
+		corners[2] = (uint8_t)type;
+		corners[3] = (uint8_t)type;
+	}
+};
+
+class world_autotiler {
+public:
+
+	static constexpr int grass = 0;
+	static constexpr int dirt = 1;
+	static constexpr int water = 2;
+
+	world_autotiler();
+
+	uint32_t packed_corners(int top_left, int top_right, int bottom_left, int bottom_right) const;
+	no::vector2i uv_index(uint32_t corners) const;
+
+private:
+
+	void add_main(int tile);
+	void add_group(int tile, int bordering_tile);
+
+	std::unordered_map<uint32_t, no::vector2i> uv_indices;
+	int row = 0;
+
 };
 
 class world_terrain {
 public:
+
+	world_autotiler autotiler;
 
 	world_terrain(world_state& world);
 	world_terrain(const world_terrain&) = delete;

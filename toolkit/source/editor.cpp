@@ -163,9 +163,9 @@ void world_editor_state::update_imgui() {
 		ImGui::InputFloat("##LimitElevationValue", &elevation_limit, 0.1f, 1.0f, 2, limit_elevation ? 0 : ImGuiInputTextFlags_ReadOnly);
 		elevation_limit = std::min(std::max(elevation_limit, 0.0f), 100.0f);
 	} else if (tool == 1) {
-		ImGui::RadioButton("Grass", &current_type, 7);
-		ImGui::RadioButton("Water", &current_type, 9);
-		ImGui::RadioButton("Dirt", &current_type, 3);
+		ImGui::RadioButton("Grass", &current_type, world_autotiler::grass);
+		ImGui::RadioButton("Dirt", &current_type, world_autotiler::dirt);
+		ImGui::RadioButton("Water", &current_type, world_autotiler::water);
 	} else if (tool == 2) {
 		int current_obj = tool_current_object;
 		ImGui::ListBox("Objects", &tool_current_object, [](void* data, int i, const char** out) -> bool {

@@ -74,6 +74,13 @@ private:
 
 };
 
+struct terrain_vertex {
+	static constexpr no::vertex_attribute_specification attributes[] = { 3, 3, 2 };
+	no::vector3f position;
+	no::vector3f normal;
+	no::vector2f tex_coords;
+};
+
 class world_view {
 public:
 
@@ -96,15 +103,16 @@ private:
 	struct {
 		int grid = 52;
 		int border = 24;
-		int per_row = 6;
-		int per_column = 6;
+		int per_row = 9;
+		int per_column = 9;
 		no::vector2i size;
 		int texture = -1;
 	} tileset;
 
 	no::vector2f uv_step() const;
-	no::vector2f uv_for_type(uint8_t type) const;
+	no::vector2f uv_for_type(no::vector2i index) const;
 	no::surface add_tile_borders(uint32_t* pixels, int width, int height);
+	void repeat_tile_under_row(uint32_t* pixels, int width, int height, int tile, int new_row, int row);
 
 	world_state& world;
 
@@ -115,8 +123,9 @@ private:
 	int diffuse_shader = -1;
 	int static_textured_shader = -1;
 	int pick_shader = -1;
+	int terrain_shader = -1;
 
-	no::tiled_quad_array<no::static_textured_vertex> height_map;
+	no::tiled_quad_array<terrain_vertex> height_map;
 	no::tiled_quad_array<no::pick_vertex> height_map_pick;
 
 	no::quad<no::static_textured_vertex> highlight_quad;

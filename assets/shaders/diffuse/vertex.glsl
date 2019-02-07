@@ -2,7 +2,6 @@
 
 uniform mat4 uni_ModelViewProjection;
 uniform mat4 uni_Model;
-uniform vec4 uni_Color;
 uniform mat4 uni_Bones[100];
 
 in vec3 in_Position;
@@ -31,7 +30,7 @@ void main() {
 	vec4 animatedPosition = bone * vec4(in_Position, 1.0f);
 	vec4 animatedNormal = bone * vec4(in_Normal, 0.0f);
 	gl_Position = uni_ModelViewProjection * animatedPosition;
-	ex_Color = in_Color * uni_Color;
+	ex_Color = in_Color;
 	ex_TexCoords = in_TexCoords;
 	ex_Normal = vec3(uni_Model * animatedNormal);
 	ex_ModelPosition = vec3(uni_Model * animatedPosition);

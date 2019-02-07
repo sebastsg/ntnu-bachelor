@@ -57,6 +57,8 @@ struct gl_shader {
 	glm::mat4 projection;
 	int model_view_projection_location = -1;
 	int model_location = -1;
+	int view_location = -1;
+	int projection_location = -1;
 };
 
 static struct {
@@ -374,10 +376,10 @@ int create_shader(const std::string& path) {
 #endif
 
 	bind_shader(id);
-
 	CHECK_GL_ERROR(shader.model_view_projection_location = glGetUniformLocation(shader.id, "uni_ModelViewProjection"));
 	CHECK_GL_ERROR(shader.model_location = glGetUniformLocation(shader.id, "uni_Model"));
-
+	CHECK_GL_ERROR(shader.view_location = glGetUniformLocation(shader.id, "uni_View"));
+	CHECK_GL_ERROR(shader.projection_location = glGetUniformLocation(shader.id, "uni_Projection"));
 	return id;
 }
 
@@ -408,6 +410,7 @@ void set_shader_view_projection(const ortho_camera& camera) {
 	shader.projection = camera.projection();
 	auto model_view_projection = shader.projection * shader.view * shader.model;
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_view_projection_location, 1, false, glm::value_ptr(model_view_projection)));
+	CHECK_GL_ERROR(glUniformMatrix4fv(shader.view_location, 1, false, glm::value_ptr(shader.view)));
 }
 
 void set_shader_view_projection(const perspective_camera& camera) {
@@ -416,6 +419,7 @@ void set_shader_view_projection(const perspective_camera& camera) {
 	shader.projection = camera.projection();
 	auto model_view_projection = shader.projection * shader.view * shader.model;
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_view_projection_location, 1, false, glm::value_ptr(model_view_projection)));
+	CHECK_GL_ERROR(glUniformMatrix4fv(shader.projection_location, 1, false, glm::value_ptr(shader.projection)));
 }
 
 void delete_shader(int id) {

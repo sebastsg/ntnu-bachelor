@@ -172,7 +172,7 @@ void game_state::draw() {
 	window().clear();
 	renderer.draw();
 	if (world.my_player_id != -1) {
-		renderer.draw_tile_highlight(world.my_player()->tile());
+		//renderer.draw_tile_highlight(world.my_player()->tile());
 	}
 	ui.draw();
 	hud.draw();
