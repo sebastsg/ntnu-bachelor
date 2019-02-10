@@ -134,7 +134,7 @@ inventory_view::~inventory_view() {
 	ignore();
 }
 
-void inventory_view::listen(player_object* player_) {
+void inventory_view::listen(character_object* player_) {
 	player = player_;
 	add_item_event = player->inventory.events.add.listen([this](const item_container::add_event& event) {
 		int i = event.slot.y * 4 + event.slot.x;
@@ -142,7 +142,7 @@ void inventory_view::listen(player_object* player_) {
 		if (slot == slots.end()) {
 			slots[i] = {};
 			slots[i].item = event.item;
-			set_item_uv(slots[i].rectangle, world.items().get(event.item.definition_id).uv);
+			set_item_uv(slots[i].rectangle, item_definitions().get(event.item.definition_id).uv);
 		} else {
 			// todo: update stack text
 		}
@@ -256,10 +256,10 @@ bool user_interface_view::is_mouse_over_any() const {
 	return is_mouse_over() || is_mouse_over_context();
 }
 
-void user_interface_view::listen(player_object* player_) {
+void user_interface_view::listen(character_object* player_) {
 	ASSERT(player_);
 	player = player_;
-	equipment_event = player->events.equip.listen([this](const player_object::equip_event& event) {
+	equipment_event = player->events.equip.listen([this](const character_object::equip_event& event) {
 		if (event.item_id == -1) {
 
 		} else {
@@ -386,7 +386,7 @@ void user_interface_view::create_context() {
 		if (slot.x != -1) {
 			auto item = player->inventory.at(slot);
 			if (item.definition_id != -1) {
-				auto definition = world.items().get(item.definition_id);
+				auto definition = item_definitions().get(item.definition_id);
 				context->add_option("Use", [] {
 
 				});

@@ -51,12 +51,6 @@ struct static_mesh_vertex {
 	vector2f tex_coords;
 };
 
-struct static_textured_vertex {
-	static constexpr vertex_attribute_specification attributes[] = { 3, 2 };
-	vector3f position;
-	vector2f tex_coords;
-};
-
 struct animated_mesh_vertex {
 	static constexpr vertex_attribute_specification attributes[] = {
 		3, 4, 2, 3, 3, 3, 4, 2, { attribute_component::is_integer, 4 }, { attribute_component::is_integer, 2 }

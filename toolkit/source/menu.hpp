@@ -8,5 +8,9 @@ public:
 	void update() override;
 	void draw() override;
 
+private:
+
+	bool limit_fps = true;
+
 };
 

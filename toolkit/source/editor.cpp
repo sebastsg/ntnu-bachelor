@@ -1,6 +1,5 @@
 #include "editor.hpp"
 #include "commands.hpp"
-#include "player.hpp"
 
 #include "window.hpp"
 #include "debug.hpp"
@@ -27,15 +26,20 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 	no::imgui::create(window());
 
 	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
-		if (event.button == no::mouse::button::left) {
-			selected_tile = hovered_tile;
-			is_selected = true;
-			if (tool == 2) {
-				decoration_object* obj = world.add_decoration();
-				obj->model = "models/decorations/" + object_paths[tool_current_object].first + ".nom";
-				obj->transform.scale = 0.01f;
+		if (event.button != no::mouse::button::left || is_mouse_over_ui()) {
+			return;
+		}
+		selected_tile = hovered_tile;
+		is_selected = true;
+		if (tool == 2) {
+			auto obj = world.objects.add(tool_current_object);
+			if (obj) {
+				obj->change_id(world.objects.next_static_id());
 				obj->transform.position = world_position_for_tile(selected_tile);
-				renderer.decorations.add(obj);
+				obj->transform.position.x += 0.5f;
+				obj->transform.position.z += 0.5f;
+			} else {
+				WARNING("Failed to add object: " << tool_current_object);
 			}
 		}
 	});
@@ -52,20 +56,9 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
 		
 	});
-
-	no::file::read(no::asset_path("worlds/main.ew"), world_stream);
-	world.terrain.read(world_stream);
-
-	auto directory = no::asset_path("models/decorations");
-	auto files = no::entries_in_directory(directory, no::entry_inclusion::only_files);
-	for (auto& file : files) {
-		auto extension = no::file_extension_in_path(file);
-		if (extension != ".nom") {
-			continue;
-		}
-		std::string name = std::filesystem::path(file).stem().string();
-		object_paths.emplace_back(name, file);
-	}
+	
+	world.load(no::asset_path("worlds/main.ew"));
+	
 	decorations_texture = no::create_texture(no::surface(no::asset_path("textures/decorations.png")), no::scale_option::nearest_neighbour, true);
 	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });
 	renderer.fog.start = 100.0f;
@@ -73,8 +66,8 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 
 world_editor_state::~world_editor_state() {
 	mouse().press.ignore(mouse_press_id);
-	mouse().press.ignore(mouse_release_id);
-	mouse().press.ignore(mouse_scroll_id);
+	mouse().release.ignore(mouse_release_id);
+	mouse().scroll.ignore(mouse_scroll_id);
 	keyboard().press.ignore(keyboard_press_id);
 	no::imgui::destroy();
 }
@@ -171,40 +164,37 @@ void world_editor_state::update_imgui() {
 	} else if (tool == 2) {
 		int current_obj = tool_current_object;
 		ImGui::ListBox("Objects", &tool_current_object, [](void* data, int i, const char** out) -> bool {
-			auto& paths = *(std::vector<std::pair<std::string, std::string>>*)data;
-			if (i < 0 || i >= (int)paths.size()) {
+			if (i < 0 || i >= object_definitions().count()) {
 				return false;
 			}
-			*out = paths[i].first.c_str();
+			*out = object_definitions().get(i).name.c_str();
 			return true;
-		}, &object_paths, object_paths.size(), 20);
+		}, nullptr, object_definitions().count(), 20);
 		if (current_obj != tool_current_object) {
-			tool_object.load<no::static_textured_vertex>(object_paths[tool_current_object].second);
+			tool_object.load<static_object_vertex>(no::asset_path("models/" + object_definitions().get(tool_current_object).model + ".nom"));
 		}
 	}
 
 	ImGui::Separator();
 
 	if (ImGui::Button("Save")) {
-		world.terrain.write(world_stream);
-		world_stream.set_write_index(world_stream.size());
-		no::file::write(no::asset_path("worlds/main.ew"), world_stream);
+		world.save(no::asset_path("worlds/main.ew"));
 	}
 
 	ImGui::Separator();
 
 	if (ImGui::Button("/\\")) {
-		world.terrain.shift_up(world_stream);
+		world.terrain.shift_up();
 	}
 	if (ImGui::Button("<-")) {
-		world.terrain.shift_left(world_stream);
+		world.terrain.shift_left();
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("->")) {
-		world.terrain.shift_right(world_stream);
+		world.terrain.shift_right();
 	}
 	if (ImGui::Button("\\/")) {
-		world.terrain.shift_down(world_stream);
+		world.terrain.shift_down();
 	}
 
 	ImGui::Separator();

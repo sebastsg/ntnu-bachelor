@@ -2,36 +2,45 @@
 
 #include "world.hpp"
 #include "draw.hpp"
+#include "character.hpp"
+#include "decoration.hpp"
 
 class world_view;
 
-class player_renderer {
+struct static_object_vertex {
+	static constexpr no::vertex_attribute_specification attributes[] = { 3, 3, 2 };
+	no::vector3f position;
+	no::vector3f normal;
+	no::vector2f tex_coords;
+};
+
+class character_renderer {
 public:
 
-	player_renderer(world_view& world);
-	player_renderer(const player_renderer&) = delete;
-	player_renderer(player_renderer&&) = delete;
+	character_renderer(world_view& world);
+	character_renderer(const character_renderer&) = delete;
+	character_renderer(character_renderer&&) = delete;
 
-	~player_renderer();
+	~character_renderer();
 
-	player_renderer& operator=(const player_renderer&) = delete;
-	player_renderer& operator=(player_renderer&&) = delete;
+	character_renderer& operator=(const character_renderer&) = delete;
+	character_renderer& operator=(character_renderer&&) = delete;
 
 	void draw();
 
-	void add(player_object* object);
-	void remove(player_object* object);
+	void add(character_object* object);
+	void remove(character_object* object);
 
 private:
 
 	struct object_data {
-		player_object* object = nullptr;
+		character_object* object = nullptr;
 		no::model_instance model;
 		int equip_event = -1;
 		std::unordered_map<equipment_slot, int> attachments;
 
 		object_data() = default;
-		object_data(player_object* object, no::model& model) : object(object), model(model) {}
+		object_data(character_object* object, no::model& model) : object(object), model(model) {}
 	};
 
 	no::model model;
@@ -42,7 +51,7 @@ private:
 	int idle = 0;
 	int run = 0;
 
-	std::vector<object_data> players;
+	std::vector<object_data> characters;
 
 	world_view& world;
 
@@ -52,6 +61,13 @@ class decoration_renderer {
 public:
 
 	decoration_renderer();
+	decoration_renderer(const decoration_renderer&) = delete;
+	decoration_renderer(decoration_renderer&&) = delete;
+
+	~decoration_renderer();
+
+	decoration_renderer& operator=(const decoration_renderer&) = delete;
+	decoration_renderer& operator=(decoration_renderer&&) = delete;
 
 	void draw();
 
@@ -60,25 +76,15 @@ public:
 
 private:
 
-	struct object_data {
-		decoration_object* object = nullptr;
-		no::model model; // todo: use model_instance, but not really big deal atm
-		object_data() = default;
-		object_data(decoration_object* object);
+	struct object_group {
+		int definition_id = -1;
+		int texture = -1;
+		no::model model;
+		std::vector<decoration_object*> objects;
 	};
 
-	// todo: decorations should be able to have different textures
-	int texture = -1;
+	std::vector<object_group> groups;
 
-	std::vector<object_data> decorations;
-
-};
-
-struct terrain_vertex {
-	static constexpr no::vertex_attribute_specification attributes[] = { 3, 3, 2 };
-	no::vector3f position;
-	no::vector3f normal;
-	no::vector2f tex_coords;
 };
 
 class world_view {
@@ -91,21 +97,38 @@ public:
 		no::shader_variable var_distance;
 	} fog;
 
+	struct {
+		no::vector3f position;
+		no::vector3f color = 1.0f;
+		no::shader_variable var_position_animate;
+		no::shader_variable var_color_animate;
+		no::shader_variable var_position_static;
+		no::shader_variable var_color_static;
+	} light;
+
 	no::perspective_camera camera;
 	no::model_attachment_mapping_list mappings;
 
-	player_renderer players;
-	decoration_renderer decorations;
-
 	world_view(world_state& world);
+	world_view(const world_view&) = delete;
+	world_view(world_view&&) = delete;
+
+	~world_view();
+
+	world_view& operator=(const world_view&) = delete;
+	world_view& operator=(world_view&&) = delete;
 
 	void draw();
+	void draw_terrain();
 	void draw_for_picking();
 	void draw_tile_highlight(no::vector2i tile);
 
 	void refresh_terrain();
 
 private:
+
+	void add(game_object* object);
+	void remove(game_object* object);
 	
 	struct {
 		int grid = 52;
@@ -122,20 +145,20 @@ private:
 	void repeat_tile_under_row(uint32_t* pixels, int width, int height, int tile, int new_row, int row);
 
 	world_state& world;
+	decoration_renderer decorations;
+	character_renderer characters;
 
-	void draw_terrain();
-	void draw_players();
-	void draw_decorations();
-
-	int diffuse_shader = -1;
-	int static_textured_shader = -1;
+	int animate_diffuse_shader = -1;
+	int static_diffuse_shader = -1;
 	int pick_shader = -1;
-	int terrain_shader = -1;
 
-	no::tiled_quad_array<terrain_vertex> height_map;
+	no::tiled_quad_array<static_object_vertex> height_map;
 	no::tiled_quad_array<no::pick_vertex> height_map_pick;
 
-	no::quad<no::static_textured_vertex> highlight_quad;
+	no::quad<static_object_vertex> highlight_quad;
 	int highlight_texture = -1;
+
+	int add_object_id = -1;
+	int remove_object_id = -1;
 
 };

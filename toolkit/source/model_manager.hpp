@@ -12,7 +12,7 @@ public:
 	friend class converter_tool;
 
 	static constexpr int animated = 0;
-	static constexpr int static_textured = 1;
+	static constexpr int static_object = 1;
 
 	loaded_model() = default;
 	loaded_model(const std::string& name, int vertex_type, const no::model_data<no::animated_mesh_vertex>& data);

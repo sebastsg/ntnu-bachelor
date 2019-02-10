@@ -3,6 +3,7 @@
 #include "editor.hpp"
 #include "item_editor.hpp"
 #include "object_editor.hpp"
+#include "window.hpp"
 
 #include "imgui/imgui.h"
 
@@ -24,6 +25,14 @@ void menu_bar_state::update() {
 		}
 		if (ImGui::MenuItem("Dialogue editor")) {
 
+		}
+		ImGui::PopItemWidth();
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Options")) {
+		ImGui::PushItemWidth(360.0f);
+		if (ImGui::MenuItem("Limit FPS", nullptr, &limit_fps)) {
+			set_synchronization(limit_fps ? no::draw_synchronization::if_updated : no::draw_synchronization::always);
 		}
 		ImGui::PopItemWidth();
 		ImGui::EndMenu();

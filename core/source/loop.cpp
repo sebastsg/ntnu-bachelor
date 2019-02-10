@@ -66,7 +66,13 @@ static struct {
 
 	long redundant_bind_calls_this_frame = 0;
 
+	signal_event post_configure;
+
 } loop;
+
+signal_event& post_configure_event() {
+	return loop.post_configure;
+}
 
 static int state_index(const window_state* state) {
 	for (size_t i = 0; i < loop.states.size(); i++) {
@@ -196,6 +202,7 @@ void create_state(const std::string& title, int width, int height, int samples, 
 
 int run_main_loop() {
 	configure();
+	loop.post_configure.emit();
 
 	loop.audio = new wasapi::audio_device();
 	start_network();

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "player.hpp"
 #include "world.hpp"
 #include "render.hpp"
 #include "ui.hpp"
@@ -42,7 +41,7 @@ public:
 
 	game_world();
 
-	player_object* my_player();
+	character_object* my_player();
 
 private:
 

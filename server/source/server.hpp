@@ -7,7 +7,7 @@
 class client_state {
 public:
 
-	no::vector2i tile = 15;
+	int player_instance_id = -1;
 
 	client_state() = default;
 	client_state(bool connected) : connected(connected) {}
@@ -31,11 +31,6 @@ class server_world : public world_state {
 public:
 
 	server_world(const std::string& name);
-	server_world(server_world&&);
-
-private:
-
-	no::io_stream stream;
 
 };
 

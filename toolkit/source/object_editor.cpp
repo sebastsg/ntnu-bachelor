@@ -8,7 +8,6 @@
 
 object_editor::object_editor() {
 	no::imgui::create(window());
-	objects.load(no::asset_path("objects.data"));
 }
 
 object_editor::~object_editor() {
@@ -16,7 +15,7 @@ object_editor::~object_editor() {
 }
 
 void object_editor::object_type_combo(game_object_type& target, const std::string& ui_id) {
-	if (ImGui::BeginCombo(CSTRING("Object type##ObjectType" << ui_id), CSTRING(new_object.type))) {
+	if (ImGui::BeginCombo(CSTRING("Object type##ObjectType" << ui_id), CSTRING(target))) {
 		for (int type_value = 0; type_value < (int)game_object_type::total_types; type_value++) {
 			game_object_type type = (game_object_type)type_value;
 			if (ImGui::Selectable(CSTRING(type << "##ObjectType" << ui_id << type_value))) {
@@ -31,16 +30,14 @@ void object_editor::ui_create_object() {
 	if (ImGui::CollapsingHeader("Create new object")) {
 		ImGui::InputText("Name##NewObjectName", new_object.name, 100);
 		object_type_combo(new_object.type, "New");
-		if (ImGui::Button("Load model##NewObjectModel")) {
-			std::string browsed_path = no::platform::open_file_browse_window();
-			new_object.model.load<no::animated_mesh_vertex>(browsed_path);
-		}
+		ImGui::InputText("Model##NewObjectModel", new_object.model, 100);
 		if (ImGui::Button("Save##SaveNewObject")) {
 			game_object_definition object;
-			object.id = objects.count();
+			object.id = object_definitions().count();
 			object.type = new_object.type;
 			object.name = new_object.name;
-			objects.add(object);
+			object.model = new_object.model;
+			object_definitions().add(object);
 			new_object = {};
 		}
 	}
@@ -49,20 +46,27 @@ void object_editor::ui_create_object() {
 void object_editor::ui_select_object() {
 	ImGui::Text("Select object:");
 	ImGui::SameLine();
-	if (ImGui::BeginCombo("##SelectEditObject", objects.get(current_object).name.c_str())) {
-		for (int id = 0; id < objects.count(); id++) {
-			if (ImGui::Selectable(objects.get(id).name.c_str())) {
+	if (ImGui::BeginCombo("##SelectEditObject", object_definitions().get(current_object).name.c_str())) {
+		for (int id = 0; id < object_definitions().count(); id++) {
+			if (ImGui::Selectable(object_definitions().get(id).name.c_str())) {
 				current_object = id;
 			}
 		}
 		ImGui::EndCombo();
 	}
-	auto& selected = objects.get(current_object);
+	auto& selected = object_definitions().get(current_object);
 	if (selected.id == -1) {
 		return;
 	}
-	ImGui::InputText("Name##EditObjectName", selected.name.data(), selected.name.capacity());
+	char name[100] = {};
+	char model[100] = {};
+	strcpy(name, selected.name.c_str());
+	strcpy(model, selected.model.c_str());
+	ImGui::InputText("Name##EditObjectName", name, 100);
 	object_type_combo(selected.type, "Edit");
+	ImGui::InputText("Model##EditObjectModel", model, 100);
+	selected.name = name;
+	selected.model = model;
 }
 
 void object_editor::update() {
@@ -84,7 +88,7 @@ void object_editor::update() {
 	ImGui::Separator();
 
 	if (ImGui::Button("Save")) {
-		objects.save(no::asset_path("objects.data"));
+		object_definitions().save(no::asset_path("objects.data"));
 	}
 
 	ImGui::End();

@@ -262,7 +262,7 @@ struct vector3 {
 	void operator*=(const vector3<T>& v) {
 		x *= v.x;
 		y *= v.y;
-		y *= v.z;
+		z *= v.z;
 	}
 
 	void operator/=(const vector3<T>& v) {
@@ -409,7 +409,7 @@ struct vector4 {
 	void operator*=(const vector4<T>& v) {
 		x *= v.x;
 		y *= v.y;
-		y *= v.z;
+		z *= v.z;
 		w *= v.w;
 	}
 

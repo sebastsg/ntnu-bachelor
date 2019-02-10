@@ -3,7 +3,6 @@
 #include "debug.hpp"
 #include "surface.hpp"
 #include "io.hpp"
-#include "player.hpp"
 #include "platform.hpp"
 #include "commands.hpp"
 #include "packets.hpp"
@@ -45,12 +44,11 @@ void hud_view::set_debug(const std::string& debug) {
 }
 
 game_world::game_world() {
-	no::file::read(no::asset_path("worlds/main.ew"), stream);
-	terrain.read(stream);
+	load(no::asset_path("worlds/main.ew"));
 }
 
-player_object* game_world::my_player() {
-	return player(my_player_id);
+character_object* game_world::my_player() {
+	return (character_object*)objects.find(my_player_id);
 }
 
 game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
@@ -102,34 +100,23 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 		{
 			move_to_tile_packet packet;
 			packet.read(stream);
-			world.player(packet.player_id)->start_movement_to(packet.tile.x, packet.tile.y);
+			auto player = (character_object*)world.objects.find(packet.player_instance_id);
+			if (player) {
+				player->start_movement_to(packet.tile.x, packet.tile.y);
+			} else {
+				WARNING("player not found: " << packet.player_instance_id);
+			}
 			break;
 		}
 		case player_joined_packet::type:
 		{
 			player_joined_packet packet;
 			packet.read(stream);
-			auto player = world.add_player(packet.player_id);
+			auto player = (character_object*)world.objects.add(packet.player.serialized());
 			if (packet.is_me) {
-				world.my_player_id = packet.player_id;
+				world.my_player_id = packet.player.id();
 				ui.listen(world.my_player());
 			}
-			player->transform.position.x = (float)packet.tile.x;
-			player->transform.position.z = (float)packet.tile.y;
-			renderer.players.add(player);
-			item_instance item;
-			item.definition_id = 0;
-			item.stack = 1;
-			player->inventory.add_from(item);
-			item.definition_id = 1;
-			item.stack = 1;
-			player->inventory.add_from(item);
-			item.definition_id = 2;
-			item.stack = 1;
-			player->inventory.add_from(item);
-			item.definition_id = 3;
-			item.stack = 1;
-			player->inventory.add_from(item);
 			break;
 		}
 		default:

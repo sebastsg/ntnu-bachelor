@@ -27,9 +27,6 @@ enum class equipment_slot {
 	total_slots
 };
 
-std::ostream& operator<<(std::ostream& out, equipment_slot slot);
-std::ostream& operator<<(std::ostream& out, item_type type);
-
 struct item_definition {
 	long long id = -1;
 	long long max_stack = 1;
@@ -65,6 +62,8 @@ private:
 
 };
 
+item_definition_list& item_definitions();
+
 class item_container {
 public:
 
@@ -83,10 +82,9 @@ public:
 		no::message_event<remove_event> remove;
 	} events;
 
-	item_container(item_definition_list& definitions, no::vector2i size);
-
 	item_instance at(no::vector2i slot) const;
 
+	void resize(no::vector2i size);
 	void add_from(item_instance& item);
 	void remove_to(long long stack, item_instance& item);
 	long long take_all(long long id);
@@ -102,8 +100,10 @@ public:
 
 private:
 
-	item_definition_list& definitions;
 	std::vector<item_instance> items;
 	no::vector2i size;
 
 };
+
+std::ostream& operator<<(std::ostream& out, equipment_slot slot);
+std::ostream& operator<<(std::ostream& out, item_type type);

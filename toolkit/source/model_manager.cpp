@@ -1,4 +1,5 @@
 #include "model_manager.hpp"
+#include "render.hpp"
 
 #include "platform.hpp"
 #include "assets.hpp"
@@ -16,9 +17,9 @@ loaded_model::loaded_model(const std::string& name, int vertex_type, const no::m
 	load_texture();
 	if (vertex_type == animated) {
 		model.load(data);
-	} else if (vertex_type == static_textured) {
-		model.load(data.to<no::static_textured_vertex>([](const no::animated_mesh_vertex& vertex) {
-			return no::static_textured_vertex{ vertex.position, vertex.tex_coords };
+	} else if (vertex_type == static_object) {
+		model.load(data.to<static_object_vertex>([](const no::animated_mesh_vertex& vertex) {
+			return static_object_vertex{ vertex.position, vertex.normal, vertex.tex_coords };
 		}));
 	}
 	instance = { model };
@@ -61,7 +62,12 @@ void loaded_model::draw() {
 		no::bind_texture(texture);
 	}
 	if (model.is_drawable()) {
-		instance.draw();
+		if (model.total_animations() > 0) {
+			instance.draw();
+		} else {
+			model.bind();
+			model.draw();
+		}
 	}
 }
 
@@ -73,6 +79,8 @@ void loaded_model::scale_vertices(no::vector3f scale) {
 	for (auto& vertex : data.shape.vertices) {
 		vertex.position *= scale;
 	}
+	data.min *= scale;
+	data.max *= scale;
 	model.load(data);
 }
 
@@ -86,7 +94,7 @@ void converter_tool::update() {
 	ImGui::Checkbox("Add default bone", &import_options.add_bone);
 	ImGui::Text("Import model type:");
 	ImGui::RadioButton("Animated", &import_options.vertex_type, loaded_model::animated);
-	ImGui::RadioButton("Static, textured", &import_options.vertex_type, loaded_model::static_textured);
+	ImGui::RadioButton("Static", &import_options.vertex_type, loaded_model::static_object);
 
 	if (ImGui::Button("Load OBJ or COLLADA file")) {
 		std::vector<no::model_data<no::animated_mesh_vertex>> models;
@@ -96,21 +104,27 @@ void converter_tool::update() {
 		options.exporter = [&](const std::string& destination, const no::model_data<no::animated_mesh_vertex>& data) {
 			models.push_back(data);
 		};
-		auto path = std::filesystem::path(browsed_path).parent_path();
-		auto files = no::entries_in_directory(path.string(), no::entry_inclusion::only_files);
-		for (auto& file : files) {
-			auto extension = no::file_extension_in_path(file);
-			if (extension != ".dae" && extension != ".obj") {
-				continue;
-			}
-			std::string name = std::filesystem::path(file).stem().string();
-			no::convert_model(file, no::asset_path("models/" + name + ".nom"), options);
-		}
-		auto merged_model = no::merge_model_animations<no::animated_mesh_vertex>(models);
 		if (import_options.vertex_type == loaded_model::animated) {
+			auto path = std::filesystem::path(browsed_path).parent_path();
+			auto files = no::entries_in_directory(path.string(), no::entry_inclusion::only_files);
+			for (auto& file : files) {
+				auto extension = no::file_extension_in_path(file);
+				if (extension != ".dae" && extension != ".obj") {
+					continue;
+				}
+				std::string name = std::filesystem::path(file).stem().string();
+				no::convert_model(file, name, options);
+			}
+			auto merged_model = no::merge_model_animations<no::animated_mesh_vertex>(models);
 			merged_model.name = std::filesystem::path(browsed_path).parent_path().stem().string();
+			model = { merged_model.name, import_options.vertex_type, merged_model };
+		} else if (import_options.vertex_type == loaded_model::static_object) {
+			no::convert_model(browsed_path, model.name, options);
+			if (!models.empty()) {
+				models[0].texture = model.data.texture;
+				model = { models[0].name, import_options.vertex_type, models[0] };
+			}
 		}
-		model = { merged_model.name, import_options.vertex_type, merged_model };
 	}
 
 	ImGui::Separator();
@@ -196,7 +210,13 @@ void converter_tool::update() {
 				path.insert(path.end() - 4, '_');
 			}
 		}
-		no::export_model(path, model.data);
+		if (model.vertex_type == loaded_model::animated) {
+			no::export_model(path, model.data);
+		} else if (model.vertex_type == loaded_model::static_object) {
+			no::export_model(path, model.data.to<static_object_vertex>([](const no::animated_mesh_vertex& vertex) {
+				return static_object_vertex{ vertex.position, vertex.normal, vertex.tex_coords };
+			}));
+		}
 	}
 	ImGui::SameLine();
 	ImGui::Checkbox("Overwrite file", &overwrite_export);
@@ -515,8 +535,8 @@ model_manager_state::model_manager_state() : dragger(mouse()) {
 	});
 	camera.transform.position.y = 1.0f;
 	camera.rotation_offset_factor = 12.0f;
-	animate_shader = no::create_shader(no::asset_path("shaders/diffuse"));
-	static_shader = no::create_shader(no::asset_path("shaders/static_textured"));
+	animate_shader = no::create_shader(no::asset_path("shaders/animatediffuse"));
+	static_shader = no::create_shader(no::asset_path("shaders/staticdiffuse"));
 }
 
 model_manager_state::~model_manager_state() {
@@ -563,23 +583,19 @@ void model_manager_state::update() {
 }
 
 void model_manager_state::draw() {
+	if (converter.model.type() == 0) {
+		no::bind_shader(animate_shader);
+	} else {
+		no::bind_shader(static_shader);
+	}
+	no::set_shader_view_projection(camera);
+	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + camera.offset());
+	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
+	no::get_shader_variable("uni_FogStart").set(100.0f);
+	no::get_shader_variable("uni_FogDistance").set(0.0f);
 	if (current_tool == 0) {
-		if (converter.model.type() == 0) {
-			no::bind_shader(animate_shader);
-			no::get_shader_variable("uni_Color").set({ 1.0f, 1.0f, 1.0f, 1.0f });
-			no::get_shader_variable("uni_LightPosition").set(camera.transform.position + camera.offset());
-			no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
-		} else {
-			no::bind_shader(static_shader);
-		}
-		no::set_shader_view_projection(camera);
 		converter.draw();
 	} else if (current_tool == 1) {
-		no::bind_shader(animate_shader);
-		no::get_shader_variable("uni_Color").set({ 1.0f, 1.0f, 1.0f, 1.0f });
-		no::get_shader_variable("uni_LightPosition").set(camera.transform.position + camera.offset());
-		no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
-		no::set_shader_view_projection(camera);
 		attachments.draw();
 	}
 	no::imgui::draw();

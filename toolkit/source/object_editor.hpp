@@ -20,14 +20,12 @@ private:
 	void ui_create_object();
 	void ui_select_object();
 
-	game_object_definition_list objects;
-
 	int current_object = -1;
 
 	struct {
 		game_object_type type = game_object_type::decoration;
 		char name[100] = {};
-		no::model model;
+		char model[100] = {};
 	} new_object;
 
 };

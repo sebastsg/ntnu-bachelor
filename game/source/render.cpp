@@ -2,7 +2,7 @@
 #include "assets.hpp"
 #include "surface.hpp"
 
-player_renderer::player_renderer(world_view& world) : world(world) {
+character_renderer::character_renderer(world_view& world) : world(world) {
 	player_texture = no::create_texture(no::surface(no::asset_path("textures/player.png")), no::scale_option::nearest_neighbour, true);
 	model.load<no::animated_mesh_vertex>(no::asset_path("models/player.nom"));
 	idle = model.index_of_animation("idle");
@@ -13,90 +13,113 @@ player_renderer::player_renderer(world_view& world) : world(world) {
 	equipments[1]->load<no::animated_mesh_vertex>(no::asset_path("models/shield.nom"));
 }
 
-player_renderer::~player_renderer() {
+character_renderer::~character_renderer() {
 	for (auto& equipment : equipments) {
 		delete equipment.second;
 	}
 	no::delete_texture(player_texture);
 }
 
-void player_renderer::add(player_object* object) {
-	int i = (int)players.size();
-	auto& player = players.emplace_back(object, model);
-	player.equip_event = player.object->events.equip.listen([i, this](const player_object::equip_event& event) {
-		auto& attachment = players[i].attachments.find(event.slot);
-		if (attachment != players[i].attachments.end()) {
-			players[i].model.detach(attachment->second);
-			players[i].attachments.erase(attachment->first);
+void character_renderer::add(character_object* object) {
+	int i = (int)characters.size();
+	auto& character = characters.emplace_back(object, model);
+	character.equip_event = character.object->events.equip.listen([i, this](const character_object::equip_event& event) {
+		auto& attachment = characters[i].attachments.find(event.slot);
+		if (attachment != characters[i].attachments.end()) {
+			characters[i].model.detach(attachment->second);
+			characters[i].attachments.erase(attachment->first);
 		}
 		if (event.item_id != -1) {
-			players[i].attachments[event.slot] = players[i].model.attach(*equipments[event.item_id], world.mappings);
+			characters[i].attachments[event.slot] = characters[i].model.attach(*equipments[event.item_id], world.mappings);
 		}
 	});
 }
 
-void player_renderer::remove(player_object* object) {
-	for (size_t i = 0; i < players.size(); i++) {
-		if (players[i].object == object) {
-			object->events.equip.ignore(players[i].equip_event);
-			players.erase(players.begin() + i);
+void character_renderer::remove(character_object* object) {
+	for (size_t i = 0; i < characters.size(); i++) {
+		if (characters[i].object == object) {
+			object->events.equip.ignore(characters[i].equip_event);
+			characters.erase(characters.begin() + i);
 			break;
 		}
 	}
 }
 
-void player_renderer::draw() {
+void character_renderer::draw() {
 	no::bind_texture(player_texture);
-	for (auto& player : players) {
-		if (player.object->is_moving()) {
-			player.model.start_animation(run);
+	for (auto& character : characters) {
+		if (character.object->is_moving()) {
+			character.model.start_animation(run);
 		} else {
-			player.model.start_animation(idle);
+			character.model.start_animation(idle);
 		}
-		player.model.animate();
-		no::set_shader_model(player.object->transform);
-		player.model.draw();
+		character.model.animate();
+		no::set_shader_model(character.object->transform);
+		character.model.draw();
 	}
 }
 
 decoration_renderer::decoration_renderer() {
-	texture = no::create_texture(no::surface(no::asset_path("textures/decorations.png")), no::scale_option::nearest_neighbour, true);
+	for (int i = 0; i < object_definitions().count(); i++) {
+		auto& definition = object_definitions().get(i);
+		if (definition.type != game_object_type::decoration) {
+			continue;
+		}
+		auto& group = groups.emplace_back();
+		group.definition_id = definition.id;
+		group.model.load<static_object_vertex>(no::asset_path("models/" + definition.model + ".nom"));
+		group.texture = no::create_texture(no::surface(no::asset_path("textures/" + group.model.texture_name() + ".png")), no::scale_option::nearest_neighbour, true);
+	}
 }
 
-decoration_renderer::object_data::object_data(decoration_object* object) : object(object) {
-	model.load<no::static_textured_vertex>(no::asset_path(object->model));
+decoration_renderer::~decoration_renderer() {
+	for (auto& group : groups) {
+		no::delete_texture(group.texture);
+	}
 }
 
 void decoration_renderer::add(decoration_object* object) {
-	decorations.emplace_back(object);
+	for (auto& group : groups) {
+		if (group.definition_id == object->definition().id) {
+			group.objects.push_back(object);
+			break;
+		}
+	}
 }
 
 void decoration_renderer::remove(decoration_object* object) {
-	for (size_t i = 0; i < decorations.size(); i++) {
-		if (decorations[i].object == object) {
-			decorations.erase(decorations.begin() + i);
-			break;
+	for (auto& group : groups) {
+		for (size_t i = 0; i < group.objects.size(); i++) {
+			if (group.objects[i] == object) {
+				group.objects.erase(group.objects.begin() + i);
+				return;
+			}
 		}
 	}
 }
 
 void decoration_renderer::draw() {
-	no::bind_texture(texture);
-	for (auto& decoration : decorations) {
-		no::set_shader_model(decoration.object->transform);
-		decoration.model.bind();
-		decoration.model.draw();
+	for (auto& group : groups) {
+		no::bind_texture(group.texture);
+		group.model.bind();
+		for (auto& object : group.objects) {
+			no::set_shader_model(object->transform);
+			group.model.draw();
+		}
 	}
 }
 
-world_view::world_view(world_state& world) : world(world), players(*this) {
+world_view::world_view(world_state& world) : world(world), characters(*this) {
 	mappings.load(no::asset_path("models/attachments.noma"));
 	camera.transform.scale.xy = 1.0f;
 	camera.transform.rotation.x = 90.0f;
-	diffuse_shader = no::create_shader(no::asset_path("shaders/diffuse"));
+	animate_diffuse_shader = no::create_shader(no::asset_path("shaders/animatediffuse"));
+	light.var_position_animate = no::get_shader_variable("uni_LightPosition");
+	light.var_color_animate = no::get_shader_variable("uni_LightColor");
 	pick_shader = no::create_shader(no::asset_path("shaders/pick"));
-	static_textured_shader = no::create_shader(no::asset_path("shaders/static_textured"));
-	terrain_shader = no::create_shader(no::asset_path("shaders/terrain"));
+	static_diffuse_shader = no::create_shader(no::asset_path("shaders/staticdiffuse"));
+	light.var_position_static = no::get_shader_variable("uni_LightPosition");
+	light.var_color_static = no::get_shader_variable("uni_LightColor");
 	fog.var_start = no::get_shader_variable("uni_FogStart");
 	fog.var_distance = no::get_shader_variable("uni_FogDistance");
 	no::surface temp_surface(no::asset_path("textures/tiles.png"));
@@ -110,7 +133,7 @@ world_view::world_view(world_state& world) : world(world), players(*this) {
 	surface.clear(0xFF0000FF);
 	highlight_texture = no::create_texture(surface);
 
-	height_map.build(4, world.terrain.size(), [this](int x, int y, std::vector<terrain_vertex>& vertices, std::vector<unsigned short>& indices) {
+	height_map.build(4, world.terrain.size(), [this](int x, int y, std::vector<static_object_vertex>& vertices, std::vector<unsigned short>& indices) {
 		int i = (int)vertices.size();
 		indices.push_back(i);
 		indices.push_back(i + 1);
@@ -139,12 +162,89 @@ world_view::world_view(world_state& world) : world(world), players(*this) {
 	});
 
 	refresh_terrain();
+
+	add_object_id = world.objects.events.add.listen([this](const world_objects::add_event& event) {
+		add(event.object);
+	});
+
+	remove_object_id = world.objects.events.remove.listen([this](const world_objects::remove_event& event) {
+		remove(event.object);
+	});
+}
+
+world_view::~world_view() {
+	world.objects.events.add.ignore(add_object_id);
+	world.objects.events.remove.ignore(remove_object_id);
+	no::delete_shader(animate_diffuse_shader);
+	no::delete_shader(static_diffuse_shader);
+	no::delete_shader(pick_shader);
+	no::delete_texture(highlight_texture);
+	no::delete_texture(tileset.texture);
+}
+
+void world_view::add(game_object* object) {
+	switch (object->definition().type) {
+	case game_object_type::decoration:
+		decorations.add((decoration_object*)object);
+		break;
+	case game_object_type::character:
+		characters.add((character_object*)object);
+		break;
+	case game_object_type::item_spawn:
+		break;
+	case game_object_type::interactive:
+		break;
+	default:
+		break;
+	}
+}
+
+void world_view::remove(game_object* object) {
+	switch (object->definition().type) {
+	case game_object_type::decoration:
+		decorations.remove((decoration_object*)object);
+		break;
+	case game_object_type::character:
+		characters.remove((character_object*)object);
+		break;
+	case game_object_type::item_spawn:
+		break;
+	case game_object_type::interactive:
+		break;
+	default:
+		break;
+	}
 }
 
 void world_view::draw() {
+	// camera.transform.position + camera.offset()
+	light.position = camera.transform.position + no::vector3f{ 0.0f, 4.0f, 0.0f };
 	draw_terrain();
-	draw_players();
-	draw_decorations();
+	decorations.draw();
+	no::bind_shader(animate_diffuse_shader);
+	no::set_shader_view_projection(camera);
+	light.var_position_animate.set(light.position);
+	light.var_color_animate.set(light.color);
+	characters.draw();
+}
+
+void world_view::draw_terrain() {
+	if (world.terrain.is_dirty()) {
+		refresh_terrain();
+	}
+	no::bind_shader(static_diffuse_shader);
+	no::set_shader_view_projection(camera);
+	light.var_position_static.set(light.position);
+	light.var_color_static.set(light.color);
+	fog.var_start.set(fog.start);
+	fog.var_distance.set(fog.distance);
+	no::bind_texture(tileset.texture);
+	no::transform transform;
+	transform.position.x = (float)world.terrain.offset().x;
+	transform.position.z = (float)world.terrain.offset().y;
+	no::set_shader_model(transform);
+	height_map.bind();
+	height_map.draw();
 }
 
 void world_view::draw_for_picking() {
@@ -153,13 +253,44 @@ void world_view::draw_for_picking() {
 	no::transform transform;
 	transform.position.x = (float)world.terrain.offset().x;
 	transform.position.z = (float)world.terrain.offset().y;
-	no::set_shader_model(transform);
-	height_map_pick.bind();
-	height_map_pick.draw();
+	no::draw_shape(height_map_pick, transform);
+}
+
+void world_view::draw_tile_highlight(no::vector2i tile) {
+	if (world.terrain.is_out_of_bounds(tile) || world.terrain.is_out_of_bounds(tile + 1)) {
+		return;
+	}
+	no::bind_shader(static_diffuse_shader);
+	no::set_shader_view_projection(camera);
+	no::set_shader_model({});
+
+	static_object_vertex top_left;
+	static_object_vertex top_right;
+	static_object_vertex bottom_left;
+	static_object_vertex bottom_right;
+
+	float x = (float)tile.x;
+	float z = (float)tile.y;
+
+	top_left.position = { x, world.terrain.elevation_at(tile) + 0.01f, z };
+	top_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1, 0 }) + 0.01f, z };
+	bottom_left.position = { x, world.terrain.elevation_at(tile + no::vector2i{ 0, 1 }) + 0.01f, z + 1.0f };
+	bottom_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1 }) + 0.01f, z + 1.0f };
+
+	top_left.tex_coords = { 0.0f, 0.0f };
+	top_right.tex_coords = { 1.0f, 0.0f };
+	bottom_left.tex_coords = { 0.0f, 1.0f };
+	bottom_right.tex_coords = { 1.0f, 1.0f };
+
+	highlight_quad.set(top_left, top_right, bottom_left, bottom_right);
+
+	no::bind_texture(highlight_texture);
+	highlight_quad.bind();
+	highlight_quad.draw();
 }
 
 void world_view::refresh_terrain() {
-	height_map.for_each([this](int i, int x, int y, std::vector<terrain_vertex>& vertices) {
+	height_map.for_each([this](int i, int x, int y, std::vector<static_object_vertex>& vertices) {
 		auto& tiles = world.terrain.tiles();
 		auto& tile = tiles.at(tiles.x() + x, tiles.y() + y);
 		auto packed = world.terrain.autotiler.packed_corners(tile.corners[0], tile.corners[1], tile.corners[2], tile.corners[3]);
@@ -285,70 +416,4 @@ void world_view::repeat_tile_under_row(uint32_t* pixels, int width, int height, 
 			}
 		}
 	}
-}
-
-void world_view::draw_terrain() {
-	if (world.terrain.is_dirty()) {
-		refresh_terrain();
-	}
-	no::bind_shader(terrain_shader);
-	no::set_shader_view_projection(camera);
-	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + no::vector3f{ 0.0f, 4.0f, 0.0f });
-	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
-	fog.var_start.set(fog.start);
-	fog.var_distance.set(fog.distance);
-	no::bind_texture(tileset.texture);
-	no::transform transform;
-	transform.position.x = (float)world.terrain.offset().x;
-	transform.position.z = (float)world.terrain.offset().y;
-	no::set_shader_model(transform);
-	height_map.bind();
-	height_map.draw();
-}
-
-void world_view::draw_players() {
-	no::bind_shader(diffuse_shader);
-	no::set_shader_view_projection(camera);
-	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + camera.offset());
-	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
-	players.draw();
-}
-
-void world_view::draw_decorations() {
-	no::bind_shader(static_textured_shader);
-	no::set_shader_view_projection(camera);
-	decorations.draw();
-}
-
-void world_view::draw_tile_highlight(no::vector2i tile) {
-	if (world.terrain.is_out_of_bounds(tile) || world.terrain.is_out_of_bounds(tile + 1)) {
-		return;
-	}
-	no::bind_shader(static_textured_shader);
-	no::set_shader_view_projection(camera);
-	no::set_shader_model({});
-
-	no::static_textured_vertex top_left;
-	no::static_textured_vertex top_right;
-	no::static_textured_vertex bottom_left;
-	no::static_textured_vertex bottom_right;
-
-	float x = (float)tile.x;
-	float z = (float)tile.y;
-
-	top_left.position = { x, world.terrain.elevation_at(tile) + 0.01f, z };
-	top_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1, 0 }) + 0.01f, z };
-	bottom_left.position = { x, world.terrain.elevation_at(tile + no::vector2i{ 0, 1 }) + 0.01f, z + 1.0f };
-	bottom_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1 }) + 0.01f, z + 1.0f };
-
-	top_left.tex_coords = { 0.0f, 0.0f };
-	top_right.tex_coords = { 1.0f, 0.0f };
-	bottom_left.tex_coords = { 0.0f, 1.0f };
-	bottom_right.tex_coords = { 1.0f, 1.0f };
-
-	highlight_quad.set(top_left, top_right, bottom_left, bottom_right);
-
-	no::bind_texture(highlight_texture);
-	highlight_quad.bind();
-	highlight_quad.draw();
 }

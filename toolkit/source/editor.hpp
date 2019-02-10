@@ -34,8 +34,6 @@ public:
 
 private:
 
-	no::io_stream world_stream;
-
 	no::vector3i hovered_pixel;
 	no::vector2i hovered_tile;
 
@@ -50,7 +48,6 @@ private:
 	int current_type = 0;
 
 	int tool_current_object = 0;
-	std::vector<std::pair<std::string, std::string>> object_paths;
 	no::model tool_object;
 	int decorations_texture = 0;
 

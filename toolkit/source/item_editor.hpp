@@ -20,8 +20,6 @@ private:
 	void ui_create_item();
 	void ui_select_item();
 
-	item_definition_list items;
-
 	int current_item = -1;
 	int ui_texture = -1;
 

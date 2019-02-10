@@ -3,6 +3,7 @@
 #include "world.hpp"
 #include "draw.hpp"
 #include "font.hpp"
+#include "character.hpp"
 
 class game_state;
 
@@ -63,7 +64,7 @@ public:
 	inventory_view& operator=(const inventory_view&) = delete;
 	inventory_view& operator=(inventory_view&&) = delete;
 
-	void listen(player_object* player);
+	void listen(character_object* player);
 	void ignore();
 
 	no::transform body_transform() const;
@@ -78,7 +79,7 @@ private:
 	world_state& world;
 	game_state& game;
 
-	player_object* player = nullptr;
+	character_object* player = nullptr;
 
 	struct inventory_slot {
 		no::rectangle rectangle;
@@ -113,7 +114,7 @@ public:
 	bool is_tab_hovered(int index) const;
 	bool is_mouse_over_any() const;
 
-	void listen(player_object* player);
+	void listen(character_object* player);
 	void ignore();
 
 	void update();
@@ -150,7 +151,7 @@ private:
 	} tabs;
 
 	int shader = -1;
-	player_object* player = nullptr;
+	character_object* player = nullptr;
 	int equipment_event = -1;
 
 	no::shader_variable color;

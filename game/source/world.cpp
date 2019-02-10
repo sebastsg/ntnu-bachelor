@@ -79,53 +79,53 @@ void world_terrain::elevate_tile(no::vector2i tile, float amount) {
 }
 
 void world_terrain::set_tile_type(no::vector2i tile, int type) {
-	// Top left
+	// top left
 	tile -= 1;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).corners[3] = type;
 	}
-	// Top middle
+	// top middle
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).corners[2] = type;
 		tile_array.at(tile.x, tile.y).corners[3] = type;
 	}
-	// Top right
+	// top right
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).corners[2] = type;
 	}
-	// Middle left
+	// middle left
 	tile.x -= 2;
 	tile.y++;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).corners[1] = type;
 		tile_array.at(tile.x, tile.y).corners[3] = type;
 	}
-	// Middle
+	// middle
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).set(type);
 	}
-	// Middle right
+	// middle right
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).corners[0] = type;
 		tile_array.at(tile.x, tile.y).corners[2] = type;
 	}
-	// Bottom left
+	// bottom left
 	tile.x -= 2;
 	tile.y++;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).corners[1] = type;
 	}
-	// Bottom middle
+	// bottom middle
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).corners[0] = type;
 		tile_array.at(tile.x, tile.y).corners[1] = type;
 	}
-	// Bottom right
+	// bottom right
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
 		tile_array.at(tile.x, tile.y).corners[0] = type;
@@ -145,31 +145,35 @@ const no::shifting_2d_array<world_tile>& world_terrain::tiles() const {
 	return tile_array;
 }
 
-void world_terrain::read(no::io_stream& stream) {
+void world_terrain::load(const std::string& path) {
+	stream.set_read_index(0);
+	no::file::read(path, stream);
 	tile_array.read(stream, 1024, {});
 	dirty = true;
 }
 
-void world_terrain::write(no::io_stream& stream) const {
+void world_terrain::save(const std::string& path) const {
 	tile_array.write(stream, 1024, {});
+	stream.set_write_index(stream.size());
+	no::file::write(path, stream);
 }
 
-void world_terrain::shift_left(no::io_stream& stream) {
+void world_terrain::shift_left() {
 	tile_array.shift_left(stream, 1024, {});
 	dirty = true;
 }
 
-void world_terrain::shift_right(no::io_stream& stream) {
+void world_terrain::shift_right() {
 	tile_array.shift_right(stream, 1024, {});
 	dirty = true;
 }
 
-void world_terrain::shift_up(no::io_stream& stream) {
+void world_terrain::shift_up() {
 	tile_array.shift_up(stream, 1024, {});
 	dirty = true;
 }
 
-void world_terrain::shift_down(no::io_stream& stream) {
+void world_terrain::shift_down() {
 	tile_array.shift_down(stream, 1024, {});
 	dirty = true;
 }
@@ -190,66 +194,12 @@ no::vector2i world_terrain::local_to_global_tile(no::vector2i tile) const {
 	return tile + tile_array.position();
 }
 
-world_state::world_state() : terrain(*this) {
-	item_definitions.load(no::asset_path("items.data"));
-}
-
-world_state::~world_state() {
-	for (auto& player : players) {
-		delete player;
-	}
-	for (auto& decoration : decorations) {
-		delete decoration;
-	}
+world_state::world_state() : terrain(*this), objects(*this) {
+	
 }
 
 void world_state::update() {
-	for (auto& player : players) {
-		player->update();
-	}
-}
-
-player_object* world_state::add_player(int id) {
-	auto object = player(id);
-	if (object) {
-		return object;
-	}
-	object = new player_object(*this);
-	players.push_back(object);
-	object->player_id = id;
-	return object;
-}
-
-void world_state::remove_player(int id) {
-	for (size_t i = 0; i < players.size(); i++) {
-		if (players[i]->player_id == id) {
-			delete players[i];
-			players.erase(players.begin() + i);
-			break;
-		}
-	}
-}
-
-player_object* world_state::player(int id) {
-	for (auto& player : players) {
-		if (player->player_id == id) {
-			return player;
-		}
-	}
-	return nullptr;
-}
-
-decoration_object* world_state::add_decoration() {
-	return decorations.emplace_back(new decoration_object(*this));
-}
-
-void world_state::remove_decoration(decoration_object* decoration) {
-	for (size_t i = 0; i < decorations.size(); i++) {
-		if (decorations[i] == decoration) {
-			delete decoration;
-			decorations.erase(decorations.begin() + i);
-		}
-	}
+	objects.update();
 }
 
 no::vector2i world_state::world_position_to_tile_index(float x, float z) const {
@@ -260,10 +210,12 @@ no::vector3f world_state::tile_index_to_world_position(int x, int z) const {
 	return { (float)x, 0.0f, (float)z };
 }
 
-int world_state::next_object_id() {
-	return ++object_id_counter;
+void world_state::load(const std::string& path) {
+	terrain.load(path + "t");
+	objects.load(path + "o");
 }
 
-item_definition_list& world_state::items() {
-	return item_definitions;
+void world_state::save(const std::string& path) const {
+	terrain.save(path + "t");
+	objects.save(path + "o");
 }

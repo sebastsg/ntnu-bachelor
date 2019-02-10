@@ -1,16 +1,12 @@
 #pragma once
 
 #include "object.hpp"
-#include "player.hpp"
 
 #include "math.hpp"
 #include "camera.hpp"
 #include "containers.hpp"
 
 class world_state;
-class player_object;
-class decoration_object;
-class game_object;
 
 struct world_tile {
 	float height = 0.0f;
@@ -68,13 +64,13 @@ public:
 	no::vector2i size() const;
 	const no::shifting_2d_array<world_tile>& tiles() const;
 
-	void read(no::io_stream& stream);
-	void write(no::io_stream& stream) const;
+	void load(const std::string& path);
+	void save(const std::string& path) const;
 
-	void shift_left(no::io_stream& stream);
-	void shift_right(no::io_stream& stream);
-	void shift_up(no::io_stream& stream);
-	void shift_down(no::io_stream& stream);
+	void shift_left();
+	void shift_right();
+	void shift_up();
+	void shift_down();
 
 	bool is_dirty() const;
 	void set_clean();
@@ -88,37 +84,24 @@ private:
 	no::shifting_2d_array<world_tile> tile_array;
 	bool dirty = false;
 
+	mutable no::io_stream stream;
+
 };
 
 class world_state {
 public:
 
 	world_terrain terrain;
+	world_objects objects;
 
 	world_state();
-	~world_state();
 
 	void update();
-
-	player_object* add_player(int id);
-	player_object* player(int id);
-	void remove_player(int id);
-
-	decoration_object* add_decoration();
-	void remove_decoration(decoration_object* decoration);
 
 	no::vector2i world_position_to_tile_index(float x, float z) const;
 	no::vector3f tile_index_to_world_position(int x, int z) const;
 
-	int next_object_id();
-
-	item_definition_list& items();
-
-private:
-
-	int object_id_counter = 0;
-	std::vector<player_object*> players;
-	std::vector<decoration_object*> decorations;
-	item_definition_list item_definitions;
+	void load(const std::string& path);
+	void save(const std::string& path) const;
 
 };

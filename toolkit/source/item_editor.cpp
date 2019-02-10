@@ -8,7 +8,6 @@
 
 item_editor::item_editor() {
 	no::imgui::create(window());
-	items.load(no::asset_path("items.data"));
 	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));
 }
 
@@ -49,12 +48,12 @@ void item_editor::ui_create_item() {
 		equipment_slot_combo(new_item.slot, "New");
 		if (ImGui::Button("Save##SaveNewItem")) {
 			item_definition item;
-			item.id = items.count();
+			item.id = item_definitions().count();
 			item.name = new_item.name;
 			item.max_stack = new_item.max_stack;
 			item.type = new_item.type;
 			item.slot = new_item.slot;
-			items.add(item);
+			item_definitions().add(item);
 		}
 	}
 }
@@ -62,15 +61,15 @@ void item_editor::ui_create_item() {
 void item_editor::ui_select_item() {
 	ImGui::Text("Select item:");
 	ImGui::SameLine();
-	if (ImGui::BeginCombo("##SelectEditItem", items.get(current_item).name.c_str())) {
-		for (int id = 0; id < items.count(); id++) {
-			if (ImGui::Selectable(items.get(id).name.c_str())) {
+	if (ImGui::BeginCombo("##SelectEditItem", item_definitions().get(current_item).name.c_str())) {
+		for (int id = 0; id < item_definitions().count(); id++) {
+			if (ImGui::Selectable(item_definitions().get(id).name.c_str())) {
 				current_item = id;
 			}
 		}
 		ImGui::EndCombo();
 	}
-	auto& selected = items.get(current_item);
+	auto& selected = item_definitions().get(current_item);
 	if (selected.id == -1) {
 		return;
 	}
@@ -106,7 +105,7 @@ void item_editor::update() {
 	ImGui::Separator();
 	
 	if (ImGui::Button("Save")) {
-		items.save(no::asset_path("items.data"));
+		item_definitions().save(no::asset_path("items.data"));
 	}
 
 	ImGui::End();

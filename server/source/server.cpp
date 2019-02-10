@@ -6,11 +6,7 @@
 #include "packets.hpp"
 
 server_world::server_world(const std::string& name) {
-	no::file::read(no::asset_path("worlds/" + name + ".ew"), stream);
-}
-
-server_world::server_world(server_world&& that) : stream(std::move(that.stream)) {
-
+	load(no::asset_path("worlds/" + name + ".ew"));
 }
 
 server_state::server_state() {
@@ -50,10 +46,30 @@ void server_state::connect(int index) {
 	INFO("Connecting client " << index);
 	clients[index] = { true };
 
+	// todo: load player from database
+	auto player = (character_object*)worlds.front().objects.add(1);
+	player->change_id(worlds.front().objects.next_dynamic_id());
+	clients[index].player_instance_id = player->id();
+	item_instance item;
+	item.definition_id = 0;
+	item.stack = 1;
+	player->inventory.add_from(item);
+	item.definition_id = 1;
+	item.stack = 1;
+	player->inventory.add_from(item);
+	item.definition_id = 2;
+	item.stack = 1;
+	player->inventory.add_from(item);
+	item.definition_id = 3;
+	item.stack = 1;
+	player->inventory.add_from(item);
+	player->transform.position.x = 15.0f;
+	player->transform.position.z = 15.0f;
+	
+	// send packets
 	player_joined_packet joined;
 	joined.is_me = 1;
-	joined.player_id = index;
-	joined.tile = clients[index].tile;
+	joined.player = *player;
 	no::io_stream session_stream;
 	no::packetizer::start(session_stream);
 	joined.write(session_stream);
@@ -63,8 +79,7 @@ void server_state::connect(int index) {
 	for (int j = 0; j < max_clients; j++) {
 		if (clients[j].is_connected() && index != j) {
 			joined.is_me = 0;
-			joined.player_id = j;
-			joined.tile = clients[j].tile;
+			joined.player = *(character_object*)worlds.front().objects.find(clients[j].player_instance_id);
 			session_stream = {};
 			no::packetizer::start(session_stream);
 			joined.write(session_stream);
@@ -74,9 +89,8 @@ void server_state::connect(int index) {
 	}
 
 	session_stream = {};
-	joined.player_id = index;
+	joined.player = *(character_object*)worlds.front().objects.find(clients[index].player_instance_id);
 	joined.is_me = 0;
-	joined.tile = clients[index].tile;
 	no::packetizer::start(session_stream);
 	joined.write(session_stream);
 	no::packetizer::end(session_stream);
@@ -91,8 +105,8 @@ void server_state::connect(int index) {
 			move_to_tile_packet packet;
 			packet.read(stream);
 
-			packet.player_id = index;
-			clients[index].tile = packet.tile;
+			packet.player_instance_id = clients[index].player_instance_id;
+			// todo: update server world
 
 			no::io_stream packet_stream;
 			no::packetizer::start(packet_stream);
@@ -112,7 +126,7 @@ void server_state::connect(int index) {
 
 		no::io_stream disconnect_stream;
 		player_disconnected_packet disconnection;
-		disconnection.player_id = index;
+		disconnection.player_instance_id = clients[index].player_instance_id;
 		no::packetizer::start(disconnect_stream);
 		disconnection.write(disconnect_stream);
 		no::packetizer::end(disconnect_stream);

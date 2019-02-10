@@ -1,6 +1,7 @@
 #pragma once
 
 #include "timer.hpp"
+#include "event.hpp"
 
 #include <string>
 #include <functional>
@@ -97,6 +98,8 @@ private:
 	int window_close_id = -1;
 
 };
+
+signal_event& post_configure_event();
 
 // TODO: Better perfect capture syntax can be used when C++20 is available.
 template<typename T, typename... U>

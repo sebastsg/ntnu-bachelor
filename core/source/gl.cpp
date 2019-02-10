@@ -67,8 +67,8 @@ static struct {
 	std::vector<gl_texture> textures;
 	std::vector<gl_shader> shaders;
 
-	int bound_shader = 0;
-	
+	int bound_shader = -1;
+
 	long total_redundant_bind_calls = 0;
 	
 } renderer;
