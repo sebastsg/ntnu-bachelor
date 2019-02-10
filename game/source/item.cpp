@@ -93,6 +93,20 @@ item_instance item_container::at(no::vector2i slot) const {
 	return items[index];
 }
 
+void item_container::for_each(const std::function<void(no::vector2i, const item_instance&)>& handler) {
+	no::vector2i slot;
+	for (auto& item : items) {
+		if (item.definition_id != -1) {
+			handler(slot, item);
+		}
+		slot.x++;
+		if (slot.x == size.x) {
+			slot.x = 0;
+			slot.y++;
+		}
+	}
+}
+
 void item_container::add_from(item_instance& other_item) {
 	if (other_item.stack <= 0) {
 		other_item = {};

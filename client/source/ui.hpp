@@ -75,6 +75,9 @@ public:
 
 private:
 
+	void on_item_added(const item_container::add_event& event);
+	void on_item_removed(const item_container::remove_event& event);
+
 	const no::ortho_camera& camera;
 	world_state& world;
 	game_state& game;

@@ -134,31 +134,42 @@ inventory_view::~inventory_view() {
 	ignore();
 }
 
-void inventory_view::listen(character_object* player_) {
-	player = player_;
-	add_item_event = player->inventory.events.add.listen([this](const item_container::add_event& event) {
-		int i = event.slot.y * 4 + event.slot.x;
-		auto slot = slots.find(i);
-		if (slot == slots.end()) {
-			slots[i] = {};
-			slots[i].item = event.item;
-			set_item_uv(slots[i].rectangle, item_definitions().get(event.item.definition_id).uv);
+void inventory_view::on_item_added(const item_container::add_event& event) {
+	int i = event.slot.y * 4 + event.slot.x;
+	auto slot = slots.find(i);
+	if (slot == slots.end()) {
+		slots[i] = {};
+		slots[i].item = event.item;
+		set_item_uv(slots[i].rectangle, item_definitions().get(event.item.definition_id).uv);
+	} else {
+		// todo: update stack text
+	}
+}
+
+void inventory_view::on_item_removed(const item_container::remove_event& event) {
+	int i = event.slot.y * 4 + event.slot.x;
+	auto slot = slots.find(i);
+	if (slot != slots.end()) {
+		ASSERT(slot->second.item.definition_id == event.item.definition_id);
+		slot->second.item.stack -= event.item.stack;
+		if (slot->second.item.stack <= 0) {
+			slots.erase(i);
 		} else {
 			// todo: update stack text
 		}
+	}
+}
+
+void inventory_view::listen(character_object* player_) {
+	player = player_;
+	add_item_event = player->inventory.events.add.listen([this](const item_container::add_event& event) {
+		on_item_added(event);
 	});
 	remove_item_event = player->inventory.events.remove.listen([this](const item_container::remove_event& event) {
-		int i = event.slot.y * 4 + event.slot.x;
-		auto slot = slots.find(i);
-		if (slot != slots.end()) {
-			ASSERT(slot->second.item.definition_id == event.item.definition_id);
-			slot->second.item.stack -= event.item.stack;
-			if (slot->second.item.stack <= 0) {
-				slots.erase(i);
-			} else {
-				// todo: update stack text
-			}
-		}
+		on_item_removed(event);
+	});
+	player->inventory.for_each([this](no::vector2i slot, const item_instance& item) {
+		on_item_added({ item, slot });
 	});
 }
 

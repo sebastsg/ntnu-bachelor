@@ -49,6 +49,8 @@ void server_state::connect(int index) {
 	// todo: load player from database
 	auto player = (character_object*)worlds.front().objects.add(1);
 	player->change_id(worlds.front().objects.next_dynamic_id());
+	player->inventory.resize({ 4, 6 });
+	player->equipment.resize({ 3, 3 });
 	clients[index].player_instance_id = player->id();
 	item_instance item;
 	item.definition_id = 0;

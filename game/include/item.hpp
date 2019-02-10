@@ -83,6 +83,7 @@ public:
 	} events;
 
 	item_instance at(no::vector2i slot) const;
+	void for_each(const std::function<void(no::vector2i, const item_instance&)>& handler);
 
 	void resize(no::vector2i size);
 	void add_from(item_instance& item);
