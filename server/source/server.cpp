@@ -48,6 +48,7 @@ void server_state::connect(int index) {
 
 	// todo: load player from database
 	auto player = (character_object*)worlds.front().objects.add(1);
+	player->transform.scale = 0.5f;
 	player->change_id(worlds.front().objects.next_dynamic_id());
 	player->inventory.resize({ 4, 6 });
 	player->equipment.resize({ 3, 3 });

@@ -113,6 +113,7 @@ public:
 	game_object* add(no::io_stream& stream);
 	game_object* find(int instance_id);
 	void remove(int instance_id);
+	void for_each(const std::function<void(game_object*)>& handler);
 
 	void update();
 

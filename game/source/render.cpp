@@ -166,9 +166,11 @@ world_view::world_view(world_state& world) : world(world), characters(*this) {
 	add_object_id = world.objects.events.add.listen([this](const world_objects::add_event& event) {
 		add(event.object);
 	});
-
 	remove_object_id = world.objects.events.remove.listen([this](const world_objects::remove_event& event) {
 		remove(event.object);
+	});
+	world.objects.for_each([this](game_object* object) {
+		add(object);
 	});
 }
 
@@ -183,6 +185,9 @@ world_view::~world_view() {
 }
 
 void world_view::add(game_object* object) {
+	if (!object) {
+		return;
+	}
 	switch (object->definition().type) {
 	case game_object_type::decoration:
 		decorations.add((decoration_object*)object);
@@ -200,6 +205,9 @@ void world_view::add(game_object* object) {
 }
 
 void world_view::remove(game_object* object) {
+	if (!object) {
+		return;
+	}
 	switch (object->definition().type) {
 	case game_object_type::decoration:
 		decorations.remove((decoration_object*)object);
@@ -218,7 +226,7 @@ void world_view::remove(game_object* object) {
 
 void world_view::draw() {
 	// camera.transform.position + camera.offset()
-	light.position = camera.transform.position + no::vector3f{ 0.0f, 4.0f, 0.0f };
+	light.position = camera.transform.position + camera.offset();
 	draw_terrain();
 	decorations.draw();
 	no::bind_shader(animate_diffuse_shader);

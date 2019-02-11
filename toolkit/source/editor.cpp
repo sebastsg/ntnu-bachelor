@@ -12,36 +12,153 @@
 #include <filesystem>
 
 editor_world::editor_world() {
-
+	load(no::asset_path("worlds/main.ew"));
 }
 
 void editor_world::update() {
 	
 }
 
-world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
+world_editor_tool::world_editor_tool(world_editor_state& editor) : editor(editor) {
+
+}
+
+elevate_tool::elevate_tool(world_editor_state& editor) : world_editor_tool(editor) {
+
+}
+
+void elevate_tool::update() {
+	if (editor.keyboard().is_key_down(no::key::space)) {
+		if (editor.mouse().is_button_down(no::mouse::button::left)) {
+			for (auto& tile : editor.brush_tiles) {
+				if (limit_elevation) {
+					editor.world.terrain.set_elevation_at(tile, elevation_limit);
+				} else {
+					editor.world.terrain.elevate_tile(tile, elevation_rate);
+				}
+			}
+		} else if (editor.mouse().is_button_down(no::mouse::button::right)) {
+			for (auto& tile : editor.brush_tiles) {
+				if (limit_elevation) {
+					editor.world.terrain.set_elevation_at(tile, 0.0f);
+				} else {
+					editor.world.terrain.elevate_tile(tile, -elevation_rate);
+				}
+			}
+		}
+	}
+}
+
+void elevate_tool::update_imgui() {
+	ImGui::InputFloat("Elevation rate", &elevation_rate, 0.01f, 0.01f, 2, limit_elevation ? ImGuiInputTextFlags_ReadOnly : 0);
+	elevation_rate = std::min(std::max(elevation_rate, 0.01f), 0.5f);
+	ImGui::Checkbox("Limit##LimitElevationCheck", &limit_elevation);
+	ImGui::SameLine();
+	ImGui::InputFloat("##LimitElevationValue", &elevation_limit, 0.1f, 1.0f, 2, limit_elevation ? 0 : ImGuiInputTextFlags_ReadOnly);
+	elevation_limit = std::min(std::max(elevation_limit, 0.0f), 100.0f);
+}
+
+void elevate_tool::draw() {
+
+}
+
+tiling_tool::tiling_tool(world_editor_state& editor) : world_editor_tool(editor) {
+
+}
+
+void tiling_tool::update() {
+	if (editor.keyboard().is_key_down(no::key::space)) {
+		if (editor.mouse().is_button_down(no::mouse::button::left)) {
+			for (auto& tile : editor.brush_tiles) {
+				editor.world.terrain.set_tile_type(tile, current_type);
+			}
+		}
+	}
+}
+
+void tiling_tool::update_imgui() {
+	ImGui::RadioButton("Grass", &current_type, world_autotiler::grass);
+	ImGui::RadioButton("Dirt", &current_type, world_autotiler::dirt);
+	ImGui::RadioButton("Water", &current_type, world_autotiler::water);
+}
+
+void tiling_tool::draw() {
+
+}
+
+object_tool::object_tool(world_editor_state& editor) : world_editor_tool(editor) {
+
+}
+
+object_tool::~object_tool() {
+	disable();
+	editor.renderer.remove(object);
+	delete object;
+}
+
+void object_tool::enable() {
+	mouse_press_id = editor.mouse().press.listen([this](const no::mouse::press_message& event) {
+		if (event.button != no::mouse::button::left || editor.is_mouse_over_ui()) {
+			return;
+		}
+		auto object = editor.world.objects.add(object_definition_id);
+		if (!object) {
+			WARNING("Failed to add object: " << object_definition_id);
+			return;
+		}
+		object->change_id(editor.world.objects.next_static_id());
+		object->transform.position = editor.world_position_for_tile(editor.selected_tile);
+		object->transform.position.x += 0.5f;
+		object->transform.position.z += 0.5f;
+	});
+}
+
+void object_tool::disable() {
+	editor.mouse().press.ignore(mouse_press_id);
+	mouse_press_id = -1;
+}
+
+void object_tool::update() {
+	if (!object || editor.is_mouse_over_ui() || editor.world.terrain.is_out_of_bounds(editor.hovered_tile)) {
+		return;
+	}
+	object->transform.position = editor.world_position_for_tile(editor.hovered_tile);
+	object->transform.position.x += 0.5f;
+	object->transform.position.z += 0.5f;
+}
+
+void object_tool::update_imgui() {
+	int object_id = object_definition_id;
+	ImGui::ListBox("Objects", &object_id, [](void* data, int i, const char** out) -> bool {
+		if (i < 0 || i >= object_definitions().count()) {
+			return false;
+		}
+		*out = object_definitions().get(i).name.c_str();
+		return true;
+	}, nullptr, object_definitions().count(), 20);
+	if (object_id != object_definition_id) {
+		object_definition_id = object_id;
+		editor.renderer.remove(object);
+		delete object;
+		object = object_definitions().construct(object_definition_id);
+		editor.renderer.add(object);
+	}
+}
+
+void object_tool::draw() {
+	
+}
+
+world_editor_state::world_editor_state() : renderer(world), dragger(mouse()), elevate(*this), tiling(*this), object(*this) {
 	window().set_swap_interval(no::swap_interval::immediate);
 	set_synchronization(no::draw_synchronization::if_updated);
-
 	no::imgui::create(window());
-
 	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
 		if (event.button != no::mouse::button::left || is_mouse_over_ui()) {
 			return;
 		}
 		selected_tile = hovered_tile;
 		is_selected = true;
-		if (tool == 2) {
-			auto obj = world.objects.add(tool_current_object);
-			if (obj) {
-				obj->change_id(world.objects.next_static_id());
-				obj->transform.position = world_position_for_tile(selected_tile);
-				obj->transform.position.x += 0.5f;
-				obj->transform.position.z += 0.5f;
-			} else {
-				WARNING("Failed to add object: " << tool_current_object);
-			}
-		}
 	});
 	mouse_release_id = mouse().release.listen([this](const no::mouse::release_message& event) {
 		if (event.button == no::mouse::button::left) {
@@ -56,12 +173,9 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()) {
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
 		
 	});
-	
-	world.load(no::asset_path("worlds/main.ew"));
-	
-	decorations_texture = no::create_texture(no::surface(no::asset_path("textures/decorations.png")), no::scale_option::nearest_neighbour, true);
 	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });
 	renderer.fog.start = 100.0f;
+	tool().enable();
 }
 
 world_editor_state::~world_editor_state() {
@@ -89,31 +203,7 @@ void world_editor_state::update_editor() {
 	if (is_mouse_over_ui()) {
 		return;
 	}
-	if (keyboard().is_key_down(no::key::space)) {
-		if (mouse().is_button_down(no::mouse::button::left)) {
-			for (auto& tile : brush_tiles) {
-				if (tool == 0) {
-					if (limit_elevation) {
-						world.terrain.set_elevation_at(tile, elevation_limit);
-					} else {
-						world.terrain.elevate_tile(tile, elevation_rate);
-					}
-				} else if (tool == 1) {
-					world.terrain.set_tile_type(tile, current_type);
-				}
-			}
-		} else if (mouse().is_button_down(no::mouse::button::right)) {
-			for (auto& tile : brush_tiles) {
-				if (tool == 0) {
-					if (limit_elevation) {
-						world.terrain.set_elevation_at(tile, 0.0f);
-					} else {
-						world.terrain.elevate_tile(tile, -elevation_rate);
-					}
-				}
-			}
-		}
-	}
+	tool().update();
 	renderer.camera.update();
 	dragger.update(renderer.camera);
 	rotater.update(renderer.camera, keyboard());
@@ -136,53 +226,28 @@ void world_editor_state::update_imgui() {
 	ImGui::Text(CSTRING("Tile: " << hovered_tile));
 
 	ImGui::Separator();
-
 	ImGui::Checkbox("Show wireframe", &show_wireframe);
-
 	ImGui::InputInt("Brush size", &brush_size, 1, 1);
 	brush_size = std::min(std::max(brush_size, 1), 25);
-
 	ImGui::Separator();
 
-	ImGui::RadioButton("Elevate", &tool, 0);
-	ImGui::RadioButton("Tile", &tool, 1);
-	ImGui::RadioButton("Object", &tool, 2);
-
-	ImGui::Separator();
-
-	if (tool == 0) {
-		ImGui::InputFloat("Elevation rate", &elevation_rate, 0.01f, 0.01f, 2, limit_elevation ? ImGuiInputTextFlags_ReadOnly : 0);
-		elevation_rate = std::min(std::max(elevation_rate, 0.01f), 0.5f);
-		ImGui::Checkbox("Limit##LimitElevationCheck", &limit_elevation);
-		ImGui::SameLine();
-		ImGui::InputFloat("##LimitElevationValue", &elevation_limit, 0.1f, 1.0f, 2, limit_elevation ? 0 : ImGuiInputTextFlags_ReadOnly);
-		elevation_limit = std::min(std::max(elevation_limit, 0.0f), 100.0f);
-	} else if (tool == 1) {
-		ImGui::RadioButton("Grass", &current_type, world_autotiler::grass);
-		ImGui::RadioButton("Dirt", &current_type, world_autotiler::dirt);
-		ImGui::RadioButton("Water", &current_type, world_autotiler::water);
-	} else if (tool == 2) {
-		int current_obj = tool_current_object;
-		ImGui::ListBox("Objects", &tool_current_object, [](void* data, int i, const char** out) -> bool {
-			if (i < 0 || i >= object_definitions().count()) {
-				return false;
-			}
-			*out = object_definitions().get(i).name.c_str();
-			return true;
-		}, nullptr, object_definitions().count(), 20);
-		if (current_obj != tool_current_object) {
-			tool_object.load<static_object_vertex>(no::asset_path("models/" + object_definitions().get(tool_current_object).model + ".nom"));
-		}
+	int radio_tool_id = current_tool_id;
+	ImGui::RadioButton("Elevate", &radio_tool_id, elevate_tool_id);
+	ImGui::RadioButton("Tile", &radio_tool_id, tiling_tool_id);
+	ImGui::RadioButton("Object", &radio_tool_id, object_tool_id);
+	if (radio_tool_id != current_tool_id) {
+		tool().disable();
+		current_tool_id = radio_tool_id;
+		tool().enable();
 	}
 
 	ImGui::Separator();
-
+	tool().update_imgui();
+	ImGui::Separator();
 	if (ImGui::Button("Save")) {
 		world.save(no::asset_path("worlds/main.ew"));
 	}
-
 	ImGui::Separator();
-
 	if (ImGui::Button("/\\")) {
 		world.terrain.shift_up();
 	}
@@ -196,9 +261,7 @@ void world_editor_state::update_imgui() {
 	if (ImGui::Button("\\/")) {
 		world.terrain.shift_down();
 	}
-
 	ImGui::Separator();
-
 	ImGui::End();
 	no::imgui::end_frame();
 }
@@ -207,27 +270,16 @@ void world_editor_state::draw() {
 	renderer.draw_for_picking();
 	hovered_pixel = no::read_pixel_at({ mouse().x(), window().height() - mouse().y() });
 	window().clear();
-
 	hovered_pixel.x--;
 	hovered_pixel.y--;
 	hovered_tile = hovered_pixel.xy + world.terrain.offset();
 
 	renderer.draw();
-
-	if (tool_object.is_drawable() && !world.terrain.is_out_of_bounds(hovered_tile)) {
-		no::transform t;
-		t.scale = 0.01f;
-		t.position = world_position_for_tile(hovered_tile);
-		no::set_shader_model(t);
-		no::bind_texture(decorations_texture);
-		tool_object.bind();
-		tool_object.draw();
-	}
-
 	renderer.draw_tile_highlight(hovered_tile);
 	for (auto& tile : brush_tiles) {
 		renderer.draw_tile_highlight(tile);
 	}
+	tool().draw();
 
 	if (show_wireframe) {
 		no::set_polygon_render_mode(no::polygon_render_mode::wireframe);
@@ -243,4 +295,13 @@ bool world_editor_state::is_mouse_over_ui() const {
 
 no::vector3f world_editor_state::world_position_for_tile(no::vector2i tile) const {
 	return { (float)tile.x, world.terrain.elevation_at(tile), (float)tile.y };
+}
+
+world_editor_tool& world_editor_state::tool() {
+	switch (current_tool_id) {
+	case elevate_tool_id: return elevate;
+	case tiling_tool_id: return tiling;
+	case object_tool_id: return object;
+	default: return elevate;
+	}
 }

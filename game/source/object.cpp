@@ -220,6 +220,12 @@ void world_objects::remove(int instance_id) {
 	}
 }
 
+void world_objects::for_each(const std::function<void(game_object*)>& handler) {
+	for (auto object : objects) {
+		handler(object);
+	}
+}
+
 void world_objects::load(const std::string& path) {
 	no::io_stream stream;
 	no::file::read(path, stream);

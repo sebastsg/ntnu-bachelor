@@ -125,10 +125,10 @@ public:
 
 	void refresh_terrain();
 
-private:
-
 	void add(game_object* object);
 	void remove(game_object* object);
+
+private:
 	
 	struct {
 		int grid = 52;
