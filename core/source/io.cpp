@@ -5,9 +5,33 @@
 
 namespace no {
 
-std::vector<std::string> entries_in_directory(const std::string& path, entry_inclusion inclusion) {
+template<typename It>
+static std::vector<std::string> iterate_entries_in_directory(const std::string& path, entry_inclusion inclusion) {
 	std::vector<std::string> files;
-	auto directory = std::filesystem::directory_iterator(path);
+	auto directory = It(path);
+	for (auto& entry : directory) {
+		if (entry.is_directory() && inclusion == entry_inclusion::only_files) {
+			continue;
+		}
+		if (!entry.is_directory() && inclusion == entry_inclusion::only_directories) {
+			continue;
+		}
+		files.push_back(entry.path().string());
+	}
+	return files;
+}
+
+std::vector<std::string> entries_in_directory(const std::string& path, entry_inclusion inclusion, bool recursive) {
+	if (recursive) {
+		return iterate_entries_in_directory<std::filesystem::recursive_directory_iterator>(path, inclusion);
+	} else {
+		return iterate_entries_in_directory<std::filesystem::directory_iterator>(path, inclusion);
+	}
+}
+
+std::vector<std::string> entries_in_directory_recursively(const std::string& path, entry_inclusion inclusion) {
+	std::vector<std::string> files;
+	auto directory = std::filesystem::recursive_directory_iterator(path);
 	for (auto& entry : directory) {
 		if (entry.is_directory() && inclusion == entry_inclusion::only_files) {
 			continue;
@@ -48,19 +72,19 @@ io_stream::io_stream(char* data, size_t size, construct_by construction) {
 	switch (construction) {
 	case construct_by::copy:
 		write(data, size);
-		write_position = begin;
+		write_position = end;
 		break;
 	case construct_by::move:
 		begin = data;
 		end = begin + size;
 		read_position = begin;
-		write_position = begin;
+		write_position = end;
 		break;
 	case construct_by::shallow_copy:
 		begin = data;
 		end = begin + size;
 		read_position = begin;
-		write_position = begin;
+		write_position = end;
 		owner = false;
 		break;
 	}
@@ -278,6 +302,7 @@ bool io_stream::is_owner() const {
 namespace file {
 
 void write(const std::string& path, const std::string& source) {
+	std::filesystem::create_directories(std::filesystem::path(path).parent_path());
 	std::ofstream file(path, std::ios::binary);
 	if (file.is_open()) {
 		file << source;
@@ -285,6 +310,7 @@ void write(const std::string& path, const std::string& source) {
 }
 
 void write(const std::string& path, const char* source, size_t size) {
+	std::filesystem::create_directories(std::filesystem::path(path).parent_path());
 	std::ofstream file(path, std::ios::binary);
 	if (file.is_open()) {
 		file.write(source, size);

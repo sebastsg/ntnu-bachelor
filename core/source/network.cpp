@@ -3,81 +3,57 @@
 
 namespace no {
 
-io_socket* socket_location::get() {
-	if (container) {
-		return &container->sockets[index];
-	}
-	return socket;
-}
-
 void packetizer::start(io_stream& stream) {
-	stream.write<uint16_t>(magic);
-	stream.write<uint32_t>(0); // offset for the size
+	stream.write(magic);
+	stream.write<body_size_type>(0); // offset for the size
 }
 
 void packetizer::end(io_stream& stream) {
-	size_t header_size = sizeof(magic) + sizeof(uint32_t);
 	if (header_size > stream.write_index()) {
 		return;
 	}
 	// go back to the beginning and write the size
 	size_t size = stream.write_index() - header_size;
-	stream.set_write_index(sizeof(magic));
-	stream.write<uint32_t>(size);
+	stream.set_write_index(sizeof(magic_type));
+	stream.write<body_size_type>(size);
 	stream.move_write_index(size);
+}
+
+char* packetizer::at_write() {
+	return stream.at_write();
 }
 
 void packetizer::write(char* data, size_t size) {
 	stream.write(data, size);
 }
 
-void packetizer::clean() {
-	stream.shift_read_to_begin();
-	packet = {};
-	packet_size = 0;
-	found_magic = false;
+io_stream packetizer::next() {
+	if (header_size > stream.size_left_to_read()) {
+		return {};
+	}
+	auto body_size = stream.peek<body_size_type>(sizeof(magic_type));
+	if (header_size + body_size > stream.size_left_to_read()) {
+		return {};
+	}
+	if (stream.peek<magic_type>() != magic) {
+		stream.move_read_index(1); // no point in reading the same magic again
+		return {};
+	}
+	stream.move_read_index(header_size);
+	auto body_begin = stream.at_read();
+	stream.move_read_index(body_size);
+	return { body_begin, body_size, io_stream::construct_by::shallow_copy };
 }
 
-bool packetizer::parse_next() {
-	if (sizeof(magic) > stream.write_index()) {
-		return false;
+void packetizer::clean() {
+	stream.shift_read_to_begin();
+}
+
+io_socket* socket_location::get() {
+	if (container) {
+		return &container->sockets[index];
 	}
-	if (!found_magic) {
-		uint16_t read_magic = stream.read<uint16_t>();
-		if (read_magic != magic) {
-			return false;
-		}
-		found_magic = true;
-	}
-	// check if the size is available
-	if (sizeof(uint32_t) > stream.write_index() + sizeof(magic)) {
-		return false;
-	}
-
-	// read the size if we haven't already
-	if (packet_size == 0) {
-		packet_size = stream.read<uint32_t>();
-		if (packet_size == 0) {
-			return true; // well, this is odd... but it seems to be a valid packet
-		}
-	}
-
-	// make sure we have received the entire packet
-	if (packet_size > stream.write_index() + sizeof(uint32_t) + sizeof(magic)) {
-		return false;
-	}
-
-	// set the data as the current read position
-	packet = { stream.at_read(), packet_size, io_stream::construct_by::shallow_copy };
-
-	// since we technically have read the buffer now, we should add to our read position
-	stream.move_read_index(packet_size - sizeof(magic));
-
-	// per-packet reset
-	packet_size = 0;
-	found_magic = false;
-
-	return true;
+	return socket;
 }
 
 size_t socket_container::create() {

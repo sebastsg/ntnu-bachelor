@@ -107,7 +107,6 @@ bool winsock_socket::open() {
 		WS_PRINT_LAST_ERROR();
 		return false;
 	}
-	receive_packetizer.stream.allocate(8192);
 	// associate the winsock i/o completion port with the socket handle
 	// the 'this' pointer is passed as the completion key
 	CreateIoCompletionPort((HANDLE)handle, winsock->io_port, (ULONG_PTR)this, 0);
@@ -124,7 +123,6 @@ bool winsock_socket::close() {
 		return false;
 	}
 	handle = INVALID_SOCKET;
-	receive_packetizer.stream.free();
 	return true;
 }
 
@@ -379,17 +377,6 @@ DWORD io_port_thread(HANDLE io_port, int thread_num) {
 		// retrieve the full I/O data structure
 		// reference for the macro: https://msdn.microsoft.com/en-us/library/aa447688.aspx
 		winsock_io_abstract_data* data = CONTAINING_RECORD(overlapped, winsock_io_abstract_data, overlapped);
-		/*MESSAGE_X(thread_num, "Operation: " << [data] {
-			switch (data->operation()) {
-			case NE_IO_INVALID: return "Invalid";
-			case NE_IO_SEND: return "Send";
-			case NE_IO_RECEIVE: return "Receive";
-			case NE_IO_ACCEPT: return "Accept";
-			case NE_IO_CONNECT: return "Connect";
-			case NE_IO_CLOSE: return "Close";
-			default: return "Unknown";
-			}
-		}());*/
 		if (data->operation() == io_completion_port_operation::close) {
 			INFO_X(thread_num, "Leaving thread");
 			return 0;
@@ -404,23 +391,18 @@ DWORD io_port_thread(HANDLE io_port, int thread_num) {
 		std::lock_guard<std::mutex> lock(ws_socket->mutex);
 
 		if (data->operation() == io_completion_port_operation::send) {
-
 			winsock_io_send_data* send_data = (winsock_io_send_data*)data;
 			io_socket* socket = send_data->location.get();
-
 			if (transferred == 0) {
 				MESSAGE_X(thread_num, "Socket disconnected.");
 				socket->sync.disconnect.emplace_and_push(socket_close_status::disconnected_gracefully);
 				continue;
 			}
-
 			io_socket::send_message send_message;
 			socket->sync.send.move_and_push(std::move(send_message));
-
 			ws_socket->io.send.destroy(send_data);
 
 		} else if (data->operation() == io_completion_port_operation::receive) {
-
 			winsock_io_receive_data* receive_data = (winsock_io_receive_data*)data;
 			io_socket* socket = receive_data->location.get();
 			if (transferred == 0) {
@@ -428,21 +410,24 @@ DWORD io_port_thread(HANDLE io_port, int thread_num) {
 				socket->sync.disconnect.emplace_and_push(socket_close_status::disconnected_gracefully);
 				continue;
 			}
-
-			char* packetizer_current_write = ws_socket->receive_packetizer.stream.at_write();
+			char* packetizer_previous_write = ws_socket->receive_packetizer.at_write();
 			ws_socket->receive_packetizer.write(receive_data->buffer.buf, transferred);
+
+			MESSAGE_X(thread_num, "Received " << transferred << " bytes");
 
 			// queue the stream events. we can use the packetizer's buffer
 			io_socket::receive_stream_message stream_message;
-			stream_message.packet = { packetizer_current_write, transferred, io_stream::construct_by::shallow_copy };
+			stream_message.packet = { packetizer_previous_write, transferred, io_stream::construct_by::shallow_copy };
 			socket->sync.receive_stream.move_and_push(std::move(stream_message));
 
 			// parse the buffer and queue the packet events for every complete packet
-			while (ws_socket->receive_packetizer.parse_next()) {
-				auto& packet = ws_socket->receive_packetizer.packet;
+			while (true) {
+				io_stream packet = ws_socket->receive_packetizer.next();
+				if (packet.size() == 0) {
+					break;
+				}
 				io_socket::receive_packet_message packet_message;
-				//packet_message.packet = std::move(ws_socket->receive_packetizer.packet);
-				packet_message.packet = { packet.data(), packet.size(), io_stream::construct_by::shallow_copy };
+				packet_message.packet = { packet.data(), packet.size_left_to_read(), io_stream::construct_by::shallow_copy };
 				socket->sync.receive_packet.move_and_push(std::move(packet_message));
 			}
 
@@ -452,7 +437,6 @@ DWORD io_port_thread(HANDLE io_port, int thread_num) {
 			socket->receive();
 
 		} else if (data->operation() == io_completion_port_operation::accept) {
-
 			winsock_io_accept_data* accept_data = (winsock_io_accept_data*)data;
 			listener_socket* listener = accept_data->listener;
 

@@ -21,26 +21,23 @@ void stop_network();
 class packetizer {
 public:
 
-	static const uint16_t magic = 0x2C4F;
-
-	io_stream stream;
-
-	// only a valid packet after parse_next() returns true
-	io_stream packet;
-
-	size_t packet_size = 0;
-	bool found_magic = false;
-
 	static void start(io_stream& stream);
 	static void end(io_stream& stream);
 
+	char* at_write();
 	void write(char* data, size_t size);
-
-	// prepare for the next write
+	io_stream next();
 	void clean();
 
-	// attempt to parse a packet from the current buffer
-	bool parse_next();
+private:
+
+	using magic_type = uint32_t;
+	using body_size_type = uint32_t;
+
+	static const magic_type magic = 'NFWK';
+	static const size_t header_size = sizeof(magic_type) + sizeof(body_size_type);
+
+	io_stream stream;
 
 };
 
@@ -363,6 +360,15 @@ private:
 	} sync;
 
 };
+
+template<typename P>
+io_stream packet_stream(const P& packet) {
+	io_stream stream;
+	packetizer::start(stream);
+	packet.write(stream);
+	packetizer::end(stream);
+	return stream;
+}
 
 }
 

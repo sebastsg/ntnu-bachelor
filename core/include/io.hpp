@@ -10,7 +10,7 @@ namespace no {
 
 enum class entry_inclusion { everything, only_files, only_directories };
 
-std::vector<std::string> entries_in_directory(const std::string& path, entry_inclusion inclusion);
+std::vector<std::string> entries_in_directory(const std::string& path, entry_inclusion inclusion, bool recursive);
 std::string file_extension_in_path(const std::string& path);
 
 class io_stream {
@@ -54,6 +54,7 @@ public:
 	char* at_read() const;
 	char* at_write() const;
 
+	// todo: merge this with peek() instead?
 	template<typename T>
 	T read(size_t index) const {
 		if (begin + index > end) {
@@ -62,6 +63,16 @@ public:
 		T value;
 		memcpy(&value, begin + index, sizeof(T));
 		return value;
+	}
+
+	template<typename T>
+	T peek() const {
+		return read<T>(read_index());
+	}
+
+	template<typename T>
+	T peek(size_t offset) const {
+		return read<T>(read_index() + offset);
 	}
 
 	template<typename T>
