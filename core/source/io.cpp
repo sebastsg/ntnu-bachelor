@@ -343,7 +343,7 @@ void read(const std::string& path, io_stream& stream) {
 	if (file.is_open()) {
 		std::stringstream result;
 		result << file.rdbuf();
-		stream.write(result.str().c_str(), result.str().size() + 1);
+		stream.write(result.str().c_str(), result.str().size());
 	}
 }
 
