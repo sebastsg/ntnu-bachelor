@@ -12,7 +12,7 @@ struct move_to_tile_packet {
 	no::vector2i tile = -1;
 	int32_t player_instance_id = -1;
 
-	void write(no::io_stream& stream) {
+	void write(no::io_stream& stream) const {
 		stream.write(type);
 		stream.write(timestamp);
 		stream.write(tile);
@@ -34,7 +34,7 @@ struct player_joined_packet {
 	uint8_t is_me = 0;
 	character_object player;
 
-	void write(no::io_stream& stream) {
+	void write(no::io_stream& stream) const {
 		stream.write(type);
 		stream.write(is_me);
 		player.write(stream);
@@ -53,7 +53,7 @@ struct player_disconnected_packet {
 
 	int32_t player_instance_id = -1;
 
-	void write(no::io_stream& stream) {
+	void write(no::io_stream& stream) const {
 		stream.write(type);
 		stream.write(player_instance_id);
 	}
@@ -62,4 +62,53 @@ struct player_disconnected_packet {
 		player_instance_id = stream.read<int32_t>();
 	}
 
+};
+
+struct version_packet {
+
+	static const int16_t type = 1000;
+
+	int32_t version = 0;
+
+	void write(no::io_stream& stream) const {
+		stream.write(type);
+		stream.write(version);
+	}
+
+	void read(no::io_stream& stream) {
+		version = stream.read<int32_t>();
+	}
+
+};
+
+struct file_transfer_packet {
+	
+	static const int16_t type = 1001;
+
+	std::string name;
+	int32_t file = 0;
+	int32_t total_files = 0;
+	int64_t offset = 0;
+	int64_t total_size = 0;
+	std::vector<char> data;
+
+	void write(no::io_stream& stream) const {
+		stream.write(type);
+		stream.write(name);
+		stream.write(file);
+		stream.write(total_files);
+		stream.write(offset);
+		stream.write(total_size);
+		stream.write_array<char>(data);
+	}
+
+	void read(no::io_stream& stream) {
+		name = stream.read<std::string>();
+		file = stream.read<int32_t>();
+		total_files = stream.read<int32_t>();
+		offset = stream.read<int64_t>();
+		total_size = stream.read<int64_t>();
+		data = stream.read_array<char>();
+	}
+	
 };

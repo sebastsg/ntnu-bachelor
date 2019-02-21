@@ -1,8 +1,11 @@
 #pragma once
 
+#include "updater.hpp"
+
 #include "loop.hpp"
 #include "network.hpp"
 #include "world.hpp"
+#include "character.hpp"
 
 class client_state {
 public:
@@ -47,13 +50,21 @@ public:
 
 private:
 
+	character_object* load_player(int client_index);
+	void send_player_joined(int client_index_joined);
+
 	void connect(int index);
 	void disconnect(int index);
+
+	void on_receive_packet(int client_index, int16_t type, no::io_stream& stream);
+	void on_disconnect(int client_index);
 
 	no::connection_establisher establisher;
 	no::socket_container sockets;
 	client_state clients[max_clients];
 
 	std::vector<server_world> worlds;
+
+	std::vector<client_updater> updaters;
 
 };

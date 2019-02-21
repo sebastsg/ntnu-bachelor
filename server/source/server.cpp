@@ -26,10 +26,47 @@ server_state::~server_state() {
 void server_state::update() {
 	establisher.synchronise();
 	sockets.synchronise();
+	for (size_t i = 0; i < updaters.size(); i++) {
+		updaters[i].update();
+		if (updaters[i].is_done()) {
+			updaters.erase(updaters.begin() + i);
+			i--;
+		}
+	}
 }
 
 void server_state::draw() {
 	
+}
+
+character_object* server_state::load_player(int client_index) {
+	// todo: load player from database
+	auto player = (character_object*)worlds.front().objects.add(1);
+	player->transform.scale = 0.5f;
+	player->change_id(worlds.front().objects.next_dynamic_id());
+	player->inventory.resize({ 4, 6 });
+	player->equipment.resize({ 3, 3 });
+	clients[client_index].player_instance_id = player->id();
+	item_instance item;
+	item.definition_id = 0;
+	item.stack = 1;
+	player->inventory.add_from(item);
+	item.definition_id = 1;
+	item.stack = 1;
+	player->inventory.add_from(item);
+	item.definition_id = 2;
+	item.stack = 1;
+	player->inventory.add_from(item);
+	item.definition_id = 3;
+	item.stack = 1;
+	player->inventory.add_from(item);
+	player->transform.position.x = 15.0f;
+	player->transform.position.z = 15.0f;
+	return player;
+}
+
+void server_state::send_player_joined(int client_index_joined) {
+
 }
 
 void server_state::connect(int index) {
@@ -46,94 +83,34 @@ void server_state::connect(int index) {
 	INFO("Connecting client " << index);
 	clients[index] = { true };
 
-	// todo: load player from database
-	auto player = (character_object*)worlds.front().objects.add(1);
-	player->transform.scale = 0.5f;
-	player->change_id(worlds.front().objects.next_dynamic_id());
-	player->inventory.resize({ 4, 6 });
-	player->equipment.resize({ 3, 3 });
-	clients[index].player_instance_id = player->id();
-	item_instance item;
-	item.definition_id = 0;
-	item.stack = 1;
-	player->inventory.add_from(item);
-	item.definition_id = 1;
-	item.stack = 1;
-	player->inventory.add_from(item);
-	item.definition_id = 2;
-	item.stack = 1;
-	player->inventory.add_from(item);
-	item.definition_id = 3;
-	item.stack = 1;
-	player->inventory.add_from(item);
-	player->transform.position.x = 15.0f;
-	player->transform.position.z = 15.0f;
+	auto player = load_player(index);
 	
-	// send packets
 	player_joined_packet joined;
 	joined.is_me = 1;
 	joined.player = *player;
-	no::io_stream session_stream;
-	no::packetizer::start(session_stream);
-	joined.write(session_stream);
-	no::packetizer::end(session_stream);
-	sockets[index].send_async(session_stream);
+	sockets[index].send_async(no::packet_stream(joined));
 
 	for (int j = 0; j < max_clients; j++) {
 		if (clients[j].is_connected() && index != j) {
 			joined.is_me = 0;
 			joined.player = *(character_object*)worlds.front().objects.find(clients[j].player_instance_id);
-			session_stream = {};
-			no::packetizer::start(session_stream);
-			joined.write(session_stream);
-			no::packetizer::end(session_stream);
-			sockets[index].send_async(session_stream);
+			sockets[index].send_async(no::packet_stream(joined));
 		}
 	}
 
-	session_stream = {};
 	joined.player = *(character_object*)worlds.front().objects.find(clients[index].player_instance_id);
 	joined.is_me = 0;
-	no::packetizer::start(session_stream);
-	joined.write(session_stream);
-	no::packetizer::end(session_stream);
-	sockets.broadcast<false>(session_stream, index);
+	sockets.broadcast<false>(no::packet_stream(joined), index);
 
 	sockets[index].events.receive_packet.listen([this, index](const no::io_socket::receive_packet_message& event) {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
-		switch (type) {
-		case move_to_tile_packet::type:
-		{
-			move_to_tile_packet packet;
-			packet.read(stream);
-
-			packet.player_instance_id = clients[index].player_instance_id;
-			// todo: update server world
-
-			no::io_stream packet_stream;
-			no::packetizer::start(packet_stream);
-			packet.write(packet_stream);
-			no::packetizer::end(packet_stream);
-			sockets.broadcast<true>(packet_stream);
-			break;
-		}
-		default:
-			break;
-		}
+		on_receive_packet(index, type, stream);
 	});
 
 	sockets[index].events.disconnect.listen([this, index](const no::io_socket::disconnect_message& event) {
 		INFO("Client " << index << " has disconnected with status " << event.status);
-		clients[index] = { false };
-
-		no::io_stream disconnect_stream;
-		player_disconnected_packet disconnection;
-		disconnection.player_instance_id = clients[index].player_instance_id;
-		no::packetizer::start(disconnect_stream);
-		disconnection.write(disconnect_stream);
-		no::packetizer::end(disconnect_stream);
-		sockets.broadcast<true>(disconnect_stream);
+		on_disconnect(index);
 	});
 }
 
@@ -143,6 +120,41 @@ void server_state::disconnect(int index) {
 	}
 	clients[index] = { false };
 	INFO("Disconnecting client " << index);
+}
+
+void server_state::on_receive_packet(int client_index, int16_t type, no::io_stream& stream) {
+	switch (type) {
+	case move_to_tile_packet::type:
+	{
+		move_to_tile_packet packet;
+		packet.read(stream);
+
+		packet.player_instance_id = clients[client_index].player_instance_id;
+		// todo: update server world
+		sockets.broadcast<true>(no::packet_stream(packet));
+		break;
+	}
+	case version_packet::type:
+	{
+		version_packet packet;
+		packet.read(stream);
+		//if (packet.version != newest_client_version) {
+			updaters.emplace_back(sockets[client_index]);
+		//}
+		packet.version = newest_client_version;
+		sockets[client_index].send(no::packet_stream(packet));
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+void server_state::on_disconnect(int client_index) {
+	clients[client_index] = { false };
+	player_disconnected_packet disconnection;
+	disconnection.player_instance_id = clients[client_index].player_instance_id;
+	sockets.broadcast<true>(no::packet_stream(disconnection));
 }
 
 void configure() {

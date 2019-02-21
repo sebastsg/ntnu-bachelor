@@ -24,7 +24,10 @@ public:
 	static void start(io_stream& stream);
 	static void end(io_stream& stream);
 
-	char* at_write();
+	packetizer();
+
+	char* data();
+	size_t write_index() const;
 	void write(char* data, size_t size);
 	io_stream next();
 	void clean();

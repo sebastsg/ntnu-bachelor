@@ -106,7 +106,7 @@ void converter_tool::update() {
 		};
 		if (import_options.vertex_type == loaded_model::animated) {
 			auto path = std::filesystem::path(browsed_path).parent_path();
-			auto files = no::entries_in_directory(path.string(), no::entry_inclusion::only_files);
+			auto files = no::entries_in_directory(path.string(), no::entry_inclusion::only_files, false);
 			for (auto& file : files) {
 				auto extension = no::file_extension_in_path(file);
 				if (extension != ".dae" && extension != ".obj") {

@@ -11,7 +11,7 @@
 
 #include <mutex>
 
-#define MAX_IO_SEND_PER_SOCKET     8
+#define MAX_IO_SEND_PER_SOCKET     128
 #define MAX_IO_RECEIVE_PER_SOCKET  4
 #define MAX_IO_ACCEPT_PER_SOCKET   4
 

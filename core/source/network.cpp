@@ -19,8 +19,16 @@ void packetizer::end(io_stream& stream) {
 	stream.move_write_index(size);
 }
 
-char* packetizer::at_write() {
-	return stream.at_write();
+packetizer::packetizer() {
+	stream.allocate(1024 * 1024 * 10); // prevent resizes per sync. todo: improve, because this is lazy
+}
+
+char* packetizer::data() {
+	return stream.data();
+}
+
+size_t packetizer::write_index() const {
+	return stream.write_index();
 }
 
 void packetizer::write(char* data, size_t size) {
@@ -36,6 +44,7 @@ io_stream packetizer::next() {
 		return {};
 	}
 	if (stream.peek<magic_type>() != magic) {
+		WARNING("Skipping magic... " << stream.peek<magic_type>() << " != " << magic);
 		stream.move_read_index(1); // no point in reading the same magic again
 		return {};
 	}

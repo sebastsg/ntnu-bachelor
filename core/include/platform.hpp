@@ -60,6 +60,7 @@ std::string environment_variable(const std::string& name);
 std::string open_file_browse_window();
 
 std::vector<std::string> command_line_arguments();
+void relaunch();
 
 }
 

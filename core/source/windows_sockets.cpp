@@ -410,14 +410,12 @@ DWORD io_port_thread(HANDLE io_port, int thread_num) {
 				socket->sync.disconnect.emplace_and_push(socket_close_status::disconnected_gracefully);
 				continue;
 			}
-			char* packetizer_previous_write = ws_socket->receive_packetizer.at_write();
+			size_t previous_write = ws_socket->receive_packetizer.write_index();
 			ws_socket->receive_packetizer.write(receive_data->buffer.buf, transferred);
-
-			MESSAGE_X(thread_num, "Received " << transferred << " bytes");
 
 			// queue the stream events. we can use the packetizer's buffer
 			io_socket::receive_stream_message stream_message;
-			stream_message.packet = { packetizer_previous_write, transferred, io_stream::construct_by::shallow_copy };
+			stream_message.packet = { ws_socket->receive_packetizer.data() + previous_write, transferred, io_stream::construct_by::shallow_copy };
 			socket->sync.receive_stream.move_and_push(std::move(stream_message));
 
 			// parse the buffer and queue the packet events for every complete packet
@@ -623,8 +621,8 @@ void io_socket::synchronise() {
 		return;
 	}
 
-	sync.receive_packet.emit(events.receive_packet);
 	sync.receive_stream.emit(events.receive_stream);
+	sync.receive_packet.emit(events.receive_packet);
 	sync.send.emit(events.send);
 
 	ws_socket->receive_packetizer.clean();

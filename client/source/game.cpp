@@ -7,7 +7,7 @@
 #include "commands.hpp"
 #include "packets.hpp"
 
-hud_view::hud_view() : font("arial.ttf", 20) {
+hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
 	fps_texture = no::create_texture();
 	debug_texture = no::create_texture();
@@ -165,21 +165,4 @@ void game_state::draw() {
 	}
 	ui.draw();
 	hud.draw();
-}
-
-void configure() {
-#if _DEBUG
-	no::set_asset_directory("../../../assets");
-#else
-	//no::set_asset_directory("assets");
-	no::set_asset_directory("../../../assets");
-#endif
-}
-
-void start() {
-	bool no_window = process_command_line();
-	if (no_window) {
-		return;
-	}
-	no::create_state<game_state>("Einheri", 800, 600, 4, true);
 }

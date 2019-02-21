@@ -83,6 +83,21 @@ std::vector<std::string> command_line_arguments() {
 	return args;
 }
 
+void relaunch() {
+	STARTUPINFO startup{};
+	startup.cb = sizeof(startup);
+	PROCESS_INFORMATION process{};
+	auto success = CreateProcess(__argv[0], nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startup, &process);
+	if (success) {
+		// note: doesn't close process
+		CloseHandle(process.hProcess);
+		CloseHandle(process.hThread);
+	} else {
+		WARNING("Failed to start " << __argv[0] << ". Error: " << GetLastError());
+	}
+	std::exit(0);
+}
+
 }
 
 }
