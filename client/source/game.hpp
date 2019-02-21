@@ -4,7 +4,7 @@
 #include "render.hpp"
 #include "ui.hpp"
 
-#include "loop.hpp"
+#include "client.hpp"
 #include "camera.hpp"
 #include "draw.hpp"
 #include "assets.hpp"
@@ -49,7 +49,7 @@ private:
 
 };
 
-class game_state : public no::window_state {
+class game_state : public client_state {
 public:
 
 	game_state();

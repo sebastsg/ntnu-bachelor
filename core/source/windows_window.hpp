@@ -41,6 +41,7 @@ public:
 
 	void set_size(const vector2i& size);
 	void set_title(const std::string& title);
+	void set_icon_from_resource(int resource_id);
 	void set_viewport(int x, int y, int width, int height);
 	void set_scissor(int x, int y, int width, int height);
 	void set_clear_color(const vector3f& color);

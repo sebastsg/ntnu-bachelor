@@ -49,6 +49,10 @@ void window::set_title(const std::string& title) {
 	platform->set_title(title);
 }
 
+void window::set_icon_from_resource(int resource_id) {
+	platform->set_icon_from_resource(resource_id);
+}
+
 void window::set_width(int width) {
 	set_size({ width, height() });
 }

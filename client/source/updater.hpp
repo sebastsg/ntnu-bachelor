@@ -1,6 +1,6 @@
 #pragma once
 
-#include "loop.hpp"
+#include "client.hpp"
 #include "network.hpp"
 #include "packets.hpp"
 
@@ -26,7 +26,7 @@ private:
 
 };
 
-class updater_state : public no::window_state {
+class updater_state : public client_state {
 public:
 
 	updater_state();

@@ -246,6 +246,17 @@ void windows_window::set_title(const std::string& title) {
 	SetWindowText(window_handle, title.c_str());
 }
 
+void windows_window::set_icon_from_resource(int resource_id) {
+	HICON icon = LoadIcon(platform::windows::current_instance(), MAKEINTRESOURCE(resource_id));
+	if (!icon) {
+		WARNING("Failed to load icon resource " << resource_id);
+		return;
+	}
+	SendMessage(window_handle, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+	SendMessage(window_handle, WM_SETICON, ICON_BIG, (LPARAM)icon);
+	// note: no need to destroy icon, since it's shared
+}
+
 void windows_window::set_viewport(int x, int y, int width, int height) {
 	context.set_viewport(x, y, width, height);
 }
