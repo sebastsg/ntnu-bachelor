@@ -9,7 +9,6 @@
 #include "draw.hpp"
 #include "assets.hpp"
 #include "font.hpp"
-#include "network.hpp"
 
 class hud_view {
 public:
@@ -61,8 +60,6 @@ public:
 private:
 
 	no::vector3i hovered_pixel;
-
-	no::io_socket server;
 
 	int mouse_press_id = -1;
 	int mouse_scroll_id = -1;

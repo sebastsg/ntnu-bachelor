@@ -65,10 +65,6 @@ character_object* server_state::load_player(int client_index) {
 	return player;
 }
 
-void server_state::send_player_joined(int client_index_joined) {
-
-}
-
 void server_state::connect(int index) {
 	if (index >= max_clients) {
 		// todo: send some message to client to let it know properly
@@ -82,69 +78,28 @@ void server_state::connect(int index) {
 	}
 	INFO("Connecting client " << index);
 	clients[index] = { true };
-
-	auto player = load_player(index);
-	
-	player_joined_packet joined;
-	joined.is_me = 1;
-	joined.player = *player;
-	sockets[index].send_async(no::packet_stream(joined));
-
-	for (int j = 0; j < max_clients; j++) {
-		if (clients[j].is_connected() && index != j) {
-			joined.is_me = 0;
-			joined.player = *(character_object*)worlds.front().objects.find(clients[j].player_instance_id);
-			sockets[index].send_async(no::packet_stream(joined));
-		}
-	}
-
-	joined.player = *(character_object*)worlds.front().objects.find(clients[index].player_instance_id);
-	joined.is_me = 0;
-	sockets.broadcast<false>(no::packet_stream(joined), index);
-
 	sockets[index].events.receive_packet.listen([this, index](const no::io_socket::receive_packet_message& event) {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		on_receive_packet(index, type, stream);
 	});
-
 	sockets[index].events.disconnect.listen([this, index](const no::io_socket::disconnect_message& event) {
 		INFO("Client " << index << " has disconnected with status " << event.status);
 		on_disconnect(index);
 	});
 }
 
-void server_state::disconnect(int index) {
-	if (index >= max_clients) {
-		return;
-	}
-	clients[index] = { false };
-	INFO("Disconnecting client " << index);
-}
-
 void server_state::on_receive_packet(int client_index, int16_t type, no::io_stream& stream) {
 	switch (type) {
-	case move_to_tile_packet::type:
-	{
-		move_to_tile_packet packet;
-		packet.read(stream);
-
-		packet.player_instance_id = clients[client_index].player_instance_id;
-		// todo: update server world
-		sockets.broadcast<true>(no::packet_stream(packet));
+	case packet::game::move_to_tile::type:
+		on_move_to_tile(client_index, { stream });
 		break;
-	}
-	case version_packet::type:
-	{
-		version_packet packet;
-		packet.read(stream);
-		//if (packet.version != newest_client_version) {
-			updaters.emplace_back(sockets[client_index]);
-		//}
-		packet.version = newest_client_version;
-		sockets[client_index].send(no::packet_stream(packet));
+	case packet::lobby::connect_to_world::type:
+		on_connect_to_world(client_index, { stream });
 		break;
-	}
+	case packet::updates::version_check::type:
+		on_version_check(client_index, { stream });
+		break;
 	default:
 		break;
 	}
@@ -152,20 +107,55 @@ void server_state::on_receive_packet(int client_index, int16_t type, no::io_stre
 
 void server_state::on_disconnect(int client_index) {
 	clients[client_index] = { false };
-	player_disconnected_packet disconnection;
+	packet::game::player_disconnected disconnection;
 	disconnection.player_instance_id = clients[client_index].player_instance_id;
-	sockets.broadcast<true>(no::packet_stream(disconnection));
+	sockets.broadcast<false>(no::packet_stream(disconnection));
 }
 
-void configure() {
-#if _DEBUG
-	no::set_asset_directory("../../../assets");
-#else
-	no::set_asset_directory("../../../assets");
-	//no::set_asset_directory("assets");
-#endif
+void server_state::send_player_joined(int client_index_joined) {
+
 }
 
-void start() {
-	no::create_state<server_state>("Server", 800, 600, 4, false);
+void server_state::on_version_check(int client_index, const packet::updates::version_check& packet) {
+	if (packet.version != newest_client_version || packet.needs_assets) {
+		updaters.emplace_back(sockets[client_index]);
+	}
+	auto new_packet = packet;
+	new_packet.version = newest_client_version;
+	sockets[client_index].send(no::packet_stream(new_packet));
 }
+
+void server_state::on_connect_to_world(int client_index, const packet::lobby::connect_to_world& packet) {
+	auto player = load_player(client_index);
+
+	packet::game::player_joined joined;
+	joined.is_me = 1;
+	joined.player = *player;
+	sockets[client_index].send(no::packet_stream(joined));
+
+	for (int j = 0; j < max_clients; j++) {
+		if (clients[j].is_connected() && client_index != j) {
+			auto existing_player = worlds.front().objects.find(clients[j].player_instance_id);
+			if (!existing_player) {
+				WARNING("Player not found");
+				continue;
+			}
+			joined.is_me = 0;
+			joined.player = *(character_object*)existing_player;
+			sockets[client_index].send(no::packet_stream(joined));
+		}
+	}
+
+	joined.player = *(character_object*)worlds.front().objects.find(clients[client_index].player_instance_id);
+	joined.is_me = 0;
+	sockets.broadcast<false>(no::packet_stream(joined), client_index);
+}
+
+void server_state::on_move_to_tile(int client_index, const packet::game::move_to_tile& packet) {
+	auto new_packet = packet;
+	new_packet.player_instance_id = clients[client_index].player_instance_id;
+	// todo: update server world
+	sockets.broadcast<false>(no::packet_stream(new_packet), client_index);
+	sockets[client_index].send(no::packet_stream(new_packet));
+}
+

@@ -34,7 +34,7 @@ void client_updater::update() {
 		WARNING("Empty file: " << paths.back());
 		return;
 	}
-	file_transfer_packet packet;
+	packet::updates::file_transfer packet;
 	packet.name = paths.back();
 	if (packet.name.find(no::asset_path("")) == 0) {
 		packet.name = packet.name.substr(no::asset_path("").size());

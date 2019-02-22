@@ -95,6 +95,7 @@ void relaunch() {
 	} else {
 		WARNING("Failed to start " << __argv[0] << ". Error: " << GetLastError());
 	}
+	internal::destroy_main_loop();
 	std::exit(0);
 }
 

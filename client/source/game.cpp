@@ -6,6 +6,7 @@
 #include "platform.hpp"
 #include "commands.hpp"
 #include "packets.hpp"
+#include "network.hpp"
 
 hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
@@ -52,9 +53,6 @@ character_object* game_world::my_player() {
 }
 
 game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
-	window().set_swap_interval(no::swap_interval::immediate);
-	set_synchronization(no::draw_synchronization::always);
-
 	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
 		if (event.button != no::mouse::button::left) {
 			return;
@@ -64,15 +62,10 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 		}
 		no::vector2i tile = hovered_pixel.xy;
 		if (tile.x != -1) {
-			move_to_tile_packet packet;
+			packet::game::move_to_tile packet;
 			packet.timestamp = 0;
 			packet.tile = tile;
-
-			no::io_stream stream;
-			no::packetizer::start(stream);
-			packet.write(stream);
-			no::packetizer::end(stream);
-			server.send_async(stream);
+			server().send_async(no::packet_stream(packet));
 		}
 	});
 
@@ -90,16 +83,17 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 		
 	});
 
-	server.connect("game.einheri.xyz", 7524); // todo: config file
+	packet::lobby::connect_to_world connect_packet;
+	connect_packet.world = 0;
+	server().send_async(no::packet_stream(connect_packet));
 
-	server.events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
+	server().events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
-		case move_to_tile_packet::type:
+		case packet::game::move_to_tile::type:
 		{
-			move_to_tile_packet packet;
-			packet.read(stream);
+			packet::game::move_to_tile packet{ stream };
 			auto player = (character_object*)world.objects.find(packet.player_instance_id);
 			if (player) {
 				player->start_movement_to(packet.tile.x, packet.tile.y);
@@ -108,10 +102,9 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 			}
 			break;
 		}
-		case player_joined_packet::type:
+		case packet::game::player_joined::type:
 		{
-			player_joined_packet packet;
-			packet.read(stream);
+			packet::game::player_joined packet{ stream };
 			auto player = (character_object*)world.objects.add(packet.player.serialized());
 			if (packet.is_me) {
 				world.my_player_id = packet.player.id();
@@ -137,7 +130,7 @@ void game_state::update() {
 	renderer.camera.size = window().size().to<float>();
 	hud.camera.transform.scale.xy = window().size().to<float>();
 	ui.camera.transform.scale.xy = window().size().to<float>();
-	server.synchronise();
+	server().synchronise();
 	if (world.my_player_id == -1) {
 		return;
 	}

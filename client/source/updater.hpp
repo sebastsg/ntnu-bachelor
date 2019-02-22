@@ -1,7 +1,6 @@
 #pragma once
 
 #include "client.hpp"
-#include "network.hpp"
 #include "packets.hpp"
 
 constexpr int client_version = 19022000; // yymmddxx
@@ -11,7 +10,7 @@ public:
 
 	file_transfer(const std::string& path);
 
-	void update(const file_transfer_packet& packet);
+	void update(const packet::updates::file_transfer& packet);
 
 	std::string relative_path() const;
 	std::string full_path() const;
@@ -40,7 +39,6 @@ private:
 	file_transfer& transfer_for_path(const std::string& path);
 	void erase_transfer(const std::string& path);
 
-	no::io_socket server;
 	std::vector<file_transfer> transfers;
 	int completed_transfers = 0;
 	no::timer previous_packet;

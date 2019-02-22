@@ -1,6 +1,7 @@
 #include "updater.hpp"
 #include "window.hpp"
 #include "game.hpp"
+#include "network.hpp"
 
 #include <filesystem>
 
@@ -8,7 +9,7 @@ file_transfer::file_transfer(const std::string& path) : path(path) {
 
 }
 
-void file_transfer::update(const file_transfer_packet& packet) {
+void file_transfer::update(const packet::updates::file_transfer& packet) {
 	stream.resize_if_needed((size_t)packet.total_size);
 	stream.set_write_index((size_t)packet.offset);
 	stream.write(packet.data.data(), packet.data.size());
@@ -39,29 +40,20 @@ bool file_transfer::is_completed() const {
 }
 
 updater_state::updater_state() {
-	window().set_swap_interval(no::swap_interval::immediate);
-	set_synchronization(no::draw_synchronization::always);
-
-	server.connect("game.einheri.xyz", 7524); // todo: config file
-
-	version_packet packet;
+	packet::updates::version_check packet;
 	packet.version = client_version;
-	server.send_async(no::packet_stream(packet));
+	packet.needs_assets = !std::filesystem::is_directory(no::asset_path(""));
+	server().send_async(no::packet_stream(packet));
 
 	previous_packet.start();
 
-	server.events.receive_stream.listen([this](const no::io_socket::receive_stream_message& event) {
-		MESSAGE("Received " << event.packet.size_left_to_read() << " bytes");
-	});
-
-	server.events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
+	server().events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
-		case version_packet::type:
+		case packet::updates::version_check::type:
 		{
-			version_packet packet;
-			packet.read(stream);
+			packet::updates::version_check packet{ stream };
 			INFO("Current version: " << client_version << ". Newest version: " << packet.version);
 			if (client_version == packet.version) {
 				if (std::filesystem::is_regular_file("einheri.old")) {
@@ -74,17 +66,15 @@ updater_state::updater_state() {
 			}
 			break;
 		}
-		case file_transfer_packet::type:
+		case packet::updates::file_transfer::type:
 		{
 			previous_packet.start();
-			file_transfer_packet packet;
-			packet.read(stream);
+			packet::updates::file_transfer packet{ stream };
 			auto& transfer = transfer_for_path(packet.name);
 			transfer.update(packet);
 			if (transfer.is_completed()) {
 				erase_transfer(transfer.relative_path());
 				completed_transfers++;
-				INFO("Completed transfer " << packet.file << " / " << packet.total_files << " (" << packet.total_size << " bytes)\n" << packet.name);
 				if (completed_transfers >= packet.total_files) {
 					no::platform::relaunch();
 				}
@@ -92,7 +82,6 @@ updater_state::updater_state() {
 			break;
 		}
 		default:
-			WARNING("Received unknown packet: " << type);
 			break;
 		}
 	});
@@ -103,7 +92,7 @@ updater_state::~updater_state() {
 }
 
 void updater_state::update() {
-	server.synchronise();
+	server().synchronise();
 	if (previous_packet.seconds() > 10) {
 		CRITICAL("Failed to update.");
 		stop();
