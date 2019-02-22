@@ -84,7 +84,7 @@ static int state_index(const window_state* state) {
 }
 
 static void update_windows() {
-	for (auto& state : loop.states) {
+	for (auto state : loop.states) {
 		auto window = loop.windows[state_index(state)];
 		window->poll();
 		state->update();
@@ -92,7 +92,7 @@ static void update_windows() {
 }
 
 static void draw_windows() {
-	for (auto& state : loop.states) {
+	for (auto state : loop.states) {
 		auto window = loop.windows[state_index(state)];
 		window->clear();
 		state->draw();
@@ -101,7 +101,7 @@ static void draw_windows() {
 }
 
 static void destroy_stopped_states() {
-	for (auto& state : loop.states_to_stop) {
+	for (auto state : loop.states_to_stop) {
 		int index = state_index(state);
 		if (index != -1) {
 			bool is_closing = !loop.states[index]->has_next_state();
@@ -233,11 +233,18 @@ int run_main_loop() {
 
 		destroy_stopped_states();
 	}
+	destroy_main_loop();
+	return 0;
+}
 
+void destroy_main_loop() {
+	for (auto state : loop.states) {
+		loop.states_to_stop.push_back(state);
+	}
+	destroy_stopped_states();
 	stop_network();
 	delete loop.audio;
-
-	return 0;
+	loop.audio = nullptr;
 }
 
 }

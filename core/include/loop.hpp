@@ -19,6 +19,7 @@ using make_state_function = std::function<window_state*()>;
 
 void create_state(const std::string& title, int width, int height, int samples, bool maximized, const make_state_function& make_state);
 int run_main_loop();
+void destroy_main_loop();
 
 }
 
@@ -74,13 +75,10 @@ public:
 
 protected:
 
-	// TODO: Better perfect capture syntax can be used when C++20 is available.
-	template<typename T, typename... U>
-	void change_state(U... args) {
-		change_state([args = std::make_tuple(std::forward<U>(args)...)] {
-			return std::apply([](auto&&... args) {
-				return new T(std::forward<U>(args)...);
-			}, std::move(args));
+	template<typename T>
+	void change_state() {
+		change_state([] {
+			return new T();
 		});
 	}
 
@@ -101,13 +99,10 @@ private:
 
 signal_event& post_configure_event();
 
-// TODO: Better perfect capture syntax can be used when C++20 is available.
-template<typename T, typename... U>
-void create_state(const std::string& title, int width, int height, int samples, bool maximized, U... args) {
-	internal::create_state(title, width, height, samples, maximized, [args = std::make_tuple(std::forward<U>(args)...)] {
-		return std::apply([](auto&&... args) {
-			return new T(std::forward<U>(args)...);
-		}, std::move(args));
+template<typename T>
+void create_state(const std::string& title, int width, int height, int samples, bool maximized) {
+	internal::create_state(title, width, height, samples, maximized, [] {
+		return new T();
 	});
 }
 
