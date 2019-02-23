@@ -59,6 +59,17 @@ item_definition& item_definition_list::get(long long id) {
 	return definitions[(size_t)id];
 }
 
+std::vector<item_definition> item_definition_list::of_type(item_type type) const {
+	std::vector<item_definition> result;
+	for (auto& definition : definitions) {
+		if (definition.type == type) {
+			result.push_back(definition);
+		}
+	}
+	return result;
+}
+
+
 int item_definition_list::count() const {
 	return (int)definitions.size();
 }

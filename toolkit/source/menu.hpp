@@ -8,6 +8,10 @@ public:
 	void update() override;
 	void draw() override;
 
+protected:
+
+	virtual void update_menu();
+
 private:
 
 	bool limit_fps = true;

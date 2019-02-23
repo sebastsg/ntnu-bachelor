@@ -50,6 +50,7 @@ public:
 	void load(const std::string& path);
 
 	item_definition& get(long long id);
+	std::vector<item_definition> of_type(item_type type) const;
 	int count() const;
 
 	bool add(const item_definition& definition);

@@ -41,6 +41,10 @@ surface::surface(int width, int height, pixel_format format) : size(width, heigh
 	pixels = new uint32_t[width * height];
 }
 
+surface::surface(int width, int height, pixel_format format, uint32_t color) : surface(width, height, format) {
+	std::fill_n(pixels, width * height, color);
+}
+
 surface::~surface() {
 	delete[] pixels;
 }

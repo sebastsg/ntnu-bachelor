@@ -3,12 +3,22 @@
 #include "editor.hpp"
 #include "item_editor.hpp"
 #include "object_editor.hpp"
+#include "dialogue_editor.hpp"
 #include "window.hpp"
 
 #include "imgui/imgui.h"
 
 void menu_bar_state::update() {
 	ImGui::BeginMainMenuBar();
+	update_menu();
+	ImGui::EndMainMenuBar();
+}
+
+void menu_bar_state::draw() {
+
+}
+
+void menu_bar_state::update_menu() {
 	if (ImGui::BeginMenu("Tool")) {
 		ImGui::PushItemWidth(360.0f);
 		if (ImGui::MenuItem("World editor")) {
@@ -24,7 +34,7 @@ void menu_bar_state::update() {
 			change_state<object_editor>();
 		}
 		if (ImGui::MenuItem("Dialogue editor")) {
-
+			change_state<dialogue_editor_state>();
 		}
 		ImGui::PopItemWidth();
 		ImGui::EndMenu();
@@ -37,9 +47,4 @@ void menu_bar_state::update() {
 		ImGui::PopItemWidth();
 		ImGui::EndMenu();
 	}
-	ImGui::EndMainMenuBar();
-}
-
-void menu_bar_state::draw() {
-
 }

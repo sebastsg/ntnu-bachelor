@@ -73,6 +73,7 @@ void item_editor::ui_select_item() {
 	if (selected.id == -1) {
 		return;
 	}
+	ImGui::Text(CSTRING("ID: " << selected.id));
 	ImGui::InputText("Name##EditItemName", selected.name.data(), selected.name.capacity());
 	int max_stack = (int)selected.max_stack;
 	ImGui::InputInt("Max stack##EditItemMaxStack", &max_stack);

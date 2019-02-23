@@ -35,6 +35,7 @@ public:
 		if (!handler) {
 			return -1;
 		}
+		MESSAGE("Registering event listener #" << handlers.size() << " <" << typeid(M).name() << ">");
 		for (size_t i = 0; i < handlers.size(); i++) {
 			if (!handlers[i]) {
 				handlers[i] = handler;

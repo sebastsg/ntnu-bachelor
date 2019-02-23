@@ -25,6 +25,26 @@ inline double deg_to_rad(double x) {
 	return x * 0.0174532925199432957; // x * (pi / 180)
 }
 
+template<typename T>
+inline T clamp(T value, T min, T max) {
+	if (value > max) {
+		return max;
+	} else if (value < min) {
+		return min;
+	}
+	return value;
+}
+
+template<typename T>
+inline T inverse_clamp(T value, T min, T max) {
+	if (value > max) {
+		return min;
+	} else if (value < min) {
+		return max;
+	}
+	return value;
+}
+
 class random_number_generator {
 public:
 
