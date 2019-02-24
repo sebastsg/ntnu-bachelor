@@ -656,9 +656,8 @@ int random_node::process() {
 		WARNING("No nodes attached.");
 		return -1;
 	}
-	std::mt19937 rng((unsigned int)std::time(nullptr));
-	std::uniform_int_distribution<int> gen(0, out.size() - 1);
-	return gen(rng);
+	// todo: randomness
+	return 0;
 }
 
 void random_node::write(no::io_stream& stream) {
@@ -670,9 +669,8 @@ void random_node::read(no::io_stream& stream) {
 }
 
 int random_condition_node::process() {
-	std::mt19937 rng((unsigned int)std::time(nullptr));
-	std::uniform_int_distribution<int> gen(0, 99);
-	return (percent > gen(rng) ? 1 : 0);
+	// todo: randomness
+	return 0;
 }
 
 void random_condition_node::write(no::io_stream& stream) {
