@@ -8,6 +8,8 @@
 
 #include <unordered_set>
 
+class character_object;
+
 enum class node_type {
 	message,
 	choice,
@@ -71,8 +73,17 @@ struct node_output {
 	int out_id = 0;
 };
 
+struct node_choice_info {
+	std::string text;
+	int node_id = -1;
+};
+
+class dialogue_tree;
+
 class abstract_node {
 public:
+
+	friend class dialogue_tree;
 
 	int id = -1;
 	int scope_id = -1;
@@ -96,6 +107,55 @@ public:
 	int get_output(int out_id);
 	int get_first_output();
 	void set_output_node(int out_id, int node_id);
+
+protected:
+
+	dialogue_tree* tree = nullptr;
+
+};
+
+class dialogue_tree {
+public:
+
+	struct choice_event {
+		std::vector<node_choice_info> choices;
+	};
+
+	struct {
+		no::message_event<choice_event> choice;
+	} events;
+
+	int id = -1;
+	int id_counter = 0;
+	int start_node_id = 0; // todo: when deleting node, make sure start node is valid
+	std::unordered_map<int, abstract_node*> nodes;
+
+	// what nodes check and modify:
+	game_variable_map* variables = nullptr;
+	character_object* player = nullptr;
+	item_container* inventory = nullptr;
+	item_container* equipment = nullptr;
+
+	void write(no::io_stream& stream) const;
+	void read(no::io_stream& stream);
+
+	void save() const;
+	void load(int id);
+
+	int current_node() const;
+
+	void select_choice(int id);
+	void process_entry_point();
+
+private:
+
+	bool process_choice_selection();
+	void prepare_message();
+	std::vector<int> process_current_and_get_choices();
+	int process_nodes_get_choice(int id, node_type type);
+	int process_non_ui_node(int id, node_type type);
+
+	int current_node_id = 0;
 
 };
 
@@ -223,7 +283,7 @@ class warp_effect_node : public effect_node {
 public:
 
 	int world_id = 0;
-	no::vector2i tile;
+	no::vector2f tile;
 
 	node_type type() const override {
 		return node_type::warp_effect;
@@ -351,27 +411,5 @@ public:
 	int process() override;
 	void write(no::io_stream& stream) override;
 	void read(no::io_stream& stream) override;
-
-};
-
-struct dialogue_tree {
-
-	int id = -1;
-	int id_counter = 0;
-	int start_node_id = 0; // todo: when deleting node, make sure start node is valid
-	std::unordered_map<int, abstract_node*> nodes;
-
-	void write(no::io_stream& stream) const;
-	void read(no::io_stream& stream);
-
-	void save() const;
-	void load(int id);
-
-};
-
-struct dialogue_choice_button {
-
-	std::string text;
-	int node_id = -1;
 
 };

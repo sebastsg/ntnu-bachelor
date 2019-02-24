@@ -1,17 +1,19 @@
 #pragma once
 
 #include "updater.hpp"
-
 #include "loop.hpp"
 #include "network.hpp"
 #include "world.hpp"
 #include "character.hpp"
 #include "packets.hpp"
+#include "dialogue.hpp"
 
 class client_state {
 public:
 
 	int player_instance_id = -1;
+	dialogue_tree* dialogue = nullptr;
+	game_variable_map variables;
 
 	client_state() = default;
 	client_state(bool connected) : connected(connected) {}
@@ -60,9 +62,11 @@ private:
 
 	void send_player_joined(int client_index_joined);
 
-	void on_move_to_tile(int client_index, const packet::game::move_to_tile& packet);
-	void on_connect_to_world(int client_index, const packet::lobby::connect_to_world& packet);
-	void on_version_check(int client_index, const packet::updates::version_check& packet);
+	void on_move_to_tile(int client_index, const to_server::game::move_to_tile& packet);
+	void on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet);
+	void on_continue_dialogue(int client_index, const to_server::game::continue_dialogue& packet);
+	void on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet);
+	void on_version_check(int client_index, const to_server::updates::update_query& packet);
 
 	no::connection_establisher establisher;
 	no::socket_container sockets;

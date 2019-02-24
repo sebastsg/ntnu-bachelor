@@ -35,6 +35,14 @@ private:
 class dialogue_view {
 public:
 
+	struct choose_event {
+		int choice = -1;
+	};
+
+	struct {
+		no::message_event<choose_event> choose;
+	} events;
+
 	dialogue_view(game_state& game, const no::ortho_camera& camera, int id);
 	~dialogue_view();
 
@@ -45,22 +53,14 @@ public:
 
 private:
 
-	int process_non_ui_node(int id, node_type type);
-	int process_nodes_get_choice(int id, node_type type);
-	void prepare_message();
-	void select_choice(int node_id);
-	void process_entry_point();
-	void start_dialogue();
-
 	game_state& game;
 	const no::ortho_camera& camera;
 	int key_listener = -1;
 
 	bool open = true;
 	dialogue_tree dialogue;
-	int current_node_id = 0;
-	std::vector<dialogue_choice_button> choices;
 	int current_choice = 0;
+	std::vector<node_choice_info> current_choices;
 	no::transform transform;
 
 	no::font font;

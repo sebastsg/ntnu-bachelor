@@ -3,6 +3,7 @@
 #include "world.hpp"
 #include "render.hpp"
 #include "ui.hpp"
+#include "dialogue_ui.hpp"
 
 #include "client.hpp"
 #include "camera.hpp"
@@ -51,6 +52,9 @@ private:
 class game_state : public client_state {
 public:
 
+	game_world world;
+	game_variable_map variables;
+
 	game_state();
 	~game_state() override;
 
@@ -59,16 +63,19 @@ public:
 
 private:
 
+	void start_dialogue(int target_id);
+	void close_dialogue();
+
 	no::vector3i hovered_pixel;
 
 	int mouse_press_id = -1;
 	int mouse_scroll_id = -1;
 	int keyboard_press_id = -1;
 
-	game_world world;
 	world_view renderer;
 	hud_view hud;
 	user_interface_view ui;
+	dialogue_view* dialogue = nullptr;
 
 	no::perspective_camera::drag_controller dragger;
 	no::perspective_camera::rotate_controller rotater;

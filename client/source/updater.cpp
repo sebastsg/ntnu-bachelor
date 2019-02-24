@@ -9,7 +9,7 @@ file_transfer::file_transfer(const std::string& path) : path(path) {
 
 }
 
-void file_transfer::update(const packet::updates::file_transfer& packet) {
+void file_transfer::update(const to_client::updates::file_transfer& packet) {
 	stream.resize_if_needed((size_t)packet.total_size);
 	stream.set_write_index((size_t)packet.offset);
 	stream.write(packet.data.data(), packet.data.size());
@@ -40,7 +40,7 @@ bool file_transfer::is_completed() const {
 }
 
 updater_state::updater_state() {
-	packet::updates::version_check packet;
+	to_server::updates::update_query packet;
 	packet.version = client_version;
 	packet.needs_assets = !std::filesystem::is_directory(no::asset_path(""));
 	server().send_async(no::packet_stream(packet));
@@ -51,9 +51,9 @@ updater_state::updater_state() {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
-		case packet::updates::version_check::type:
+		case to_client::updates::latest_version::type:
 		{
-			packet::updates::version_check packet{ stream };
+			to_client::updates::latest_version packet{ stream };
 			INFO("Current version: " << client_version << ". Newest version: " << packet.version);
 			if (client_version == packet.version) {
 				if (std::filesystem::is_regular_file("einheri.old")) {
@@ -66,10 +66,10 @@ updater_state::updater_state() {
 			}
 			break;
 		}
-		case packet::updates::file_transfer::type:
+		case to_client::updates::file_transfer::type:
 		{
 			previous_packet.start();
-			packet::updates::file_transfer packet{ stream };
+			to_client::updates::file_transfer packet{ stream };
 			auto& transfer = transfer_for_path(packet.name);
 			transfer.update(packet);
 			if (transfer.is_completed()) {

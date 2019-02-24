@@ -712,7 +712,7 @@ void dialogue_editor_state::update_node_ui(warp_effect_node& node) {
 	//ImGui::SameLine();
 	//ImGui::Button("Change");
 	//world_popup_context(&node.world_id);
-	dirty |= ImGui::InputInt2("Tile", &node.tile.x);
+	dirty |= ImGui::InputFloat2("Tile", &node.tile.x);
 	ImGui::PopItemWidth();
 }
 

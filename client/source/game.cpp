@@ -62,8 +62,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 		}
 		no::vector2i tile = hovered_pixel.xy;
 		if (tile.x != -1) {
-			packet::game::move_to_tile packet;
-			packet.timestamp = 0;
+			to_server::game::move_to_tile packet;
 			packet.tile = tile;
 			server().send_async(no::packet_stream(packet));
 		}
@@ -80,10 +79,12 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 	});
 
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		
+		if (event.key == no::key::p) {
+			start_dialogue(0);
+		}
 	});
 
-	packet::lobby::connect_to_world connect_packet;
+	to_server::lobby::connect_to_world connect_packet;
 	connect_packet.world = 0;
 	server().send_async(no::packet_stream(connect_packet));
 
@@ -91,9 +92,9 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
-		case packet::game::move_to_tile::type:
+		case to_client::game::move_to_tile::type:
 		{
-			packet::game::move_to_tile packet{ stream };
+			to_client::game::move_to_tile packet{ stream };
 			auto player = (character_object*)world.objects.find(packet.player_instance_id);
 			if (player) {
 				player->start_movement_to(packet.tile.x, packet.tile.y);
@@ -102,9 +103,9 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 			}
 			break;
 		}
-		case packet::game::player_joined::type:
+		case to_client::game::player_joined::type:
 		{
-			packet::game::player_joined packet{ stream };
+			to_client::game::player_joined packet{ stream };
 			auto player = (character_object*)world.objects.add(packet.player.serialized());
 			if (packet.is_me) {
 				world.my_player_id = packet.player.id();
@@ -121,6 +122,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 }
 
 game_state::~game_state() {
+	close_dialogue();
 	mouse().press.ignore(mouse_press_id);
 	mouse().press.ignore(mouse_scroll_id);
 	keyboard().press.ignore(keyboard_press_id);
@@ -141,6 +143,13 @@ void game_state::update() {
 	world.update();
 	renderer.camera.update();
 	hud.set_debug(STRING("Tile: " << world.my_player()->tile()));
+	if (dialogue) {
+		if (dialogue->is_open()) {
+			dialogue->update();
+		} else {
+			close_dialogue();
+		}
+	}
 }
 
 void game_state::draw() {
@@ -158,4 +167,25 @@ void game_state::draw() {
 	}
 	ui.draw();
 	hud.draw();
+	if (dialogue) {
+		dialogue->draw();
+	}
+}
+
+void game_state::start_dialogue(int target_id) {
+	close_dialogue();
+	to_server::game::start_dialogue packet;
+	packet.target_instance_id = target_id;
+	server().send_async(no::packet_stream(packet));
+	dialogue = new dialogue_view(*this, ui.camera, target_id);
+	dialogue->events.choose.listen([this](const dialogue_view::choose_event& event) {
+		to_server::game::continue_dialogue packet;
+		packet.choice = event.choice;
+		server().send_async(no::packet_stream(packet));
+	});
+}
+
+void game_state::close_dialogue() {
+	delete dialogue;
+	dialogue = nullptr;
 }

@@ -54,9 +54,6 @@ character_object* server_state::load_player(int client_index) {
 	item.definition_id = 1;
 	item.stack = 1;
 	player->inventory.add_from(item);
-	item.definition_id = 2;
-	item.stack = 1;
-	player->inventory.add_from(item);
 	item.definition_id = 3;
 	item.stack = 1;
 	player->inventory.add_from(item);
@@ -91,13 +88,19 @@ void server_state::connect(int index) {
 
 void server_state::on_receive_packet(int client_index, int16_t type, no::io_stream& stream) {
 	switch (type) {
-	case packet::game::move_to_tile::type:
+	case to_server::game::move_to_tile::type:
 		on_move_to_tile(client_index, { stream });
 		break;
-	case packet::lobby::connect_to_world::type:
+	case to_server::game::start_dialogue::type:
+		on_start_dialogue(client_index, { stream });
+		break;
+	case to_server::game::continue_dialogue::type:
+		on_continue_dialogue(client_index, { stream });
+		break;
+	case to_server::lobby::connect_to_world::type:
 		on_connect_to_world(client_index, { stream });
 		break;
-	case packet::updates::version_check::type:
+	case to_server::updates::update_query::type:
 		on_version_check(client_index, { stream });
 		break;
 	default:
@@ -107,7 +110,7 @@ void server_state::on_receive_packet(int client_index, int16_t type, no::io_stre
 
 void server_state::on_disconnect(int client_index) {
 	clients[client_index] = { false };
-	packet::game::player_disconnected disconnection;
+	to_client::game::player_disconnected disconnection;
 	disconnection.player_instance_id = clients[client_index].player_instance_id;
 	sockets.broadcast<false>(no::packet_stream(disconnection));
 }
@@ -116,7 +119,51 @@ void server_state::send_player_joined(int client_index_joined) {
 
 }
 
-void server_state::on_version_check(int client_index, const packet::updates::version_check& packet) {
+void server_state::on_move_to_tile(int client_index, const to_server::game::move_to_tile& packet) {
+	to_client::game::move_to_tile new_packet;
+	new_packet.tile = packet.tile;
+	new_packet.player_instance_id = clients[client_index].player_instance_id;
+	// todo: update server world
+	sockets.broadcast<false>(no::packet_stream(new_packet), client_index);
+	sockets[client_index].send(no::packet_stream(new_packet));
+}
+
+void server_state::on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet) {
+	auto& client = clients[client_index];
+	if (client.dialogue) {
+		WARNING("Player is already in a dialogue");
+		return;
+	}
+	auto target = worlds.front().objects.find(packet.target_instance_id);
+	if (!target) {
+		WARNING("Target " << packet.target_instance_id << " not found.");
+		return;
+	}
+	auto player = worlds.front().objects.find(client.player_instance_id);
+	if (!player) {
+		WARNING("Player not found");
+		return;
+	}
+	int dialogue_id = 0; // todo: associate dialogues with objects
+	client.dialogue = new dialogue_tree();
+	client.dialogue->variables = &client.variables;
+	client.dialogue->player = (character_object*)player;
+	client.dialogue->inventory = &client.dialogue->player->inventory;
+	client.dialogue->equipment = &client.dialogue->player->equipment;
+	client.dialogue->load(dialogue_id);
+	client.dialogue->process_entry_point();
+}
+
+void server_state::on_continue_dialogue(int client_index, const to_server::game::continue_dialogue& packet) {
+	auto& client = clients[client_index];
+	if (!client.dialogue) {
+		WARNING("Player is not in a dialogue");
+		return;
+	}
+	client.dialogue->select_choice(packet.choice);
+}
+
+void server_state::on_version_check(int client_index, const to_server::updates::update_query& packet) {
 	if (packet.version != newest_client_version || packet.needs_assets) {
 		updaters.emplace_back(sockets[client_index]);
 	}
@@ -125,10 +172,10 @@ void server_state::on_version_check(int client_index, const packet::updates::ver
 	sockets[client_index].send(no::packet_stream(new_packet));
 }
 
-void server_state::on_connect_to_world(int client_index, const packet::lobby::connect_to_world& packet) {
+void server_state::on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet) {
 	auto player = load_player(client_index);
 
-	packet::game::player_joined joined;
+	to_client::game::player_joined joined;
 	joined.is_me = 1;
 	joined.player = *player;
 	sockets[client_index].send(no::packet_stream(joined));
@@ -149,13 +196,5 @@ void server_state::on_connect_to_world(int client_index, const packet::lobby::co
 	joined.player = *(character_object*)worlds.front().objects.find(clients[client_index].player_instance_id);
 	joined.is_me = 0;
 	sockets.broadcast<false>(no::packet_stream(joined), client_index);
-}
-
-void server_state::on_move_to_tile(int client_index, const packet::game::move_to_tile& packet) {
-	auto new_packet = packet;
-	new_packet.player_instance_id = clients[client_index].player_instance_id;
-	// todo: update server world
-	sockets.broadcast<false>(no::packet_stream(new_packet), client_index);
-	sockets[client_index].send(no::packet_stream(new_packet));
 }
 

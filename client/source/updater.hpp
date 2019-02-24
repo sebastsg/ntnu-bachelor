@@ -10,7 +10,7 @@ public:
 
 	file_transfer(const std::string& path);
 
-	void update(const packet::updates::file_transfer& packet);
+	void update(const to_client::updates::file_transfer& packet);
 
 	std::string relative_path() const;
 	std::string full_path() const;

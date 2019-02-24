@@ -49,5 +49,3 @@ private:
 	std::unordered_map<int, std::vector<game_variable>> locals;
 
 };
-
-game_variable_map& variables();

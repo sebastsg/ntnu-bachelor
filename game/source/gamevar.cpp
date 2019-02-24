@@ -2,14 +2,6 @@
 #include "debug.hpp"
 #include "loop.hpp"
 
-namespace global {
-static game_variable_map variables;
-}
-
-game_variable_map& variables() {
-	return global::variables;
-}
-
 static bool compare_game_var_greater_than(variable_type type, const std::string& a, const std::string& b) {
 	switch (type) {
 	case variable_type::string: return a.size() > b.size();
