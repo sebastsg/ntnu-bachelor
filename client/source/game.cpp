@@ -52,7 +52,12 @@ character_object* game_world::my_player() {
 	return (character_object*)objects.find(my_player_id);
 }
 
-game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
+game_state::game_state() : 
+	renderer(world), 
+	dragger(mouse()), 
+	ui(*this, world), 
+	chat(*this, ui.camera), 
+	ui_font(no::asset_path("fonts/leo.ttf"), 14) {
 	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
 		if (event.button != no::mouse::button::left) {
 			return;
@@ -80,18 +85,36 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
 		if (event.key == no::key::p) {
-			start_dialogue(0);
+			//start_dialogue(0);
 		}
 	});
 
-	to_server::lobby::connect_to_world connect_packet;
-	connect_packet.world = 0;
-	server().send_async(no::packet_stream(connect_packet));
+	chat.events.message.listen([this](const chat_view::message_event& event) {
+		to_server::game::chat_message packet;
+		packet.message = event.message;
+		server().send_async(no::packet_stream(packet));
+	});
+
+	to_server::lobby::login_attempt login_packet;
+	login_packet.password = "";
+	login_packet.name = "penguin";
+	server().send_async(no::packet_stream(login_packet));
 
 	server().events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
+		case to_client::lobby::login_status::type:
+		{
+			to_client::lobby::login_status packet{ stream };
+			if (packet.status == 1) {
+				player_name = packet.name;
+				to_server::lobby::connect_to_world connect_packet;
+				connect_packet.world = 0;
+				server().send(no::packet_stream(connect_packet));
+			}
+			break;
+		}
 		case to_client::game::move_to_tile::type:
 		{
 			to_client::game::move_to_tile packet{ stream };
@@ -111,6 +134,12 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this, world) {
 				world.my_player_id = packet.player.id();
 				ui.listen(world.my_player());
 			}
+			break;
+		}
+		case to_client::game::chat_message::type:
+		{
+			to_client::game::chat_message packet{ stream };
+			chat.add(packet.author, packet.message);
 			break;
 		}
 		default:
@@ -143,6 +172,7 @@ void game_state::update() {
 	world.update();
 	renderer.camera.update();
 	hud.set_debug(STRING("Tile: " << world.my_player()->tile()));
+	chat.update();
 	if (dialogue) {
 		if (dialogue->is_open()) {
 			dialogue->update();
@@ -166,10 +196,15 @@ void game_state::draw() {
 		//renderer.draw_tile_highlight(world.my_player()->tile());
 	}
 	ui.draw();
+	chat.draw();
 	hud.draw();
 	if (dialogue) {
 		dialogue->draw();
 	}
+}
+
+const no::font& game_state::font() const {
+	return ui_font;
 }
 
 void game_state::start_dialogue(int target_id) {

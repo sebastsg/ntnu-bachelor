@@ -11,9 +11,7 @@
 class client_state {
 public:
 
-	int player_instance_id = -1;
-	dialogue_tree* dialogue = nullptr;
-	game_variable_map variables;
+	friend class server_state;
 
 	client_state() = default;
 	client_state(bool connected) : connected(connected) {}
@@ -30,6 +28,11 @@ public:
 private:
 
 	bool connected = false;
+	std::string login_name;
+	std::string display_name;
+	int player_instance_id = -1;
+	dialogue_tree* dialogue = nullptr;
+	game_variable_map variables;
 
 };
 
@@ -65,6 +68,8 @@ private:
 	void on_move_to_tile(int client_index, const to_server::game::move_to_tile& packet);
 	void on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet);
 	void on_continue_dialogue(int client_index, const to_server::game::continue_dialogue& packet);
+	void on_chat_message(int client_index, const to_server::game::chat_message& packet);
+	void on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet);
 	void on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet);
 	void on_version_check(int client_index, const to_server::updates::update_query& packet);
 

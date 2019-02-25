@@ -4,6 +4,7 @@
 #include "render.hpp"
 #include "ui.hpp"
 #include "dialogue_ui.hpp"
+#include "chat_ui.hpp"
 
 #include "client.hpp"
 #include "camera.hpp"
@@ -51,6 +52,8 @@ private:
 
 class game_state : public client_state {
 public:
+	
+	std::string player_name;
 
 	game_world world;
 	game_variable_map variables;
@@ -60,6 +63,8 @@ public:
 
 	void update() override;
 	void draw() override;
+
+	const no::font& font() const;
 
 private:
 
@@ -73,8 +78,10 @@ private:
 	int keyboard_press_id = -1;
 
 	world_view renderer;
+	no::font ui_font;
 	hud_view hud;
 	user_interface_view ui;
+	chat_view chat;
 	dialogue_view* dialogue = nullptr;
 
 	no::perspective_camera::drag_controller dragger;

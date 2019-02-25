@@ -1,36 +1,7 @@
 #pragma once
 
-#include "camera.hpp"
-#include "font.hpp"
-#include "draw.hpp"
+#include "ui.hpp"
 #include "dialogue.hpp"
-
-class game_state;
-
-class text_view {
-public:
-
-	no::transform transform;
-
-	text_view();
-	text_view(const text_view&) = delete;
-	text_view(text_view&&);
-
-	~text_view();
-
-	text_view& operator=(const text_view&) = delete;
-	text_view& operator=(text_view&&);
-
-	std::string text() const;
-	void render(const no::font& font, const std::string& text);
-	void draw(const no::rectangle& rectangle) const;
-
-private:
-
-	std::string rendered_text;
-	int texture = -1;
-
-};
 
 class dialogue_view {
 public:

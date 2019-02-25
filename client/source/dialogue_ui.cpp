@@ -1,45 +1,6 @@
 #include "dialogue_ui.hpp"
 #include "game.hpp"
 
-text_view::text_view() {
-	texture = no::create_texture();
-}
-
-text_view::text_view(text_view&& that) {
-	std::swap(transform, that.transform);
-	std::swap(rendered_text, that.rendered_text);
-	std::swap(texture, that.texture);
-}
-
-text_view::~text_view() {
-	no::delete_texture(texture);
-}
-
-text_view& text_view::operator=(text_view&& that) {
-	std::swap(transform, that.transform);
-	std::swap(rendered_text, that.rendered_text);
-	std::swap(texture, that.texture);
-	return *this;
-}
-
-std::string text_view::text() const {
-	return rendered_text;
-}
-
-void text_view::render(const no::font& font, const std::string& text) {
-	if (text == rendered_text) {
-		return;
-	}
-	rendered_text = text;
-	no::load_texture(texture, font.render(rendered_text));
-	transform.scale.xy = no::texture_size(texture).to<float>();
-}
-
-void text_view::draw(const no::rectangle& rectangle) const {
-	no::bind_texture(texture);
-	no::draw_shape(rectangle, transform);
-}
-
 dialogue_view::dialogue_view(game_state& game, const no::ortho_camera& camera, int id) 
 	: game(game), camera(camera), font(no::asset_path("fonts/leo.ttf"), 10) {
 	auto player = game.world.my_player();

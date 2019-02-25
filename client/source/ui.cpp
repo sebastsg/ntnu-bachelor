@@ -34,6 +34,45 @@ static void set_item_uv(no::rectangle& rectangle, no::vector2f uv) {
 	set_ui_uv(rectangle, uv, item_size);
 }
 
+text_view::text_view() {
+	texture = no::create_texture();
+}
+
+text_view::text_view(text_view&& that) {
+	std::swap(transform, that.transform);
+	std::swap(rendered_text, that.rendered_text);
+	std::swap(texture, that.texture);
+}
+
+text_view::~text_view() {
+	no::delete_texture(texture);
+}
+
+text_view& text_view::operator=(text_view&& that) {
+	std::swap(transform, that.transform);
+	std::swap(rendered_text, that.rendered_text);
+	std::swap(texture, that.texture);
+	return *this;
+}
+
+std::string text_view::text() const {
+	return rendered_text;
+}
+
+void text_view::render(const no::font& font, const std::string& text) {
+	if (text == rendered_text) {
+		return;
+	}
+	rendered_text = text;
+	no::load_texture(texture, font.render(rendered_text));
+	transform.scale.xy = no::texture_size(texture).to<float>();
+}
+
+void text_view::draw(const no::rectangle& rectangle) const {
+	no::bind_texture(texture);
+	no::draw_shape(rectangle, transform);
+}
+
 context_menu::context_menu(const no::ortho_camera& camera_, no::vector2f position_, const no::font& font, no::mouse& mouse_)
 	: camera(camera_), mouse(mouse_), position(position_), font(font) {
 	set_ui_uv(top, context_uv_top);
@@ -218,7 +257,7 @@ no::vector2i inventory_view::hovered_slot() const {
 }
 
 user_interface_view::user_interface_view(game_state& game, world_state& world) 
-	: game(game), world(world), inventory(camera, game, world), font(no::asset_path("fonts/leo.ttf"), 6) {
+	: game(game), world(world), inventory(camera, game, world), font(no::asset_path("fonts/leo.ttf"), 9) {
 	camera.zoom = 2.0f;
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
 	color = no::get_shader_variable("uni_Color");

@@ -97,6 +97,12 @@ void server_state::on_receive_packet(int client_index, int16_t type, no::io_stre
 	case to_server::game::continue_dialogue::type:
 		on_continue_dialogue(client_index, { stream });
 		break;
+	case to_server::game::chat_message::type:
+		on_chat_message(client_index, { stream });
+		break;
+	case to_server::lobby::login_attempt::type:
+		on_login_attempt(client_index, { stream });
+		break;
 	case to_server::lobby::connect_to_world::type:
 		on_connect_to_world(client_index, { stream });
 		break;
@@ -163,13 +169,22 @@ void server_state::on_continue_dialogue(int client_index, const to_server::game:
 	client.dialogue->select_choice(packet.choice);
 }
 
-void server_state::on_version_check(int client_index, const to_server::updates::update_query& packet) {
-	if (packet.version != newest_client_version || packet.needs_assets) {
-		updaters.emplace_back(sockets[client_index]);
-	}
-	auto new_packet = packet;
-	new_packet.version = newest_client_version;
-	sockets[client_index].send(no::packet_stream(new_packet));
+void server_state::on_chat_message(int client_index, const to_server::game::chat_message& packet) {
+	to_client::game::chat_message client_packet;
+	client_packet.author = clients[client_index].display_name;
+	client_packet.message = packet.message;
+	sockets.broadcast<true>(no::packet_stream(client_packet), client_index);
+}
+
+void server_state::on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet) {
+	// todo: validate login
+	auto& client = clients[client_index];
+	client.login_name = packet.name;
+	client.display_name = packet.name;
+	to_client::lobby::login_status client_packet;
+	client_packet.status = 1;
+	client_packet.name = client.display_name;
+	sockets[client_index].send(no::packet_stream(client_packet));
 }
 
 void server_state::on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet) {
@@ -196,5 +211,14 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 	joined.player = *(character_object*)worlds.front().objects.find(clients[client_index].player_instance_id);
 	joined.is_me = 0;
 	sockets.broadcast<false>(no::packet_stream(joined), client_index);
+}
+
+void server_state::on_version_check(int client_index, const to_server::updates::update_query& packet) {
+	if (packet.version != newest_client_version || packet.needs_assets) {
+		updaters.emplace_back(sockets[client_index]);
+	}
+	auto new_packet = packet;
+	new_packet.version = newest_client_version;
+	sockets[client_index].send(no::packet_stream(new_packet));
 }
 

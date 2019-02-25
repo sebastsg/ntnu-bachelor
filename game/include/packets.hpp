@@ -29,6 +29,10 @@ Packet(move_to_tile, 2)
 	no::vector2i tile = -1;
 	int32_t player_instance_id = -1;
 
+Packet(chat_message, 3)
+	std::string author;
+	std::string message;
+
 End
 
 Begin(to_server::game, 1000)
@@ -42,16 +46,31 @@ Packet(start_dialogue, 1)
 Packet(continue_dialogue, 2)
 	int32_t choice = -1;
 
+Packet(chat_message, 3)
+	std::string message;
+
 End
 
-Begin(to_server::lobby, 2000)
+Begin(to_client::lobby, 2000)
 
-Packet1(connect_to_world, 0)
+Packet1(login_status, 0)
+	int32_t status = 0;
+	std::string name;
+
+End
+
+Begin(to_server::lobby, 3000)
+
+Packet1(login_attempt, 0)
+	std::string name;
+	std::string password;
+
+Packet(connect_to_world, 1)
 	int32_t world = 0;
 
 End
 
-Begin(to_client::updates, 3000)
+Begin(to_client::updates, 4000)
 
 Packet1(latest_version, 0)
 	int32_t version = 0;
@@ -66,7 +85,7 @@ Packet(file_transfer, 1)
 
 End
 
-Begin(to_server::updates, 4000)
+Begin(to_server::updates, 5000)
 
 Packet1(update_query, 0)
 	int32_t version = 0;
