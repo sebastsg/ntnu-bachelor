@@ -131,7 +131,7 @@ void abstract_node::write(no::io_stream& stream) {
 
 void abstract_node::read(no::io_stream& stream) {
 	id = stream.read<int32_t>();
-	transform = stream.read<no::transform>();
+	transform = stream.read<no::transform3>();
 	int out_count = stream.read<int32_t>();
 	for (int j = 0; j < out_count; j++) {
 		node_output output;

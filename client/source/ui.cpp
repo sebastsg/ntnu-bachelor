@@ -1,4 +1,4 @@
-#include "ui.hpp"
+#include "main_ui.hpp"
 #include "game.hpp"
 
 #include "assets.hpp"
@@ -34,45 +34,6 @@ static void set_item_uv(no::rectangle& rectangle, no::vector2f uv) {
 	set_ui_uv(rectangle, uv, item_size);
 }
 
-text_view::text_view() {
-	texture = no::create_texture();
-}
-
-text_view::text_view(text_view&& that) {
-	std::swap(transform, that.transform);
-	std::swap(rendered_text, that.rendered_text);
-	std::swap(texture, that.texture);
-}
-
-text_view::~text_view() {
-	no::delete_texture(texture);
-}
-
-text_view& text_view::operator=(text_view&& that) {
-	std::swap(transform, that.transform);
-	std::swap(rendered_text, that.rendered_text);
-	std::swap(texture, that.texture);
-	return *this;
-}
-
-std::string text_view::text() const {
-	return rendered_text;
-}
-
-void text_view::render(const no::font& font, const std::string& text) {
-	if (text == rendered_text) {
-		return;
-	}
-	rendered_text = text;
-	no::load_texture(texture, font.render(rendered_text));
-	transform.scale.xy = no::texture_size(texture).to<float>();
-}
-
-void text_view::draw(const no::rectangle& rectangle) const {
-	no::bind_texture(texture);
-	no::draw_shape(rectangle, transform);
-}
-
 context_menu::context_menu(const no::ortho_camera& camera_, no::vector2f position_, const no::font& font, no::mouse& mouse_)
 	: camera(camera_), mouse(mouse_), position(position_), font(font) {
 	set_ui_uv(top, context_uv_top);
@@ -93,8 +54,7 @@ void context_menu::trigger(int index) {
 }
 
 bool context_menu::is_mouse_over(int index) const {
-	no::vector2f mouse_position = camera.mouse_position(mouse);
-	return option_transform(index).collides_with(no::vector3f{ mouse_position.x, mouse_position.y, 0.0f });
+	return option_transform(index).collides_with(camera.mouse_position(mouse));
 }
 
 int context_menu::count() const {
@@ -113,15 +73,15 @@ void context_menu::draw() const {
 	if (!color.exists()) {
 		color = no::get_shader_variable("uni_Color");
 	}
-	no::transform transform;
+	no::transform2 transform;
 	// top
-	transform.position.xy = position;
-	transform.scale.xy = context_uv_top.zw;
+	transform.position = position;
+	transform.scale = context_uv_top.zw;
 	no::draw_shape(top, transform);
 
 	// rows
 	transform.position.y += context_uv_top.w;
-	transform.scale.xy = context_uv_row.zw;
+	transform.scale = context_uv_row.zw;
 	no::vector2f mouse_position = camera.mouse_position(mouse);
 	for (auto& option : options) {
 		no::draw_shape(row, transform);
@@ -129,18 +89,18 @@ void context_menu::draw() const {
 	}
 
 	// bottom
-	transform.scale.xy = context_uv_bottom.zw;
+	transform.scale = context_uv_bottom.zw;
 	no::draw_shape(bottom, transform);
 
 	// text
 	transform.position.x += 16.0f;
 	transform.position.y = position.y + context_uv_top.w;
 	for (auto& option : options) {
-		transform.scale.xy = context_uv_row.zw;
-		if (transform.collides_with(no::vector3f{ mouse_position.x + 16.0f, mouse_position.y, 0.0f })) {
+		transform.scale = context_uv_row.zw;
+		if (transform.collides_with(no::vector2f{ mouse_position.x + 16.0f, mouse_position.y })) {
 			color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
 		}
-		transform.scale.xy = no::texture_size(option.texture).to<float>();
+		transform.scale = no::texture_size(option.texture).to<float>();
 		no::bind_texture(option.texture);
 		no::draw_shape(full, transform);
 		transform.position.y += context_uv_row.w;
@@ -148,17 +108,17 @@ void context_menu::draw() const {
 	}
 }
 
-no::transform context_menu::option_transform(int index) const {
-	no::transform transform;
-	transform.scale.xy = context_uv_row.zw;
-	transform.position.xy = position;
+no::transform2 context_menu::option_transform(int index) const {
+	no::transform2 transform;
+	transform.scale = context_uv_row.zw;
+	transform.position = position;
 	transform.position.y += context_uv_top.w + transform.scale.y * (float)index;
 	return transform;
 }
 
-no::transform context_menu::menu_transform() const {
-	no::transform transform;
-	transform.position.xy = position;
+no::transform2 context_menu::menu_transform() const {
+	no::transform2 transform;
+	transform.position = position;
 	transform.scale.x = max_width;
 	transform.scale.y = context_uv_top.w + context_uv_row.w * (float)options.size() + context_uv_bottom.w;
 	return transform;
@@ -223,17 +183,17 @@ void inventory_view::ignore() {
 	player = nullptr;
 }
 
-no::transform inventory_view::body_transform() const {
-	no::transform transform;
-	transform.scale.xy = inventory_uv.zw;
+no::transform2 inventory_view::body_transform() const {
+	no::transform2 transform;
+	transform.scale = inventory_uv.zw;
 	transform.position.x = camera.width() - background_uv.z - 2.0f + inventory_offset.x;
 	transform.position.y = inventory_offset.y;
 	return transform;
 }
 
-no::transform inventory_view::slot_transform(int index) const {
-	no::transform transform;
-	transform.scale.xy = item_size;
+no::transform2 inventory_view::slot_transform(int index) const {
+	no::transform2 transform;
+	transform.scale = item_size;
 	transform.position.x = camera.width() - background_uv.z + 23.0f + (float)(index % 4) * item_grid.x;
 	transform.position.y = 132.0f + (float)(index / 4) * item_grid.y;
 	return transform;
@@ -248,8 +208,7 @@ void inventory_view::draw() const {
 
 no::vector2i inventory_view::hovered_slot() const {
 	for (auto& slot : slots) {
-		no::vector2f mouse = camera.mouse_position(game.mouse());
-		if (slot_transform(slot.first).collides_with(no::vector3f{ mouse.x, mouse.y, 0.0f })) {
+		if (slot_transform(slot.first).collides_with(camera.mouse_position(game.mouse()))) {
 			return { slot.first % 4, slot.first / 4 };
 		}
 	}
@@ -277,29 +236,22 @@ user_interface_view::~user_interface_view() {
 }
 
 bool user_interface_view::is_mouse_over() const {
-	no::transform transform;
-	transform.scale.xy = background_uv.zw;
+	no::transform2 transform;
+	transform.scale = background_uv.zw;
 	transform.position.x = camera.width() - transform.scale.x - 2.0f;
-	no::vector2f mouse = camera.mouse_position(game.mouse());
-	return transform.collides_with(no::vector3f{ mouse.x, mouse.y, 0.0f });
+	return transform.collides_with(camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_mouse_over_context() const {
-	if (!context) {
-		return false;
-	}
-	no::vector2f mouse = camera.mouse_position(game.mouse());
-	return context->menu_transform().collides_with(no::vector3f{ mouse.x, mouse.y, 0.0f });
+	return context && context->menu_transform().collides_with(camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_mouse_over_inventory() const {
-	no::vector2f mouse = camera.mouse_position(game.mouse());
-	return inventory.body_transform().collides_with(no::vector3f{ mouse.x, mouse.y, 0.0f });
+	return inventory.body_transform().collides_with(camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_tab_hovered(int index) const {
-	no::vector2f mouse = camera.mouse_position(game.mouse());
-	return tab_transform(index).collides_with(no::vector3f{ mouse.x, mouse.y, 0.0f });
+	return tab_transform(index).collides_with(camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_mouse_over_any() const {
@@ -364,8 +316,8 @@ void user_interface_view::draw() const {
 	no::set_shader_view_projection(camera);
 	color.set(no::vector4f{ 1.0f });
 	no::bind_texture(ui_texture);
-	no::transform transform;
-	transform.scale.xy = background_uv.zw;
+	no::transform2 transform;
+	transform.scale = background_uv.zw;
 	transform.position.x = camera.width() - transform.scale.x - 2.0f;
 	no::set_shader_model(transform);
 	background.bind();
@@ -389,9 +341,9 @@ void user_interface_view::draw() const {
 }
 
 void user_interface_view::draw_hud() const {
-	no::transform transform;
-	transform.position.xy = 8.0f;
-	transform.scale.xy = hud_size;
+	no::transform2 transform;
+	transform.position = 8.0f;
+	transform.scale = hud_size;
 	no::set_shader_model(transform);
 	hud_background.bind();
 	hud_background.draw();
@@ -419,12 +371,12 @@ void user_interface_view::draw_tab(int index, const no::rectangle& tab) const {
 	tab.draw();
 }
 
-no::transform user_interface_view::tab_transform(int index) const {
-	no::transform transform;
-	transform.position.xy = { 429.0f, 146.0f };
-	transform.position.xy -= background_uv.xy;
+no::transform2 user_interface_view::tab_transform(int index) const {
+	no::transform2 transform;
+	transform.position = { 429.0f, 146.0f };
+	transform.position -= background_uv.xy;
 	transform.position.x += camera.width() - background_uv.z - 2.0f + (tab_size.x + 4.0f) * (float)index;
-	transform.scale.xy = tab_size;
+	transform.scale = tab_size;
 	return transform;
 }
 

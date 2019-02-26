@@ -247,7 +247,7 @@ void world_view::draw_terrain() {
 	fog.var_start.set(fog.start);
 	fog.var_distance.set(fog.distance);
 	no::bind_texture(tileset.texture);
-	no::transform transform;
+	no::transform3 transform;
 	transform.position.x = (float)world.terrain.offset().x;
 	transform.position.z = (float)world.terrain.offset().y;
 	no::set_shader_model(transform);
@@ -258,7 +258,7 @@ void world_view::draw_terrain() {
 void world_view::draw_for_picking() {
 	no::bind_shader(pick_shader);
 	no::set_shader_view_projection(camera);
-	no::transform transform;
+	no::transform3 transform;
 	transform.position.x = (float)world.terrain.offset().x;
 	transform.position.z = (float)world.terrain.offset().y;
 	no::draw_shape(height_map_pick, transform);
@@ -270,7 +270,7 @@ void world_view::draw_tile_highlight(no::vector2i tile) {
 	}
 	no::bind_shader(static_diffuse_shader);
 	no::set_shader_view_projection(camera);
-	no::set_shader_model({});
+	no::set_shader_model(no::transform3{});
 
 	static_object_vertex top_left;
 	static_object_vertex top_right;

@@ -396,30 +396,40 @@ shader_variable get_shader_variable(const std::string& name) {
 	return { renderer.shaders[renderer.bound_shader].id, name };
 }
 
-void set_shader_model(const transform& transform) {
+template<typename M>
+static void set_shader_model_generic(const M& transform) {
 	auto& shader = renderer.shaders[renderer.bound_shader];
-	shader.model = transform_to_glm_mat4(transform);
+	shader.model = transform.to_matrix4();
 	auto model_view_projection = shader.projection * shader.view * shader.model;
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_view_projection_location, 1, false, glm::value_ptr(model_view_projection)));
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_location, 1, false, glm::value_ptr(shader.model)));
 }
 
-void set_shader_view_projection(const ortho_camera& camera) {
+template<typename C>
+static void set_shader_view_projection_generic(const C& camera) {
 	auto& shader = renderer.shaders[renderer.bound_shader];
 	shader.view = camera.view();
 	shader.projection = camera.projection();
 	auto model_view_projection = shader.projection * shader.view * shader.model;
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_view_projection_location, 1, false, glm::value_ptr(model_view_projection)));
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.view_location, 1, false, glm::value_ptr(shader.view)));
+	CHECK_GL_ERROR(glUniformMatrix4fv(shader.projection_location, 1, false, glm::value_ptr(shader.projection)));
+}
+
+void set_shader_model(const transform2& transform) {
+	set_shader_model_generic(transform);
+}
+
+void set_shader_model(const transform3& transform) {
+	set_shader_model_generic(transform);
+}
+
+void set_shader_view_projection(const ortho_camera& camera) {
+	set_shader_view_projection_generic(camera);
 }
 
 void set_shader_view_projection(const perspective_camera& camera) {
-	auto& shader = renderer.shaders[renderer.bound_shader];
-	shader.view = camera.view();
-	shader.projection = camera.projection();
-	auto model_view_projection = shader.projection * shader.view * shader.model;
-	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_view_projection_location, 1, false, glm::value_ptr(model_view_projection)));
-	CHECK_GL_ERROR(glUniformMatrix4fv(shader.projection_location, 1, false, glm::value_ptr(shader.projection)));
+	set_shader_view_projection_generic(camera);
 }
 
 void delete_shader(int id) {
@@ -459,8 +469,12 @@ void shader_variable::set(const glm::mat4& matrix) const {
 	CHECK_GL_ERROR(glUniformMatrix4fv(location, 1, false, glm::value_ptr(matrix)));
 }
 
-void shader_variable::set(const transform& transform) const {
-	set(transform_to_glm_mat4(transform));
+void shader_variable::set(const transform2& transform) const {
+	set(transform.to_matrix4());
+}
+
+void shader_variable::set(const transform3& transform) const {
+	set(transform.to_matrix4());
 }
 
 void shader_variable::set(vector2f* vector, size_t count) const {

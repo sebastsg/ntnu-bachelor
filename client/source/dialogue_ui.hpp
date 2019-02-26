@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ui.hpp"
+#include "main_ui.hpp"
 #include "dialogue.hpp"
 
 class dialogue_view {
@@ -32,12 +32,12 @@ private:
 	dialogue_tree dialogue;
 	int current_choice = 0;
 	std::vector<node_choice_info> current_choices;
-	no::transform transform;
+	no::transform2 transform;
 
 	no::font font;
 
-	text_view message_view;
-	std::vector<text_view> choice_views;
+	no::text_view message_view;
+	std::vector<no::text_view> choice_views;
 	no::rectangle rectangle;
 
 };

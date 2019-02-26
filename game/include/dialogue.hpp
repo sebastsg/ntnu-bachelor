@@ -90,7 +90,7 @@ public:
 	std::vector<node_output> out;
 
 	// while transform is only used in editor, it's practical to keep here
-	no::transform transform;
+	no::transform3 transform;
 
 	virtual node_type type() const = 0;
 	virtual node_output_type output_type() const = 0;

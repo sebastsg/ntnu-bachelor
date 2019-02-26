@@ -1,8 +1,8 @@
 #include "dialogue_ui.hpp"
 #include "game.hpp"
 
-dialogue_view::dialogue_view(game_state& game, const no::ortho_camera& camera, int id) 
-	: game(game), camera(camera), font(no::asset_path("fonts/leo.ttf"), 10) {
+dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera, int id) 
+	: game(game_), camera(camera), font(no::asset_path("fonts/leo.ttf"), 10), message_view(game) {
 	auto player = game.world.my_player();
 	if (!player) {
 		WARNING("No player");
@@ -25,7 +25,7 @@ dialogue_view::dialogue_view(game_state& game, const no::ortho_camera& camera, i
 		message_view.render(font, ((choice_node*)dialogue.nodes[dialogue.current_node()])->text);
 		choice_views.clear();
 		for (auto& choice : event.choices) {
-			choice_views.emplace_back().render(font, choice.text);
+			choice_views.emplace_back(game).render(font, choice.text);
 		}
 	});
 	dialogue.process_entry_point();
@@ -69,14 +69,14 @@ void dialogue_view::update() {
 	if (!open) {
 		return;
 	}
-	transform.position.xy = camera.transform.position.xy;
-	transform.scale.xy = camera.transform.scale.xy;
-	transform.position.xy += transform.scale.xy / 2.0f;
-	transform.scale.xy /= 2.0f;
-	transform.position.xy -= transform.scale.xy / 2.0f;
-	message_view.transform.position.xy = transform.position.xy + 16.0f;
+	transform.position = camera.transform.position;
+	transform.scale = camera.transform.scale;
+	transform.position += transform.scale / 2.0f;
+	transform.scale /= 2.0f;
+	transform.position -= transform.scale / 2.0f;
+	message_view.transform.position = transform.position + 16.0f;
 	for (int i = 0; i < (int)choice_views.size(); i++) {
-		choice_views[i].transform.position.xy = {
+		choice_views[i].transform.position = {
 			transform.position.x + 32.0f,
 			transform.position.y + 64.0f + (float)i * 20.0f
 		};

@@ -3,10 +3,6 @@
 
 namespace no {
 
-ortho_camera::ortho_camera() {
-	transform.position.z = 1.0f;
-}
-
 void ortho_camera::update() {
 	if (target) {
 		vector2f goal = {
@@ -24,9 +20,9 @@ void ortho_camera::update() {
 			transform.position.y += delta.y;
 		}
 	}
-	transform.rotation.z = fmodf(transform.rotation.z, 360.0f);
-	if (transform.rotation.z < 0.0f) {
-		transform.rotation.z += 360.0f;
+	transform.rotation = std::fmodf(transform.rotation, 360.0f);
+	if (transform.rotation < 0.0f) {
+		transform.rotation += 360.0f;
 	}
 }
 
@@ -39,7 +35,7 @@ float ortho_camera::y() const {
 }
 
 vector2f ortho_camera::position() const {
-	return transform.position.xy / zoom;
+	return transform.position / zoom;
 }
 
 float ortho_camera::width() const {
@@ -51,15 +47,15 @@ float ortho_camera::height() const {
 }
 
 vector2f ortho_camera::size() const {
-	return transform.scale.xy / zoom;
+	return transform.scale / zoom;
 }
 
 vector2f ortho_camera::mouse_position(const mouse& mouse) const {
-	return (transform.position.xy + mouse.position().to<float>()) / zoom;
+	return (transform.position + mouse.position().to<float>()) / zoom;
 }
 
 glm::mat4 ortho_camera::rotation() const {
-	return glm::rotate(glm::mat4(1.0f), transform.rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
+	return glm::rotate(glm::mat4(1.0f), transform.rotation, glm::vec3(0.0f, 0.0f, 1.0f));
 }
 
 glm::mat4 ortho_camera::projection() const {
@@ -67,12 +63,12 @@ glm::mat4 ortho_camera::projection() const {
 }
 
 glm::mat4 ortho_camera::view() const {
-	vector3f rounded_position = transform.position;
-	rounded_position.xy.ceil();
+	vector2f rounded_position = transform.position;
+	rounded_position.ceil();
 	glm::vec3 negated_position = {
 		-rounded_position.x,
 		-rounded_position.y,
-		-rounded_position.z
+		-1.0f
 	};
 	glm::mat4 matrix = rotation() * glm::translate(glm::mat4(1.0f), negated_position);
 	return glm::scale(matrix, { zoom, zoom, zoom });
@@ -230,7 +226,7 @@ void perspective_camera::move_controller::update(perspective_camera& camera, con
 	}
 }
 
-void perspective_camera::follow_controller::update(perspective_camera& camera, const no::transform& transform) const {
+void perspective_camera::follow_controller::update(perspective_camera& camera, const no::transform3& transform) const {
 	// todo: interpolate
 	camera.transform.position = transform.position + offset;
 }

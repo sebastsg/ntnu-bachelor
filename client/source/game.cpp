@@ -19,15 +19,15 @@ void hud_view::draw() const {
 	no::set_shader_view_projection(camera);
 	no::get_shader_variable("uni_Color").set({ 1.0f, 1.0f, 1.0f, 1.0f });
 
-	no::transform transform;
-	transform.position.xy = { 300.0f, 4.0f };
-	transform.scale.xy = no::texture_size(fps_texture).to<float>();
+	no::transform2 transform;
+	transform.position = { 300.0f, 4.0f };
+	transform.scale = no::texture_size(fps_texture).to<float>();
 	no::bind_texture(fps_texture);
 	no::set_shader_model(transform);
 	rectangle.bind();
 	rectangle.draw();
 	transform.position.y = 24.0f;
-	transform.scale.xy = no::texture_size(debug_texture).to<float>();
+	transform.scale = no::texture_size(debug_texture).to<float>();
 	no::bind_texture(debug_texture);
 	no::set_shader_model(transform);
 	rectangle.draw();
@@ -100,7 +100,7 @@ game_state::game_state() :
 	login_packet.name = "penguin";
 	server().send_async(no::packet_stream(login_packet));
 
-	server().events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
+	receive_packet_id = server().events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
@@ -153,14 +153,15 @@ game_state::game_state() :
 game_state::~game_state() {
 	close_dialogue();
 	mouse().press.ignore(mouse_press_id);
-	mouse().press.ignore(mouse_scroll_id);
+	mouse().scroll.ignore(mouse_scroll_id);
 	keyboard().press.ignore(keyboard_press_id);
+	server().events.receive_packet.ignore(receive_packet_id);
 }
 
 void game_state::update() {
 	renderer.camera.size = window().size().to<float>();
-	hud.camera.transform.scale.xy = window().size().to<float>();
-	ui.camera.transform.scale.xy = window().size().to<float>();
+	hud.camera.transform.scale = window().size().to<float>();
+	ui.camera.transform.scale = window().size().to<float>();
 	server().synchronise();
 	if (world.my_player_id == -1) {
 		return;

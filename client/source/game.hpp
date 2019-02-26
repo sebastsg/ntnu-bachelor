@@ -76,6 +76,7 @@ private:
 	int mouse_press_id = -1;
 	int mouse_scroll_id = -1;
 	int keyboard_press_id = -1;
+	int receive_packet_id = -1;
 
 	world_view renderer;
 	no::font ui_font;

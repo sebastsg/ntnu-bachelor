@@ -41,7 +41,8 @@ void delete_texture(int id);
 int create_shader(const std::string& path);
 void bind_shader(int id);
 shader_variable get_shader_variable(const std::string& name);
-void set_shader_model(const transform& transform);
+void set_shader_model(const transform2& transform);
+void set_shader_model(const transform3& transform);
 void set_shader_view_projection(const ortho_camera& camera);
 void set_shader_view_projection(const perspective_camera& camera);
 void delete_shader(int id);
@@ -68,7 +69,8 @@ public:
 	void set(const vector3f& vector) const;
 	void set(const vector4f& vector) const;
 	void set(const glm::mat4& matrix) const;
-	void set(const transform& transform) const;
+	void set(const transform2& transform) const;
+	void set(const transform3& transform) const;
 	void set(vector2f* vector, size_t count) const;
 	void set(const std::vector<glm::mat4>& matrices) const;
 
@@ -412,6 +414,32 @@ private:
 
 };
 
+class sprite_animation {
+public:
+
+	int frames = 1;
+	float fps = 10.0f;
+
+	void update();
+	void draw(vector2f position, vector2f size) const;
+	void draw(vector2f position, int texture) const;
+	void draw(const transform2& transform) const;
+
+	void pause();
+	void resume();
+	bool is_paused() const;
+	void set_frame(int frame);
+
+private:
+
+	rectangle rectangle;
+	int current_frame = 0;
+	float sub_frame = 0.0f;
+	int previous_frame;
+	bool paused = false;
+
+};
+
 template<typename V>
 class quad {
 public:
@@ -513,8 +541,8 @@ private:
 
 };
 
-template<typename T>
-void draw_shape(const T& shape, const transform& transform) {
+template<typename T, typename M>
+void draw_shape(const T& shape, const M& transform) {
 	set_shader_model(transform);
 	shape.bind();
 	shape.draw();

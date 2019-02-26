@@ -2,7 +2,7 @@
 #include "game.hpp"
 #include "unicode.hpp"
 
-chat_view::chat_view(game_state& game, const no::ortho_camera& camera) : game(game), camera(camera) {
+chat_view::chat_view(game_state& game, const no::ortho_camera& camera) : game(game), camera(camera), input(game) {
 	enable();
 }
 
@@ -11,11 +11,11 @@ chat_view::~chat_view() {
 }
 
 void chat_view::update() {
-	input.transform.position.xy = { 16.0f, camera.height() - input.transform.scale.y - 48.0f };
+	input.transform.position = { 16.0f, camera.height() - input.transform.scale.y - 48.0f };
 	const int lower = std::max(0, (int)history.size() - visible_history_length);
 	float y = camera.height() - 96.0f;
 	for (int i = (int)history.size() - 1; i >= lower; i--) {
-		history[i].transform.position.xy = { input.transform.position.x + 8.0f, y };
+		history[i].transform.position = { input.transform.position.x + 8.0f, y };
 		y -= history[i].transform.scale.y + 4.0f;
 	}
 }
@@ -28,7 +28,7 @@ void chat_view::draw() const {
 }
 
 void chat_view::add(const std::string& author, const std::string& message) {
-	history.emplace_back().render(game.font(), author + ": " + message);
+	history.emplace_back(game).render(game.font(), author + ": " + message);
 }
 
 void chat_view::enable() {

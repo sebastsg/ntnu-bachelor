@@ -12,39 +12,39 @@ static bool compare_game_var_greater_than(variable_type type, const std::string&
 	}
 }
 
-static void modify_game_var_add(game_variable* var, const std::string& value) {
-	switch (var->type) {
-	case variable_type::string: var->value += value; return;
-	case variable_type::integer: var->value = std::to_string(std::stoi(var->value) + std::stoi(value)); return;
-	case variable_type::floating: var->value = std::to_string(std::stof(var->value) + std::stof(value)); return;
-	case variable_type::boolean: var->value = std::to_string(std::stoi(var->value) + std::stoi(value)); return;
+static void modify_game_var_add(game_variable& var, const std::string& value) {
+	switch (var.type) {
+	case variable_type::string: var.value += value; return;
+	case variable_type::integer: var.value = std::to_string(std::stoi(var.value) + std::stoi(value)); return;
+	case variable_type::floating: var.value = std::to_string(std::stof(var.value) + std::stof(value)); return;
+	case variable_type::boolean: var.value = std::to_string(std::stoi(var.value) + std::stoi(value)); return;
 	default: return;
 	}
 }
 
-static void modify_game_var_multiply(game_variable* var, const std::string& value) {
-	switch (var->type) {
+static void modify_game_var_multiply(game_variable& var, const std::string& value) {
+	switch (var.type) {
 	case variable_type::string: WARNING("Multiplying a string does not make any sense."); return;
-	case variable_type::integer: var->value = std::to_string(std::stoi(var->value) * std::stoi(value)); return;
-	case variable_type::floating: var->value = std::to_string(std::stof(var->value) * std::stof(value)); return;
-	case variable_type::boolean: var->value = std::to_string(std::stoi(var->value) * std::stoi(value)); return;
+	case variable_type::integer: var.value = std::to_string(std::stoi(var.value) * std::stoi(value)); return;
+	case variable_type::floating: var.value = std::to_string(std::stof(var.value) * std::stof(value)); return;
+	case variable_type::boolean: var.value = std::to_string(std::stoi(var.value) * std::stoi(value)); return;
 	default: return;
 	}
 }
 
-static void modify_game_var_divide(game_variable* var, const std::string& value) {
+static void modify_game_var_divide(game_variable& var, const std::string& value) {
 	int value_int = std::stoi(value);
 	float value_float = std::stof(value);
 	if (value_int == 0 || value_float == 0.0f) {
-		WARNING("Cannot divide " << var->name << " by " << value << " (division by zero)<br>Setting to 0.");
-		var->value = "0"; // most likely the desired output
+		WARNING("Cannot divide " << var.name << " by " << value << " (division by zero)<br>Setting to 0.");
+		var.value = "0"; // most likely the desired output
 		return;
 	}
-	switch (var->type) {
+	switch (var.type) {
 	case variable_type::string: WARNING("Dividing a string does not make any sense."); return;
-	case variable_type::integer: var->value = std::to_string(std::stoi(var->value) / value_int); return;
-	case variable_type::floating: var->value = std::to_string(std::stof(var->value) / value_float); return;
-	case variable_type::boolean: var->value = std::to_string(std::stoi(var->value) / value_int); return;
+	case variable_type::integer: var.value = std::to_string(std::stoi(var.value) / value_int); return;
+	case variable_type::floating: var.value = std::to_string(std::stof(var.value) / value_float); return;
+	case variable_type::boolean: var.value = std::to_string(std::stoi(var.value) / value_int); return;
 	default: return;
 	}
 }
@@ -65,18 +65,18 @@ void game_variable::modify(const std::string& new_value, variable_modification m
 	switch (mod_operator) {
 	case variable_modification::set: value = new_value; return;
 	case variable_modification::negate: value = std::to_string(!std::stoi(value)); return;
-	case variable_modification::add: modify_game_var_add(this, new_value); return;
-	case variable_modification::multiply: modify_game_var_multiply(this, new_value); return;
-	case variable_modification::divide: modify_game_var_divide(this, new_value); return;
+	case variable_modification::add: modify_game_var_add(*this, new_value); return;
+	case variable_modification::multiply: modify_game_var_multiply(*this, new_value); return;
+	case variable_modification::divide: modify_game_var_divide(*this, new_value); return;
 	default: return;
 	}
 }
 
-static void write_game_variable(no::io_stream& stream, game_variable* var) {
-	stream.write((int32_t)var->type);
-	stream.write(var->name);
-	stream.write(var->value);
-	stream.write<uint8_t>(var->is_persistent ? 1 : 0);
+static void write_game_variable(no::io_stream& stream, game_variable& var) {
+	stream.write((int32_t)var.type);
+	stream.write(var.name);
+	stream.write(var.value);
+	stream.write<uint8_t>(var.is_persistent ? 1 : 0);
 }
 
 static game_variable read_game_variable(no::io_stream& stream) {
@@ -148,14 +148,14 @@ void game_variable_map::delete_local(int scope_id, const std::string& name) {
 void game_variable_map::write(no::io_stream& stream) {
 	stream.write((int32_t)globals.size());
 	for (auto& i : globals) {
-		write_game_variable(stream, &i);
+		write_game_variable(stream, i);
 	}
 	stream.write((int32_t)locals.size());
 	for (auto& i : locals) {
 		stream.write<int32_t>(i.first);
 		stream.write((int32_t)i.second.size());
 		for (auto& j : i.second) {
-			write_game_variable(stream, &j);
+			write_game_variable(stream, j);
 		}
 	}
 }

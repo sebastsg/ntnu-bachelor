@@ -258,7 +258,7 @@ void draw() {
 	bind_shader(data.shader_id);
 
 	ortho_camera camera;
-	camera.transform.scale.xy = { draw_data->DisplaySize.x, draw_data->DisplaySize.y };
+	camera.transform.scale = { draw_data->DisplaySize.x, draw_data->DisplaySize.y };
 	set_shader_view_projection(camera);
 
 	vertex_array<imgui_vertex> vertex_array;

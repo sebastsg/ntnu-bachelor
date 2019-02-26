@@ -56,7 +56,7 @@ public:
 
 	friend class world_objects;
 
-	no::transform transform;
+	no::transform3 transform;
 
 	virtual ~game_object() = default;
 

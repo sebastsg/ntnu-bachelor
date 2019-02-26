@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ui.hpp"
+#include "main_ui.hpp"
 
 class chat_view {
 public:
@@ -36,8 +36,8 @@ private:
 	int key_press = -1;
 	int key_input = -1;
 
-	text_view input;
-	std::vector<text_view> history;
+	no::text_view input;
+	std::vector<no::text_view> history;
 	no::rectangle rectangle;
 
 	int visible_history_length = 10;

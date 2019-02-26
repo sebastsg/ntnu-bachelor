@@ -8,8 +8,8 @@ namespace no {
 class ortho_camera {
 public:
 
-	transform* target = nullptr;
-	transform transform;
+	transform2* target = nullptr;
+	transform2 transform;
 	float zoom = 1.0f;
 
 	float near_clipping_plane = 0.01f;
@@ -18,11 +18,9 @@ public:
 	vector2f target_chase_speed = { 0.05f, 0.05f };
 	vector2f target_chase_aspect = { 2.0f, 1.5f };
 
-	ortho_camera();
-
 	void update();
 
-	// From screen to world coordinates (divided by zoom)
+	// from screen to world coordinates (divided by zoom)
 	float x() const;
 	float y() const;
 	vector2f position() const;
@@ -46,7 +44,7 @@ public:
 	class move_controller;
 	class follow_controller;
 
-	transform transform;
+	transform3 transform;
 	vector2f size;
 
 	float field_of_view = 60.0f;
@@ -138,7 +136,7 @@ public:
 	vector3f speed = 2.0f;
 	vector3f offset = { 0.0f, 1.0f, 0.0f };
 
-	void update(perspective_camera& camera, const no::transform& transform) const;
+	void update(perspective_camera& camera, const no::transform3& transform) const;
 
 };
 

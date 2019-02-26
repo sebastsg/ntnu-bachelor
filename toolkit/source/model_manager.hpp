@@ -39,7 +39,7 @@ private:
 class converter_tool {
 public:
 
-	no::transform transform;
+	no::transform3 transform;
 	loaded_model model;
 	std::vector<std::string> node_names_for_list;
 

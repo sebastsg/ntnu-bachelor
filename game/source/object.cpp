@@ -108,7 +108,7 @@ void game_object::write(no::io_stream& stream) const {
 void game_object::read(no::io_stream& stream) {
 	definition_id = stream.read<int32_t>();
 	instance_id = stream.read<int32_t>();
-	transform = stream.read<no::transform>();
+	transform = stream.read<no::transform3>();
 }
 
 float game_object::x() const {

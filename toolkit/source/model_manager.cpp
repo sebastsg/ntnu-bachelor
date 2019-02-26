@@ -511,7 +511,7 @@ void attachments_tool::draw() {
 	if (!instance.can_animate()) {
 		return;
 	}
-	no::set_shader_model({});
+	no::set_shader_model(no::transform3{});
 	instance.animate();
 	if (texture != -1) {
 		no::bind_texture(texture);
