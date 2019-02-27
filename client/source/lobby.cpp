@@ -58,6 +58,8 @@ lobby_state::~lobby_state() {
 	keyboard().press.ignore(keyboard_press_id);
 	server().events.receive_packet.ignore(receive_packet_id);
 	no::delete_texture(button_texture);
+	no::delete_texture(input_background);
+	no::delete_shader(shader);
 }
 
 void lobby_state::update() {
