@@ -100,7 +100,6 @@ private:
 class user_interface_view {
 public:
 	
-
 	no::ortho_camera camera;
 
 	user_interface_view(game_state& game, world_state& world);

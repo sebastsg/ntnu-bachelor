@@ -32,6 +32,8 @@ public:
 	uint32_t* data() const;
 	uint32_t at(int x, int y) const;
 	uint32_t at(int index) const;
+	void set(int x, int y, uint32_t color);
+	void set(int index, uint32_t color);
 
 	void clear(uint32_t color);
 	void render(uint32_t* pixels, int width, int height);

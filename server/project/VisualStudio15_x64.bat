@@ -3,4 +3,6 @@ set PATH="C:\Program Files\CMake\bin\";%PATH%
 mkdir VisualStudio15
 cd VisualStudio15
 cmake -G "Visual Studio 15" ../
+cd ../../thirdparty/lib
+copy "*.dll" "../../project/VisualStudio15"
 pause

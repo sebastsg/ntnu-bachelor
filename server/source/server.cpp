@@ -177,14 +177,19 @@ void server_state::on_chat_message(int client_index, const to_server::game::chat
 }
 
 void server_state::on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet) {
-	// todo: validate login
-	auto& client = clients[client_index];
-	client.login_name = packet.name;
-	client.display_name = packet.name;
-	to_client::lobby::login_status client_packet;
-	client_packet.status = 1;
-	client_packet.name = client.display_name;
-	sockets[client_index].send(no::packet_stream(client_packet));
+	database.execute("select * from player where email = $1", [this, client_index](const query_result& result) {
+		if (result.count() != 1) {
+			return;
+		}
+		auto row = result.row(0);
+		auto& client = clients[client_index];
+		client.login_name = row.text("email");
+		client.display_name = row.text("display_name");
+		to_client::lobby::login_status client_packet;
+		client_packet.status = 1;
+		client_packet.name = client.display_name;
+		sockets[client_index].send(no::packet_stream(client_packet));
+	}, { packet.name });
 }
 
 void server_state::on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet) {

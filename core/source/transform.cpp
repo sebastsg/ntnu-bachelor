@@ -2,6 +2,18 @@
 
 namespace no {
 
+transform2::transform2(vector2f position) 
+	: position(position) {
+}
+
+transform2::transform2(vector2f position, vector2f scale) 
+	: position(position), scale(scale) {
+}
+
+transform2::transform2(vector2f position, float rotation, vector2f scale) 
+	: position(position), rotation(rotation), scale(scale) {
+}
+
 glm::mat4 transform2::to_matrix4() const {
 	const vector2f origin = position + scale / 2.0f;
 	glm::mat4 matrix(1.0f);
@@ -168,6 +180,18 @@ void transform2::align(align_type alignment, const transform2& parent, const vec
 	default:
 		break;
 	}
+}
+
+transform3::transform3(vector3f position) 
+	: position(position) {
+}
+
+transform3::transform3(vector3f position, vector3f scale) 
+	: position(position), scale(scale) {
+}
+
+transform3::transform3(vector3f position, vector3f rotation, vector3f scale) 
+	: position(position), rotation(rotation), scale(scale) {
 }
 
 glm::mat4 transform3::to_matrix4() const {

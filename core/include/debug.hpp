@@ -27,7 +27,7 @@ void append(int index, message_type type, const char* file, const char* func, in
 		}
 
 #  define DEBUG(ID, TYPE, STR) \
-		no::debug::append(ID, TYPE, __FILE__, __FUNCSIG__, __LINE__, STRING(STR));
+		no::debug::append(ID, TYPE, __FILE__, __FUNCSIG__, __LINE__, STRING(STR))
 
 #  define DEBUG_LIMIT(ID, TYPE, STR, LIMIT) \
 		{ \

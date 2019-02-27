@@ -420,7 +420,7 @@ public:
 	int frames = 1;
 	float fps = 10.0f;
 
-	void update();
+	void update(float delta);
 	void draw(vector2f position, vector2f size) const;
 	void draw(vector2f position, int texture) const;
 	void draw(const transform2& transform) const;
@@ -431,6 +431,8 @@ public:
 	void set_frame(int frame);
 
 private:
+
+	void set_tex_coords();
 
 	rectangle rectangle;
 	int current_frame = 0;

@@ -1,8 +1,8 @@
 #include "dialogue_ui.hpp"
 #include "game.hpp"
 
-dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera, int id) 
-	: game(game_), camera(camera), font(no::asset_path("fonts/leo.ttf"), 10), message_view(game) {
+dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera_, int id) 
+	: game(game_), camera(camera_), font(no::asset_path("fonts/leo.ttf"), 10), message_view(game, camera) {
 	auto player = game.world.my_player();
 	if (!player) {
 		WARNING("No player");
@@ -25,7 +25,7 @@ dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera, 
 		message_view.render(font, ((choice_node*)dialogue.nodes[dialogue.current_node()])->text);
 		choice_views.clear();
 		for (auto& choice : event.choices) {
-			choice_views.emplace_back(game).render(font, choice.text);
+			choice_views.emplace_back(game, camera).render(font, choice.text);
 		}
 	});
 	dialogue.process_entry_point();

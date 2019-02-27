@@ -8,7 +8,13 @@ public:
 
 	client_state();
 
+	std::string player_name() const;
+
 protected:
+
+	static struct player_details_ {
+		std::string name;
+	} player_details;
 
 	no::io_socket& server();
 

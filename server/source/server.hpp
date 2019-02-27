@@ -1,6 +1,7 @@
 #pragma once
 
 #include "updater.hpp"
+#include "persistency.hpp"
 #include "loop.hpp"
 #include "network.hpp"
 #include "world.hpp"
@@ -45,6 +46,8 @@ public:
 
 class server_state : public no::window_state {
 public:
+
+	database_connection database;
 
 	static constexpr int max_clients = 100;
 

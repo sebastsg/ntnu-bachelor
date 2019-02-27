@@ -1,7 +1,8 @@
 #include "updater.hpp"
 #include "window.hpp"
-#include "game.hpp"
+#include "lobby.hpp"
 #include "network.hpp"
+#include "assets.hpp"
 
 #include <filesystem>
 
@@ -61,7 +62,7 @@ updater_state::updater_state() {
 					std::filesystem::remove("einheri.old");
 				}
 				if (std::filesystem::is_directory(no::asset_path(""))) {
-					change_state<game_state>();
+					change_state<lobby_state>();
 				}
 			}
 			break;

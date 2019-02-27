@@ -4,6 +4,8 @@
 
 static no::io_socket server_socket;
 
+client_state::player_details_ client_state::player_details;
+
 static void connect_to_server() {
 	if (server_socket.id == -1) {
 		// todo: config file
@@ -20,6 +22,10 @@ client_state::client_state() {
 	constexpr int IDI_ICON1 = 102;
 	window().set_icon_from_resource(IDI_ICON1);
 #endif
+}
+
+std::string client_state::player_name() const {
+	return player_details.name;
 }
 
 no::io_socket& client_state::server() {

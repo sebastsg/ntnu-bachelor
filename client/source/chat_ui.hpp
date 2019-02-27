@@ -13,7 +13,7 @@ public:
 		no::message_event<message_event> message;
 	} events;
 
-	chat_view(game_state& game, const no::ortho_camera& camera);
+	chat_view(const game_state& game, const no::ortho_camera& camera);
 	chat_view(const chat_view&) = delete;
 	chat_view(chat_view&&) = delete;
 
@@ -31,7 +31,7 @@ public:
 
 private:
 
-	game_state& game;
+	const game_state& game;
 	const no::ortho_camera& camera;
 	int key_press = -1;
 	int key_input = -1;

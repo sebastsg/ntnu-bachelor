@@ -10,6 +10,7 @@ include_directories(
 	${PROJECT_SOURCE_DIR}/../../core/thirdparty/include
 	${PROJECT_SOURCE_DIR}/../../core/include
 	${PROJECT_SOURCE_DIR}/../../game/include
+	${PROJECT_SOURCE_DIR}/../thirdparty/include/libpq
 )
 
 if(CMAKE_CONFIGURATION_TYPES)
@@ -44,6 +45,7 @@ if(${WIN32})
 		debug ws2_32.lib
 		debug ${ROOT_DIR}/../core/lib/debug/core.lib
 		debug ${ROOT_DIR}/../game/lib/debug/game.lib
+		debug ${ROOT_DIR}/thirdparty/lib/libpq.lib
 	)
 	set(RELEASE_LINK_LIBRARIES
 		optimized ${ROOT_DIR}/../core/thirdparty/lib/release/freetype.lib
@@ -61,6 +63,7 @@ if(${WIN32})
 		optimized ws2_32.lib
 		optimized ${ROOT_DIR}/../core/lib/release/core.lib
 		optimized ${ROOT_DIR}/../game/lib/release/game.lib
+		optimized ${ROOT_DIR}/thirdparty/lib/libpq.lib
 	)
 	set(ALL_LINK_LIBRARIES ${DEBUG_LINK_LIBRARIES} ${RELEASE_LINK_LIBRARIES})
 	target_link_libraries(server ${ALL_LINK_LIBRARIES})

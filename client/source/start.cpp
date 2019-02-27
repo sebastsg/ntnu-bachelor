@@ -1,4 +1,5 @@
 #include "game.hpp"
+#include "lobby.hpp"
 #include "updater.hpp"
 #include "commands.hpp"
 
@@ -16,7 +17,7 @@ void start() {
 		return;
 	}
 #if _DEBUG
-	no::create_state<game_state>("Einheri", 800, 600, 4, true);
+	no::create_state<lobby_state>("Einheri", 800, 600, 4, true);
 #else
 	no::create_state<updater_state>("Einheri", 800, 600, 4, true);
 #endif

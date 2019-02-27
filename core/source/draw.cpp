@@ -502,32 +502,28 @@ void rectangle::draw() const {
 	vertices.draw();
 }
 
-void sprite_animation::update() {
+void sprite_animation::update(float delta) {
 	if (paused) {
 		return;
 	}
 	previous_frame = current_frame;
-	sub_frame += fps;
+	sub_frame += fps * delta;
 	current_frame = (int)sub_frame;
 	if (current_frame >= frames) {
 		current_frame = 0;
 		sub_frame = 0.0f;
 	}
 	if (previous_frame != current_frame) {
-		const float frame_width = 1.0f / (float)frames;
-		rectangle.set_tex_coords(frame_width * (float)current_frame, 0.0f, frame_width, 1.0f);
+		set_tex_coords();
 	}
 }
 
 void sprite_animation::draw(vector2f position, vector2f size) const {
-	transform2 transform;
-	transform.position = position;
-	transform.scale = size;
-	draw_shape(rectangle, transform);
+	draw_shape(rectangle, transform2{ position, size });
 }
 
 void sprite_animation::draw(vector2f position, int texture) const {
-	draw(position, texture_size(texture).to<float>());
+	draw_shape(rectangle, transform2{ position, texture_size(texture).to<float>() });
 }
 
 void sprite_animation::draw(const transform2& transform) const {
@@ -550,6 +546,12 @@ void sprite_animation::set_frame(int frame) {
 	previous_frame = current_frame;
 	current_frame = frame;
 	sub_frame = (float)frame;
+	set_tex_coords();
+}
+
+void sprite_animation::set_tex_coords() {
+	const float frame_width = 1.0f / (float)frames;
+	rectangle.set_tex_coords(frame_width * (float)current_frame, 0.0f, frame_width, 1.0f);
 }
 
 }

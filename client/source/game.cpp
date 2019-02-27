@@ -95,26 +95,10 @@ game_state::game_state() :
 		server().send_async(no::packet_stream(packet));
 	});
 
-	to_server::lobby::login_attempt login_packet;
-	login_packet.password = "";
-	login_packet.name = "penguin";
-	server().send_async(no::packet_stream(login_packet));
-
 	receive_packet_id = server().events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
 		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
-		case to_client::lobby::login_status::type:
-		{
-			to_client::lobby::login_status packet{ stream };
-			if (packet.status == 1) {
-				player_name = packet.name;
-				to_server::lobby::connect_to_world connect_packet;
-				connect_packet.world = 0;
-				server().send(no::packet_stream(connect_packet));
-			}
-			break;
-		}
 		case to_client::game::move_to_tile::type:
 		{
 			to_client::game::move_to_tile packet{ stream };

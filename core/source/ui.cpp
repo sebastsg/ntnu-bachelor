@@ -3,26 +3,23 @@
 
 namespace no {
 
-ui_element::ui_element(window_state& state_) : state(state_) {
-	mouse_press_id = state.mouse().press.listen([this](const mouse::press_message& event) {
-		if (event.button != mouse::button::left) {
-			return;
-		}
-		if (transform.collides_with(state.mouse().position().to<float>())) {
+ui_element::ui_element(const window_state& state_, const ortho_camera& camera_) : state(state_), camera(camera_) {
+	mouse_release_id = state.mouse().release.listen([this](const mouse::release_message& event) {
+		if (event.button == mouse::button::left && transform.collides_with(camera.mouse_position(state.mouse()))) {
 			events.click.emit();
 		}
 	});
 }
 
 ui_element::~ui_element() {
-	state.mouse().press.ignore(mouse_press_id);
+	state.mouse().release.ignore(mouse_release_id);
 }
 
-text_view::text_view(window_state& state) : ui_element(state) {
+text_view::text_view(const window_state& state, const ortho_camera& camera) : ui_element(state, camera) {
 	texture = create_texture();
 }
 
-text_view::text_view(text_view&& that) : ui_element(that.state) {
+text_view::text_view(text_view&& that) : ui_element(that.state, that.camera) {
 	std::swap(transform, that.transform);
 	std::swap(rendered_text, that.rendered_text);
 	std::swap(texture, that.texture);
@@ -43,7 +40,7 @@ std::string text_view::text() const {
 	return rendered_text;
 }
 
-void text_view::render(const no::font& font, const std::string& text) {
+void text_view::render(const font& font, const std::string& text) {
 	if (text == rendered_text) {
 		return;
 	}
@@ -52,17 +49,18 @@ void text_view::render(const no::font& font, const std::string& text) {
 	transform.scale = texture_size(texture).to<float>();
 }
 
-void text_view::draw(const no::rectangle& rectangle) const {
+void text_view::draw(const rectangle& rectangle) const {
 	bind_texture(texture);
 	draw_shape(rectangle, transform);
 }
 
-ui_button::ui_button(window_state& state) : ui_element(state), label(state) {
+button::button(const window_state& state, const ortho_camera& camera) : ui_element(state, camera), label(state, camera) {
 	animation.pause();
+	animation.frames = 3;
 }
 
-void ui_button::update() {
-	if (transform.collides_with(state.mouse().position().to<float>())) {
+void button::update() {
+	if (transform.collides_with(camera.mouse_position(state.mouse()))) {
 		if (transition.enabled) {
 			transition.current += transition.in_speed;
 			if (transition.current > 1.0f) {
@@ -93,15 +91,15 @@ void ui_button::update() {
 			animation.set_frame(0);
 		}
 	}
-	label.transform.align(label_align, transform, label_padding);
+	label.transform.align(align_type::middle, transform, label_padding);
 }
 
-void ui_button::draw() {
-	draw_button();
+void button::draw(int sprite) {
+	draw_button(sprite);
 	draw_label();
 }
 
-void ui_button::draw_button() {
+void button::draw_button(int sprite) {
 	bind_texture(sprite);
 	if (transition.enabled) {
 		color.set({ 1.0f, 1.0f, 1.0f, 1.0f });
@@ -109,22 +107,102 @@ void ui_button::draw_button() {
 		animation.draw(transform);
 		color.set({ 1.0f, 1.0f, 1.0f, transition.current });
 		animation.set_frame((int)transition.next_frame);
-		animation.draw(transform);
-	} else {
-		animation.draw(transform);
 	}
+	animation.draw(transform);
 }
 
-void ui_button::draw_label() {
+void button::draw_label() {
 	if (label.text().empty()) {
 		return;
 	}
 	color.set({ label_color.x, label_color.y, label_color.z, 1.0f });
 	label.draw(text_rectangle);
 	if (transition.enabled) {
-		color.set({ label_color.x, label_color.y, label_color.z, transition.current });
+		color.set({ label_hover_color.x, label_hover_color.y, label_hover_color.z, transition.current });
 		label.draw(text_rectangle);
 	}
+}
+
+input_field::input_field(const window_state& state_, const ortho_camera& camera_, const font& font) : ui_element(state_, camera_), label(state_, camera_), input_font(font) {
+	animation.pause();
+	animation.frames = 3;
+	events.click.listen([this] {
+		focus();
+	});
+	mouse_press = state.mouse().press.listen([this](const mouse::press_message& event) {
+		if (event.button == mouse::button::left) {
+			if (transform.collides_with(camera.mouse_position(state.mouse()))) {
+				focus();
+			} else {
+				blur();
+			}
+		}
+	});
+}
+
+input_field::~input_field() {
+	blur();
+	state.mouse().press.ignore(mouse_press);
+}
+
+void input_field::update() {
+	if (key_input != -1) {
+		animation.set_frame(2);
+	} else if (transform.collides_with(camera.mouse_position(state.mouse()))) {
+		if (state.mouse().is_button_down(mouse::button::left)) {
+			animation.set_frame(2);
+		} else {
+			animation.set_frame(1);
+		}
+	} else {
+		animation.set_frame(0);
+	}
+	label.transform.align(align_type::left, transform, padding);
+	std::string text = censor ? std::string(input.size(), '*') : input;
+	label.render(input_font, key_input == -1 ? text : text + "|");
+}
+
+void input_field::draw(int sprite) {
+	draw_background(sprite);
+	draw_text();
+}
+
+void input_field::focus() {
+	if (key_input != -1) {
+		return;
+	}
+	key_input = state.keyboard().input.listen([this](const keyboard::input_message& event) {
+		if (event.character == (unsigned int)no::key::enter) {
+			return;
+		}
+		if (event.character == (unsigned int)no::key::backspace) {
+			if (!input.empty()) {
+				input = input.substr(0, input.size() - 1);
+			}
+		} else if (event.character < 0x7F) {
+			input += (char)event.character;
+		}
+	});
+}
+
+void input_field::blur() {
+	state.keyboard().input.ignore(key_input);
+	key_input = -1;
+}
+
+void input_field::draw_background(int sprite) {
+	bind_texture(sprite);
+	animation.draw(transform);
+}
+
+void input_field::draw_text() {
+	if (!label.text().empty()) {
+		label.draw(text_rectangle);
+	}
+}
+
+std::string input_field::value() const {
+	return input;
 }
 
 }

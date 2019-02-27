@@ -53,8 +53,6 @@ private:
 class game_state : public client_state {
 public:
 	
-	std::string player_name;
-
 	game_world world;
 	game_variable_map variables;
 

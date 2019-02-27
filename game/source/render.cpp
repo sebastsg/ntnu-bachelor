@@ -225,7 +225,6 @@ void world_view::remove(game_object* object) {
 }
 
 void world_view::draw() {
-	// camera.transform.position + camera.offset()
 	light.position = camera.transform.position + camera.offset();
 	draw_terrain();
 	decorations.draw();

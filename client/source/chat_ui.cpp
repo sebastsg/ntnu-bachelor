@@ -2,7 +2,7 @@
 #include "game.hpp"
 #include "unicode.hpp"
 
-chat_view::chat_view(game_state& game, const no::ortho_camera& camera) : game(game), camera(camera), input(game) {
+chat_view::chat_view(const game_state& game, const no::ortho_camera& camera) : game(game), camera(camera), input(game, camera) {
 	enable();
 }
 
@@ -28,14 +28,14 @@ void chat_view::draw() const {
 }
 
 void chat_view::add(const std::string& author, const std::string& message) {
-	history.emplace_back(game).render(game.font(), author + ": " + message);
+	history.emplace_back(game, camera).render(game.font(), author + ": " + message);
 }
 
 void chat_view::enable() {
 	key_press = game.keyboard().press.listen([this](const no::keyboard::press_message& event) {
 		if (event.key == no::key::enter) {
 			events.message.emit(input.text());
-			add(game.player_name, input.text());
+			add(game.player_name(), input.text());
 			input.render(game.font(), "");
 		}
 	});

@@ -119,6 +119,14 @@ uint32_t surface::at(int index) const {
 	return pixels[index];
 }
 
+void surface::set(int x, int y, uint32_t color) {
+	pixels[y * size.x + x] = color;
+}
+
+void surface::set(int index, uint32_t color) {
+	pixels[index] = color;
+}
+
 void surface::clear(uint32_t color) {
 	std::fill_n(pixels, size.x * size.y, color);
 }

@@ -5,6 +5,7 @@
 #include "loop.hpp"
 #include "draw.hpp"
 #include "font.hpp"
+#include "camera.hpp"
 
 namespace no {
 
@@ -17,7 +18,7 @@ public:
 		signal_event click;
 	} events;
 
-	ui_element(window_state& state);
+	ui_element(const window_state& state, const ortho_camera& camera);
 	ui_element(const ui_element&) = delete;
 	ui_element(ui_element&&) = delete;
 
@@ -28,18 +29,19 @@ public:
 
 protected:
 	
-	window_state& state;
+	const window_state& state;
+	const ortho_camera& camera;
 
 private:
 
-	int mouse_press_id = -1;
+	int mouse_release_id = -1;
 
 };
 
 class text_view : public ui_element {
 public:
 
-	text_view(window_state& state);
+	text_view(const window_state& state, const ortho_camera& camera);
 	text_view(const text_view&) = delete;
 	text_view(text_view&&);
 
@@ -49,8 +51,8 @@ public:
 	text_view& operator=(text_view&&);
 
 	std::string text() const;
-	void render(const no::font& font, const std::string& text);
-	void draw(const no::rectangle& rectangle) const;
+	void render(const font& font, const std::string& text);
+	void draw(const rectangle& rectangle) const;
 
 private:
 
@@ -59,27 +61,29 @@ private:
 
 };
 
-class ui_button : public ui_element {
+class button : public ui_element {
 public:
 
 	text_view label;
 	shader_variable color;
+	vector3f label_color;
+	vector3f label_hover_color = 1.0f;
 
-	ui_button(window_state& state);
-	ui_button(const ui_button&) = delete;
-	ui_button(ui_button&&) = delete;
+	button(const window_state& state, const ortho_camera& camera);
+	button(const button&) = delete;
+	button(button&&) = delete;
 
-	~ui_button() override = default;
+	~button() override = default;
 
-	ui_button& operator=(const ui_button&) = delete;
-	ui_button& operator=(ui_button&&) = delete;
+	button& operator=(const button&) = delete;
+	button& operator=(button&&) = delete;
 
 	void update();
-	void draw();
+	void draw(int sprite);
 
 private:
 
-	void draw_button();
+	void draw_button(int sprite);
 	void draw_label();
 
 	struct {
@@ -91,12 +95,48 @@ private:
 		float next_frame = 0.0f;
 	} transition;
 
-	int sprite = -1;
 	sprite_animation animation;
-	align_type label_align = align_type::middle;
 	vector2f label_padding;
-	vector3f label_color = 1.0f;
 	rectangle text_rectangle;
+
+};
+
+class input_field : public ui_element {
+public:
+
+	bool censor = false;
+	vector2f padding = { 8.0f, 0.0f };
+
+	input_field(const window_state& state, const ortho_camera& camera, const font& font);
+	input_field(const input_field&) = delete;
+	input_field(input_field&&) = delete;
+
+	~input_field() override;
+
+	input_field& operator=(const input_field&) = delete;
+	input_field& operator=(input_field&&) = delete;
+
+	void update();
+	void draw(int sprite);
+
+	void focus();
+	void blur();
+
+	std::string value() const;
+
+private:
+
+	void draw_background(int sprite);
+	void draw_text();
+	
+	sprite_animation animation;
+	rectangle text_rectangle;
+	const font& input_font;
+	text_view label;
+	std::string input;
+
+	int key_input = -1;
+	int mouse_press = -1;
 
 };
 

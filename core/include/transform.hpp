@@ -28,6 +28,11 @@ struct transform2 {
 	float rotation = 0.0f;
 	vector2f scale = 1.0f;
 
+	transform2() = default;
+	transform2(vector2f position);
+	transform2(vector2f position, vector2f scale);
+	transform2(vector2f position, float rotation, vector2f scale);
+
 	glm::mat4 to_matrix4() const;
 
 	float center_x(float width) const;
@@ -55,6 +60,11 @@ struct transform3 {
 	vector3f position;
 	vector3f rotation;
 	vector3f scale = 1.0f;
+
+	transform3() = default;
+	transform3(vector3f position);
+	transform3(vector3f position, vector3f scale);
+	transform3(vector3f position, vector3f rotation, vector3f scale);
 
 	glm::mat4 to_matrix4() const;
 	
