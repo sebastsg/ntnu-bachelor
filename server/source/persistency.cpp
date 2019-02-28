@@ -59,9 +59,9 @@ bool query_result::is_bad() const {
 	case PGRES_BAD_RESPONSE:
 	case PGRES_FATAL_ERROR:
 	case PGRES_NONFATAL_ERROR:
-		return false;
-	default:
 		return true;
+	default:
+		return false;
 	}
 }
 
