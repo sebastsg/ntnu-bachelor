@@ -6,11 +6,17 @@
 
 namespace to_client::game {
 
-Write(player_joined)
-	stream.write(is_me);
+Write(my_player_info)
 	player.write(stream);
-Read(player_joined)
-	is_me = stream.read<uint8_t>();
+	variables.write(stream);
+Read(my_player_info)
+	player.read(stream);
+	variables.read(stream);
+End
+
+Write(other_player_joined)
+	player.write(stream);
+Read(other_player_joined)
 	player.read(stream);
 End
 

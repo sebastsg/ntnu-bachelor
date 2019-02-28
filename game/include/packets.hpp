@@ -1,6 +1,7 @@
 #pragma once
 
 #include "character.hpp"
+#include "gamevar.hpp"
 #include "io.hpp"
 #include "math.hpp"
 
@@ -18,18 +19,21 @@ struct NAME { \
 
 Begin(to_client::game, 0)
 
-Packet1(player_joined, 0)
-	uint8_t is_me = 0;
+Packet1(my_player_info, 0)
+	character_object player;
+	game_variable_map variables;
+
+Packet(other_player_joined, 1)
 	character_object player;
 
-Packet(player_disconnected, 1)
+Packet(player_disconnected, 2)
 	int32_t player_instance_id = -1;
 
-Packet(move_to_tile, 2)
+Packet(move_to_tile, 3)
 	no::vector2i tile = -1;
 	int32_t player_instance_id = -1;
 
-Packet(chat_message, 3)
+Packet(chat_message, 4)
 	std::string author;
 	std::string message;
 

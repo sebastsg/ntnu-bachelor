@@ -18,6 +18,10 @@ char* query_result_row::raw(const std::string& column) const {
 	return PQgetvalue(result, row, column_index(column));
 }
 
+int query_result_row::length(const std::string& column) const {
+	return PQgetlength(result, row, column_index(column));
+}
+
 int query_result_row::column_index(const std::string& column) const {
 	return PQfnumber(result, column.c_str());
 }
@@ -27,7 +31,9 @@ bool query_result_row::exists(const std::string& column) const {
 }
 
 query_result::query_result(PGresult* result) : result(result) {
-
+	if (is_bad()) {
+		WARNING("Query failed. Error: " << status_message());
+	}
 }
 
 query_result::~query_result() {
@@ -49,11 +55,18 @@ int query_result::count() const {
 }
 
 bool query_result::is_bad() const {
-	return PQresultStatus(result) != PGRES_TUPLES_OK;
+	switch (PQresultStatus(result)) {
+	case PGRES_BAD_RESPONSE:
+	case PGRES_FATAL_ERROR:
+	case PGRES_NONFATAL_ERROR:
+		return false;
+	default:
+		return true;
+	}
 }
 
 std::string query_result::status_message() const {
-	return PQresultErrorMessage(result);
+	return PQresultVerboseErrorMessage(result, PQERRORS_VERBOSE, PQSHOW_CONTEXT_ALWAYS);
 }
 
 database_connection::database_connection() {
@@ -67,32 +80,31 @@ database_connection::~database_connection() {
 	PQfinish(connection);
 }
 
-void database_connection::execute(const std::string& query, const std::function<void(const query_result&)>& callback) {
-	query_result result{ PQexec(connection, query.c_str()) };
-	if (result.is_bad()) {
-		WARNING("Query failed. Error: " << result.status_message());
-	} else {
-		callback(result);
-	}
+query_result database_connection::execute(const std::string& query) const {
+	return { PQexec(connection, query.c_str()) };
 }
 
-void database_connection::execute(const std::string& query, const callback_function& callback, const std::initializer_list<std::string>& params) {
+query_result database_connection::execute(const std::string& query, const std::initializer_list<std::string>& params) const {
+	ASSERT(16 > params.size());
 	int count = (int)params.size();
 	Oid* types = nullptr; // deduced by backend
-	const char** values = new const char*[count];
+	const char* values[16];
 	for (int i = 0; i < count; i++) {
 		values[i] = (params.begin() + i)->c_str();
 	}
 	int* lengths = nullptr; // we're sending c strings, no need
 	int* formats = nullptr; // sending text, no need
 	int result_format = 0; // text result
-	query_result result{ PQexecParams(connection, query.c_str(), count, types, values, lengths, formats, result_format) };
-	if (result.is_bad()) {
-		WARNING("Query failed. Error: " << result.status_message());
-	} else {
-		callback(result);
+	return { PQexecParams(connection, query.c_str(), count, types, values, lengths, formats, result_format) };
+}
+
+query_result database_connection::call(const std::string& procedure, const std::initializer_list<std::string>& params) const {
+	std::string query = "call " + procedure + " ( ";
+	for (int i = 1; i <= (int)params.size(); i++) {
+		query += "$" + std::to_string(i) + ",";
 	}
-	delete[] values;
+	query[query.size() - 1] = ')';
+	return execute(query, params);
 }
 
 bool database_connection::is_bad() const {
@@ -101,4 +113,62 @@ bool database_connection::is_bad() const {
 
 std::string database_connection::status_message() const {
 	return PQerrorMessage(connection);
+}
+
+game_persister::game_persister(const database_connection& database) : database(database) {
+
+}
+
+no::vector2i game_persister::load_player_tile(int player_id) {
+	auto result = database.execute("select tile_x, tile_z from player where id = $1", { std::to_string(player_id) });
+	if (result.count() != 1) {
+		return {};
+	}
+	auto row = result.row(0);
+	return { row.integer("tile_x"), row.integer("tile_z") };
+}
+
+void game_persister::save_player_tile(int player_id, no::vector2i tile) {
+	database.call("set_player_tile", { std::to_string(player_id), std::to_string(tile.x), std::to_string(tile.y) });
+}
+
+game_variable_map game_persister::load_player_variables(int player_id) {
+	auto result = database.execute("select * from variable where player_id = $1", { std::to_string(player_id) });
+	game_variable_map variables;
+	for (int i = 0; i < result.count(); i++) {
+		auto row = result.row(i);
+		int scope = row.integer("scope");
+		std::string name = row.text("var_name");
+		std::string value = row.text("var_value");
+		int type = row.integer("var_type");
+		game_variable variable{ (variable_type)type, name, value, true };
+		INFO("Loaded " << variable.name << ":" << variable.value);
+		if (scope == -1) {
+			variables.create_global(variable);
+		} else {
+			variables.create_local(scope, variable);
+		}
+	}
+	return variables;
+}
+
+void game_persister::save_player_variables(int player_id, const game_variable_map& variables) {
+	variables.for_each_global([this, player_id](const game_variable& variable) {
+		database.call("set_variable", {
+			std::to_string(player_id),
+			"-1",
+			variable.name,
+			variable.value,
+			std::to_string((int)variable.type)
+		});
+	});
+	variables.for_each_local([this, player_id](int scope, const game_variable& variable) {
+		database.call("set_variable", {
+			std::to_string(player_id),
+			std::to_string(scope),
+			variable.name,
+			variable.value,
+			std::to_string((int)variable.type)
+		 });
+	});
 }

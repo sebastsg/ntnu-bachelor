@@ -3,6 +3,7 @@
 #include "io.hpp"
 
 #include <unordered_map>
+#include <functional>
 
 enum class variable_comparison { 
 	equal, 
@@ -23,6 +24,9 @@ struct game_variable {
 	std::string value;
 	bool is_persistent = true;
 
+	game_variable() = default;
+	game_variable(variable_type type, std::string name, std::string value, bool persistent);
+
 	bool compare(const std::string& right, variable_comparison comp_operator) const;
 	void modify(const std::string& value, variable_modification mod_operator);
 
@@ -40,7 +44,10 @@ public:
 	void delete_global(const std::string& name);
 	void delete_local(int scope_id, const std::string& name);
 
-	void write(no::io_stream& stream);
+	void for_each_global(const std::function<void(const game_variable&)>& function) const;
+	void for_each_local(const std::function<void(int, const game_variable&)>& function) const;
+
+	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);
 
 private:

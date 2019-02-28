@@ -72,7 +72,7 @@ void game_variable::modify(const std::string& new_value, variable_modification m
 	}
 }
 
-static void write_game_variable(no::io_stream& stream, game_variable& var) {
+static void write_game_variable(no::io_stream& stream, const game_variable& var) {
 	stream.write((int32_t)var.type);
 	stream.write(var.name);
 	stream.write(var.value);
@@ -86,6 +86,14 @@ static game_variable read_game_variable(no::io_stream& stream) {
 	var.value = stream.read<std::string>();
 	var.is_persistent = (stream.read<uint8_t>() != 0);
 	return var;
+}
+
+game_variable::game_variable(variable_type type, std::string name, std::string value, bool persistent) :
+	type(type),
+	name(std::move(name)),
+	value(std::move(value)),
+	is_persistent(persistent) {
+
 }
 
 game_variable* game_variable_map::global(const std::string& name) {
@@ -145,7 +153,21 @@ void game_variable_map::delete_local(int scope_id, const std::string& name) {
 	}
 }
 
-void game_variable_map::write(no::io_stream& stream) {
+void game_variable_map::for_each_global(const std::function<void(const game_variable&)>& function) const {
+	for (auto& variable : globals) {
+		function(variable);
+	}
+}
+
+void game_variable_map::for_each_local(const std::function<void(int, const game_variable&)>& function) const {
+	for (auto& scope : locals) {
+		for (auto& variable : scope.second) {
+			function(scope.first, variable);
+		}
+	}
+}
+
+void game_variable_map::write(no::io_stream& stream) const {
 	stream.write((int32_t)globals.size());
 	for (auto& i : globals) {
 		write_game_variable(stream, i);

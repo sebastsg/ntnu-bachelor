@@ -2,6 +2,9 @@
 
 #include "libpq-fe.h"
 
+#include "math.hpp"
+#include "gamevar.hpp"
+
 #include <string>
 #include <functional>
 
@@ -13,10 +16,12 @@ public:
 	int integer(const std::string& column) const;
 	std::string text(const std::string& column) const;
 	char* raw(const std::string& column) const;
-	int column_index(const std::string& column) const;
+	int length(const std::string& column) const;
 	bool exists(const std::string& column) const;
 
 private:
+
+	int column_index(const std::string& column) const;
 
 	PGresult* result = nullptr;
 	int row = 0;
@@ -50,8 +55,6 @@ private:
 class database_connection {
 public:
 
-	using callback_function = std::function<void(const query_result&)>;
-
 	database_connection();
 	database_connection(const database_connection&) = delete;
 	database_connection(database_connection&&) = delete;
@@ -61,13 +64,34 @@ public:
 	database_connection& operator=(const database_connection&) = delete;
 	database_connection& operator=(database_connection&&) = delete;
 
-	void execute(const std::string& query, const callback_function& callback);
-	void execute(const std::string& query, const callback_function& callback, const std::initializer_list<std::string>& params);
+	query_result execute(const std::string& query) const;
+	query_result execute(const std::string& query, const std::initializer_list<std::string>& params) const;
+	query_result call(const std::string& procedure, const std::initializer_list<std::string>& params) const;
+	
+	// todo: async alternatives
+
 	bool is_bad() const;
 	std::string status_message() const;
 
 private:
 
 	PGconn* connection = nullptr;
+
+};
+
+class game_persister {
+public:
+
+	game_persister(const database_connection& database);
+
+	no::vector2i load_player_tile(int player_id);
+	void save_player_tile(int player_id, no::vector2i tile);
+
+	game_variable_map load_player_variables(int player_id);
+	void save_player_variables(int player_id, const game_variable_map& variables);
+
+private:
+
+	const database_connection& database;
 
 };

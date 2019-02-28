@@ -84,8 +84,8 @@ game_state::game_state() :
 	});
 
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		if (event.key == no::key::p) {
-			//start_dialogue(0);
+		if (event.key == no::key::num_9) {
+			start_dialogue(0);
 		}
 	});
 
@@ -110,14 +110,19 @@ game_state::game_state() :
 			}
 			break;
 		}
-		case to_client::game::player_joined::type:
+		case to_client::game::my_player_info::type:
 		{
-			to_client::game::player_joined packet{ stream };
+			to_client::game::my_player_info packet{ stream };
 			auto player = (character_object*)world.objects.add(packet.player.serialized());
-			if (packet.is_me) {
-				world.my_player_id = packet.player.id();
-				ui.listen(world.my_player());
-			}
+			world.my_player_id = packet.player.id();
+			ui.listen(world.my_player());
+			variables = packet.variables;
+			break;
+		}
+		case to_client::game::other_player_joined::type:
+		{
+			to_client::game::other_player_joined packet{ stream };
+			world.objects.add(packet.player.serialized());
 			break;
 		}
 		case to_client::game::chat_message::type:

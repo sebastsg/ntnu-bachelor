@@ -29,11 +29,22 @@ public:
 private:
 
 	bool connected = false;
-	std::string login_name;
-	std::string display_name;
-	int player_instance_id = -1;
+
+	struct {
+		std::string email;
+	} account;
+
+	struct {
+		int id = -1;
+		std::string display_name;
+	} player;
+
+	struct {
+		int player_instance_id = -1;
+		game_variable_map variables;
+	} object;
+
 	dialogue_tree* dialogue = nullptr;
-	game_variable_map variables;
 
 };
 
@@ -48,6 +59,7 @@ class server_state : public no::window_state {
 public:
 
 	database_connection database;
+	game_persister persister;
 
 	static constexpr int max_clients = 100;
 
