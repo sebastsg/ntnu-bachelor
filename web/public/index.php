@@ -31,7 +31,8 @@ router_bind('/post/signup', function() {
     if (!array_keys_exist($_POST, ['display_name', 'email', 'password'])) {
         return ['status' => false];
     }
-    $status = register_player($_POST['display_name'], $_POST['email'], $_POST['password']);
+    $status = register_account($_POST['email'], $_POST['password']);
+    $status = $status && register_player($_POST['email'], $_POST['display_name']);
     return ['status' => $status];
 });
 

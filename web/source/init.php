@@ -23,7 +23,7 @@ function array_keys_exist($array, $keys) {
 }
 
 function verify_login($email, $password) {
-    $players = execute_sql('select password_hash from player where email = ?', [$email]);
+    $players = execute_sql('select password_hash from account where email = ?', [$email]);
     if (count($players) !== 1) {
         return false;
     }
@@ -32,21 +32,26 @@ function verify_login($email, $password) {
 }
 
 function is_email_registered($email) {
-    return count(execute_sql('select id from player where email = ?', [$email])) === 1;
+    return count(execute_sql('select email from account where email = ?', [$email])) === 1;
 }
 
 function is_display_name_taken($display_name) {
     return count(execute_sql('select id from player where display_name = ?', [$display_name])) === 1;
 }
 
-function register_player($display_name, $email, $password) {
-    if (strlen($password) < 8) {
-        return false;
-    }
-    if (is_email_registered($email)) {
+function register_account($email, $password) {
+    if (strlen($password) < 8 || is_email_registered($email)) {
         return false;
     }
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
-    call_sql('register_player', [$display_name, $email, $password_hash]);
+    call_sql('register_account', [$email, $password_hash]);
+    return true;
+}
+
+function register_player($email, $display_name) {
+    if (!is_email_registered($email)) {
+        return false;
+    }
+    call_sql('register_player', [$email, $display_name]);
     return true;
 }
