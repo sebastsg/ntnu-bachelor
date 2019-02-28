@@ -205,6 +205,12 @@ long long item_container::take_all(long long id) {
 	return total;
 }
 
+void item_container::clear() {
+	for (auto& item : items) {
+		item = {};
+	}
+}
+
 long long item_container::can_hold_more(long long id) const {
 	long long can_hold = 0;
 	for (auto& item : items) {

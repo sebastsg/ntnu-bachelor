@@ -20,7 +20,9 @@ server_state::server_state() : persister(database) {
 }
 
 server_state::~server_state() {
-	
+	for (int i = 0; i < max_clients; i++) {
+		save_player(i);
+	}
 }
 
 void server_state::update() {
@@ -33,6 +35,11 @@ void server_state::update() {
 			i--;
 		}
 	}
+	for (int i = 0; i < max_clients; i++) {
+		if (clients[i].is_connected() && clients[i].last_saved.seconds() > 120) {
+			save_player(i);
+		}
+	}
 }
 
 void server_state::draw() {
@@ -40,29 +47,37 @@ void server_state::draw() {
 }
 
 character_object* server_state::load_player(int client_index) {
+	auto player = (character_object*)worlds.front().objects.add(1);
+	player->change_id(worlds.front().objects.next_dynamic_id());
+	player->inventory.resize({ 4, 6 });
+	player->equipment.resize({ 4, 4 });
 	auto& client = clients[client_index];
 	no::vector2i tile = persister.load_player_tile(client.player.id);
 	client.object.variables = persister.load_player_variables(client.player.id);
-
-	auto player = (character_object*)worlds.front().objects.add(1);
-	player->transform.scale = 0.5f;
-	player->change_id(worlds.front().objects.next_dynamic_id());
-	player->inventory.resize({ 4, 6 });
-	player->equipment.resize({ 3, 3 });
-	clients[client_index].object.player_instance_id = player->id();
-	item_instance item;
-	item.definition_id = 0;
-	item.stack = 1;
-	player->inventory.add_from(item);
-	item.definition_id = 1;
-	item.stack = 1;
-	player->inventory.add_from(item);
-	item.definition_id = 3;
-	item.stack = 1;
-	player->inventory.add_from(item);
+	client.object.player_instance_id = player->id();
+	persister.load_player_items(client.player.id, 0, player->inventory);
+	persister.load_player_items(client.player.id, 1, player->equipment);
 	player->transform.position.x = (float)tile.x;
 	player->transform.position.z = (float)tile.y;
+	player->transform.scale = 0.5f;
 	return player;
+}
+
+void server_state::save_player(int client_index) {
+	auto& client = clients[client_index];
+	if (!client.is_connected()) {
+		return;
+	}
+	character_object* player = (character_object*)worlds.front().objects.find(client.object.player_instance_id);
+	if (!player) {
+		WARNING("Failed to save player");
+		return;
+	}
+	persister.save_player_tile(client.player.id, player->tile());
+	persister.save_player_variables(client.player.id, client.object.variables);
+	persister.save_player_items(client.player.id, inventory_container_type, player->inventory);
+	persister.save_player_items(client.player.id, equipment_container_type, player->equipment);
+	client.last_saved.start();
 }
 
 void server_state::connect(int index) {
@@ -141,7 +156,6 @@ void server_state::on_move_to_tile(int client_index, const to_server::game::move
 	}
 	sockets.broadcast<false>(no::packet_stream(new_packet), client_index);
 	sockets[client_index].send(no::packet_stream(new_packet));
-	persister.save_player_tile(client.player.id, new_packet.tile);
 }
 
 void server_state::on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet) {
@@ -168,7 +182,6 @@ void server_state::on_start_dialogue(int client_index, const to_server::game::st
 	client.dialogue->equipment = &client.dialogue->player->equipment;
 	client.dialogue->load(dialogue_id);
 	client.dialogue->process_entry_point();
-	persister.save_player_variables(client.player.id, client.object.variables);
 }
 
 void server_state::on_continue_dialogue(int client_index, const to_server::game::continue_dialogue& packet) {
@@ -178,7 +191,6 @@ void server_state::on_continue_dialogue(int client_index, const to_server::game:
 		return;
 	}
 	client.dialogue->select_choice(packet.choice);
-	persister.save_player_variables(client.player.id, client.object.variables);
 }
 
 void server_state::on_chat_message(int client_index, const to_server::game::chat_message& packet) {

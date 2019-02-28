@@ -9,6 +9,10 @@
 #include "packets.hpp"
 #include "dialogue.hpp"
 
+constexpr int inventory_container_type = 0;
+constexpr int equipment_container_type = 1;
+constexpr int warehouse_container_type = 2;
+
 class client_state {
 public:
 
@@ -29,6 +33,7 @@ public:
 private:
 
 	bool connected = false;
+	no::timer last_saved;
 
 	struct {
 		std::string email;
@@ -72,6 +77,7 @@ public:
 private:
 
 	character_object* load_player(int client_index);
+	void save_player(int client_index);
 
 	void connect(int index);
 

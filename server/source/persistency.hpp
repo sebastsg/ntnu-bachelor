@@ -4,6 +4,7 @@
 
 #include "math.hpp"
 #include "gamevar.hpp"
+#include "character.hpp"
 
 #include <string>
 #include <functional>
@@ -89,6 +90,9 @@ public:
 
 	game_variable_map load_player_variables(int player_id);
 	void save_player_variables(int player_id, const game_variable_map& variables);
+
+	void load_player_items(int player_id, int container, item_container& items);
+	void save_player_items(int player_id, int container, item_container& items);
 
 private:
 

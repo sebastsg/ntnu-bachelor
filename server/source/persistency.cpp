@@ -142,7 +142,6 @@ game_variable_map game_persister::load_player_variables(int player_id) {
 		std::string value = row.text("var_value");
 		int type = row.integer("var_type");
 		game_variable variable{ (variable_type)type, name, value, true };
-		INFO("Loaded " << variable.name << ":" << variable.value);
 		if (scope == -1) {
 			variables.create_global(variable);
 		} else {
@@ -170,5 +169,30 @@ void game_persister::save_player_variables(int player_id, const game_variable_ma
 			variable.value,
 			std::to_string((int)variable.type)
 		 });
+	});
+}
+
+void game_persister::load_player_items(int player_id, int container, item_container& items) {
+	auto result = database.execute("select * from item_ownership where player_id = $1 and container = $2", {
+		std::to_string(player_id),
+		std::to_string(container)
+	});
+	items.clear();
+	for (int i = 0; i < result.count(); i++) {
+		auto row = result.row(i);
+		item_instance item{ row.integer("item"), row.integer("stack") };
+		items.add_from(item);
+	}
+}
+
+void game_persister::save_player_items(int player_id, int container, item_container& items) {
+	items.for_each([&](no::vector2i slot, const item_instance& item) {
+		database.call("set_item_ownership", {
+			std::to_string(player_id),
+			std::to_string(container),
+			std::to_string(items.columns()),
+			std::to_string(item.definition_id),
+			std::to_string(item.stack)
+		});
 	});
 }

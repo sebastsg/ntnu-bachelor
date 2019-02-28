@@ -90,6 +90,7 @@ public:
 	void add_from(item_instance& item);
 	void remove_to(long long stack, item_instance& item);
 	long long take_all(long long id);
+	void clear();
 
 	long long can_hold_more(long long id) const;
 
