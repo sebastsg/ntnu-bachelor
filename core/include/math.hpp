@@ -183,6 +183,10 @@ struct vector2 {
 		return x == v.x && y == v.y;
 	}
 
+	constexpr bool operator!=(const vector2<T>& v) const {
+		return x != v.x || y != v.y;
+	}
+
 	constexpr T distance_to(const vector2<T>& v) const {
 		const T dx = x - v.x;
 		const T dy = y - v.y;
@@ -309,6 +313,10 @@ struct vector3 {
 
 	constexpr bool operator==(const vector3<T>& v) const {
 		return x == v.x && y == v.y && z == v.z;
+	}
+
+	constexpr bool operator!=(const vector3<T>& v) const {
+		return x != v.x || y != v.y || z != v.z;
 	}
 
 	constexpr T distance_to(const vector3<T>& v) const {
@@ -458,6 +466,10 @@ struct vector4 {
 
 	constexpr bool operator==(const vector4<T>& v) const {
 		return x == v.x && y == v.y && z == v.z && w == v.w;
+	}
+
+	constexpr bool operator!=(const vector4<T>& v) const {
+		return x != v.x || y != v.y || z != v.z || w != v.w;
 	}
 
 	constexpr T distance_to(const vector4<T>& v) const {

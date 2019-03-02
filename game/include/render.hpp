@@ -106,6 +106,8 @@ public:
 		no::shader_variable var_color_static;
 	} light;
 
+	no::shader_variable var_color;
+
 	no::perspective_camera camera;
 	no::model_attachment_mapping_list mappings;
 
@@ -121,7 +123,7 @@ public:
 	void draw();
 	void draw_terrain();
 	void draw_for_picking();
-	void draw_tile_highlight(no::vector2i tile);
+	void draw_tile_highlights(const std::vector<no::vector2i>& tiles, const no::vector4f& color);
 
 	void refresh_terrain();
 

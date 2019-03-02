@@ -24,17 +24,20 @@ bool character_object::is_moving() const {
 	return moving;
 }
 
-void character_object::start_movement_to(int x, int z) {
-	target_x = x;
-	target_z = z;
+void character_object::start_path_movement(const std::vector<no::vector2i>& path) {
+	target_path = path;
 }
 
 void character_object::move_towards_target() {
-	if (target_x < 0 || target_z < 0) {
+	while (!target_path.empty() && target_path.back() < 0) {
+		target_path.pop_back();
+	}
+	if (target_path.empty()) {
 		return;
 	}
 	float speed = 0.05f;
-	auto target_position = world->tile_index_to_world_position(target_x, target_z);
+	no::vector2i current_target = target_path.back();
+	no::vector3f target_position = world->tile_index_to_world_position(current_target.x, current_target.y);
 	float x_difference = target_position.x - transform.position.x + 0.5f;
 	float z_difference = target_position.z - transform.position.z + 0.5f;
 	moving = false;
@@ -47,12 +50,14 @@ void character_object::move_towards_target() {
 		moving = true;
 	}
 	if (!moving) {
-		target_x = -1;
-		target_z = -1;
+		target_path.pop_back();
+		if (!target_path.empty()) {
+			move_towards_target();
+		}
 		return;
 	}
 	no::vector2i from = tile();
-	no::vector2i to = { target_x, target_z };
+	no::vector2i to = current_target;
 	bool left = false;
 	bool up = false;
 	bool right = false;

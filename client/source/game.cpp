@@ -7,6 +7,7 @@
 #include "commands.hpp"
 #include "packets.hpp"
 #include "network.hpp"
+#include "pathfinding.hpp"
 
 hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
@@ -104,7 +105,8 @@ game_state::game_state() :
 			to_client::game::move_to_tile packet{ stream };
 			auto player = (character_object*)world.objects.find(packet.player_instance_id);
 			if (player) {
-				player->start_movement_to(packet.tile.x, packet.tile.y);
+				pathfinder pathfind{ world.terrain };
+				player->start_path_movement(pathfind.find_path(player->tile(), packet.tile));
 			} else {
 				WARNING("player not found: " << packet.player_instance_id);
 			}
@@ -183,7 +185,16 @@ void game_state::draw() {
 	window().clear();
 	renderer.draw();
 	if (world.my_player_id != -1) {
-		//renderer.draw_tile_highlight(world.my_player()->tile());
+		if (hovered_pixel.x != -1) {
+			renderer.draw_tile_highlights({ hovered_pixel.xy }, { 0.3f, 0.4f, 0.8f, 0.4f });
+			if (keyboard().is_key_down(no::key::num_8)) {
+				pathfinder p{ world.terrain };
+				path_found = p.find_path(world.my_player()->tile(), hovered_pixel.xy);
+			}
+			renderer.draw_tile_highlights(path_found, { 1.0f, 1.0f, 0.2f, 0.8f });
+		}
+
+
 	}
 	ui.draw();
 	chat.draw();

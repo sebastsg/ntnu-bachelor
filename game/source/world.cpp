@@ -1,14 +1,45 @@
 #include "world.hpp"
 #include "assets.hpp"
 
+void world_tile::set(uint8_t type) {
+	set_corner(0, type);
+	set_corner(1, type);
+	set_corner(2, type);
+	set_corner(3, type);
+}
+
+void world_tile::set_corner(int index, uint8_t type) {
+	corners[index] = type | (corners[index] & flag_bits);
+}
+
+uint8_t world_tile::corner(int index) const {
+	return corners[index] & tile_bits;
+}
+
+bool world_tile::is_solid() const {
+	return flag(solid_flag);
+}
+
+void world_tile::set_solid(bool solid) {
+	set_flag(solid_flag, solid);
+}
+
+bool world_tile::flag(int index) const {
+	return corners[index] & flag_bits;
+}
+
+void world_tile::set_flag(int index, bool value) {
+	corners[index] = corner(index) | (value ? flag_bits : 0);
+}
+
 world_autotiler::world_autotiler() {
-	add_main(grass);
-	add_main(dirt);
-	add_main(water);
+	add_main(world_tile::grass);
+	add_main(world_tile::dirt);
+	add_main(world_tile::water);
 	row++;
 	row += 2;
-	add_group(grass, dirt);
-	add_group(grass, water);
+	add_group(world_tile::grass, world_tile::dirt);
+	add_group(world_tile::grass, world_tile::water);
 }
 
 void world_autotiler::add_main(int tile) {
@@ -82,25 +113,25 @@ void world_terrain::set_tile_type(no::vector2i tile, int type) {
 	// top left
 	tile -= 1;
 	if (!is_out_of_bounds(tile)) {
-		tile_array.at(tile.x, tile.y).corners[3] = type;
+		tile_array.at(tile.x, tile.y).set_corner(3, type);
 	}
 	// top middle
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
-		tile_array.at(tile.x, tile.y).corners[2] = type;
-		tile_array.at(tile.x, tile.y).corners[3] = type;
+		tile_array.at(tile.x, tile.y).set_corner(2, type);
+		tile_array.at(tile.x, tile.y).set_corner(3, type);
 	}
 	// top right
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
-		tile_array.at(tile.x, tile.y).corners[2] = type;
+		tile_array.at(tile.x, tile.y).set_corner(2, type);
 	}
 	// middle left
 	tile.x -= 2;
 	tile.y++;
 	if (!is_out_of_bounds(tile)) {
-		tile_array.at(tile.x, tile.y).corners[1] = type;
-		tile_array.at(tile.x, tile.y).corners[3] = type;
+		tile_array.at(tile.x, tile.y).set_corner(1, type);
+		tile_array.at(tile.x, tile.y).set_corner(3, type);
 	}
 	// middle
 	tile.x++;
@@ -110,27 +141,39 @@ void world_terrain::set_tile_type(no::vector2i tile, int type) {
 	// middle right
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
-		tile_array.at(tile.x, tile.y).corners[0] = type;
-		tile_array.at(tile.x, tile.y).corners[2] = type;
+		tile_array.at(tile.x, tile.y).set_corner(0, type);
+		tile_array.at(tile.x, tile.y).set_corner(2, type);
 	}
 	// bottom left
 	tile.x -= 2;
 	tile.y++;
 	if (!is_out_of_bounds(tile)) {
-		tile_array.at(tile.x, tile.y).corners[1] = type;
+		tile_array.at(tile.x, tile.y).set_corner(1, type);
 	}
 	// bottom middle
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
-		tile_array.at(tile.x, tile.y).corners[0] = type;
-		tile_array.at(tile.x, tile.y).corners[1] = type;
+		tile_array.at(tile.x, tile.y).set_corner(0, type);
+		tile_array.at(tile.x, tile.y).set_corner(1, type);
 	}
 	// bottom right
 	tile.x++;
 	if (!is_out_of_bounds(tile)) {
-		tile_array.at(tile.x, tile.y).corners[0] = type;
+		tile_array.at(tile.x, tile.y).set_corner(0, type);
 	}
 	dirty = true;
+}
+
+void world_terrain::set_tile_solid(no::vector2i tile, bool solid) {
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).set_solid(solid);
+	}
+}
+
+void world_terrain::set_tile_flag(no::vector2i tile, int flag, bool value) {
+	if (!is_out_of_bounds(tile)) {
+		tile_array.at(tile.x, tile.y).set_flag(flag, value);
+	}
 }
 
 no::vector2i world_terrain::offset() const {

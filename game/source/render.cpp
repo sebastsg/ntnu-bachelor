@@ -122,6 +122,7 @@ world_view::world_view(world_state& world) : world(world), characters(*this) {
 	light.var_color_static = no::get_shader_variable("uni_LightColor");
 	fog.var_start = no::get_shader_variable("uni_FogStart");
 	fog.var_distance = no::get_shader_variable("uni_FogDistance");
+	var_color = no::get_shader_variable("uni_Color");
 	no::surface temp_surface(no::asset_path("textures/tiles.png"));
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 3, 1);
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 4, 2);
@@ -130,7 +131,7 @@ world_view::world_view(world_state& world) : world(world), characters(*this) {
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, false);
 	no::surface surface = { 2, 2, no::pixel_format::rgba };
-	surface.clear(0xFF0000FF);
+	surface.clear(0xFFFFFFFF);
 	highlight_texture = no::create_texture(surface);
 
 	height_map.build(4, world.terrain.size(), [this](int x, int y, std::vector<static_object_vertex>& vertices, std::vector<unsigned short>& indices) {
@@ -245,6 +246,7 @@ void world_view::draw_terrain() {
 	light.var_color_static.set(light.color);
 	fog.var_start.set(fog.start);
 	fog.var_distance.set(fog.distance);
+	var_color.set(no::vector4f{ 1.0f });
 	no::bind_texture(tileset.texture);
 	no::transform3 transform;
 	transform.position.x = (float)world.terrain.offset().x;
@@ -263,44 +265,41 @@ void world_view::draw_for_picking() {
 	no::draw_shape(height_map_pick, transform);
 }
 
-void world_view::draw_tile_highlight(no::vector2i tile) {
-	if (world.terrain.is_out_of_bounds(tile) || world.terrain.is_out_of_bounds(tile + 1)) {
-		return;
-	}
+void world_view::draw_tile_highlights(const std::vector<no::vector2i>& tiles, const no::vector4f& color) {
 	no::bind_shader(static_diffuse_shader);
 	no::set_shader_view_projection(camera);
 	no::set_shader_model(no::transform3{});
-
+	var_color.set(color);
+	no::bind_texture(highlight_texture);
 	static_object_vertex top_left;
 	static_object_vertex top_right;
 	static_object_vertex bottom_left;
 	static_object_vertex bottom_right;
-
-	float x = (float)tile.x;
-	float z = (float)tile.y;
-
-	top_left.position = { x, world.terrain.elevation_at(tile) + 0.01f, z };
-	top_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1, 0 }) + 0.01f, z };
-	bottom_left.position = { x, world.terrain.elevation_at(tile + no::vector2i{ 0, 1 }) + 0.01f, z + 1.0f };
-	bottom_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1 }) + 0.01f, z + 1.0f };
-
 	top_left.tex_coords = { 0.0f, 0.0f };
 	top_right.tex_coords = { 1.0f, 0.0f };
 	bottom_left.tex_coords = { 0.0f, 1.0f };
 	bottom_right.tex_coords = { 1.0f, 1.0f };
-
-	highlight_quad.set(top_left, top_right, bottom_left, bottom_right);
-
-	no::bind_texture(highlight_texture);
-	highlight_quad.bind();
-	highlight_quad.draw();
+	for (no::vector2i tile : tiles) {
+		if (world.terrain.is_out_of_bounds(tile) || world.terrain.is_out_of_bounds(tile + 1)) {
+			continue;
+		}
+		float x = (float)tile.x;
+		float z = (float)tile.y;
+		top_left.position = { x, world.terrain.elevation_at(tile) + 0.01f, z };
+		top_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1, 0 }) + 0.01f, z };
+		bottom_left.position = { x, world.terrain.elevation_at(tile + no::vector2i{ 0, 1 }) + 0.01f, z + 1.0f };
+		bottom_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1 }) + 0.01f, z + 1.0f };
+		highlight_quad.set(top_left, top_right, bottom_left, bottom_right);
+		highlight_quad.bind();
+		highlight_quad.draw();
+	}
 }
 
 void world_view::refresh_terrain() {
 	height_map.for_each([this](int i, int x, int y, std::vector<static_object_vertex>& vertices) {
 		auto& tiles = world.terrain.tiles();
 		auto& tile = tiles.at(tiles.x() + x, tiles.y() + y);
-		auto packed = world.terrain.autotiler.packed_corners(tile.corners[0], tile.corners[1], tile.corners[2], tile.corners[3]);
+		auto packed = world.terrain.autotiler.packed_corners(tile.corner(0), tile.corner(1), tile.corner(2), tile.corner(3));
 		no::vector2f uv = uv_for_type(world.terrain.autotiler.uv_index(packed));
 		no::vector2f step = uv_step();
 		vertices[i].position.y = tile.height;

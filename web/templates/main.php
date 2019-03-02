@@ -15,7 +15,7 @@
     <a href="/signup">Sign up</a><span>|</span>
     <a href="/leaderboard">Leaderboard</a><span>|</span>
     <a href="/world">World map</a>
-    <a href="/files/Einheri.zip" id="download" class="external" download>Click to download</a>
+    <a href="/files/Einheri.exe" id="download" class="external" download>Click to download</a>
 </header>
 <main>
     <section>

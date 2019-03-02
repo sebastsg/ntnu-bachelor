@@ -77,13 +77,76 @@ void tiling_tool::update() {
 }
 
 void tiling_tool::update_imgui() {
-	ImGui::RadioButton("Grass", &current_type, world_autotiler::grass);
-	ImGui::RadioButton("Dirt", &current_type, world_autotiler::dirt);
-	ImGui::RadioButton("Water", &current_type, world_autotiler::water);
+	ImGui::RadioButton("Grass", &current_type, world_tile::grass);
+	ImGui::RadioButton("Dirt", &current_type, world_tile::dirt);
+	ImGui::RadioButton("Water", &current_type, world_tile::water);
 }
 
 void tiling_tool::draw() {
 
+}
+
+tile_flag_tool::tile_flag_tool(world_editor_state& editor) : world_editor_tool(editor) {
+
+}
+
+void tile_flag_tool::update() {
+	if (editor.keyboard().is_key_down(no::key::space)) {
+		if (editor.mouse().is_button_down(no::mouse::button::left)) {
+			apply();
+		}
+	}
+}
+
+void tile_flag_tool::update_imgui() {
+	int before = flag;
+	ImGui::RadioButton("Solid", &flag, world_tile::solid_flag);
+	if (before != flag) {
+		refresh();
+	}
+	ImGui::Checkbox("Enable flag", &value);
+}
+
+void tile_flag_tool::draw() {
+	editor.renderer.draw_tile_highlights(tiles_with_flag, { 1.0f, 0.0f, 0.0f, 0.5f });
+}
+
+void tile_flag_tool::refresh() {
+	auto& terrain = editor.world.terrain;
+	auto& tiles = terrain.tiles();
+	no::vector2i offset = terrain.offset();
+	no::vector2i size = terrain.size();
+	tiles_with_flag.clear();
+	for (int x = offset.x; x < size.x; x++) {
+		for (int y = offset.y; y < size.y; y++) {
+			if (flag == 0 && tiles.at(x, y).is_solid()) {
+				tiles_with_flag.emplace_back(x, y);
+			}
+		}
+	}
+}
+
+void tile_flag_tool::apply() {
+	for (auto& tile : editor.brush_tiles) {
+		bool before = editor.world.terrain.tiles().at(tile.x, tile.y).flag(flag);
+		if (value != before) {
+			editor.world.terrain.set_tile_flag(tile, flag, value);
+			if (before) {
+				erase(tile);
+			} else {
+				tiles_with_flag.push_back(tile);
+			}
+		}
+	}
+}
+
+void tile_flag_tool::erase(no::vector2i tile) {
+	for (int i = 0; i < (int)tiles_with_flag.size(); i++) {
+		if (tiles_with_flag[i] == tile) {
+			tiles_with_flag.erase(tiles_with_flag.begin() + i);
+			break;
+		}
+	}
 }
 
 object_tool::object_tool(world_editor_state& editor) : world_editor_tool(editor) {
@@ -149,7 +212,13 @@ void object_tool::draw() {
 	
 }
 
-world_editor_state::world_editor_state() : renderer(world), dragger(mouse()), elevate(*this), tiling(*this), object(*this) {
+world_editor_state::world_editor_state() :
+	renderer(world),
+	dragger(mouse()),
+	elevate(*this),
+	tiling(*this),
+	object(*this),
+	tile_flag(*this) {
 	window().set_swap_interval(no::swap_interval::immediate);
 	set_synchronization(no::draw_synchronization::if_updated);
 	no::imgui::create(window());
@@ -171,11 +240,12 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()), el
 		}
 	});
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		
+
 	});
 	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });
 	renderer.fog.start = 100.0f;
 	tool().enable();
+	tile_flag.refresh();
 }
 
 world_editor_state::~world_editor_state() {
@@ -235,6 +305,7 @@ void world_editor_state::update_imgui() {
 	ImGui::RadioButton("Elevate", &radio_tool_id, elevate_tool_id);
 	ImGui::RadioButton("Tile", &radio_tool_id, tiling_tool_id);
 	ImGui::RadioButton("Object", &radio_tool_id, object_tool_id);
+	ImGui::RadioButton("Tile flags", &radio_tool_id, tile_flag_tool_id);
 	if (radio_tool_id != current_tool_id) {
 		tool().disable();
 		current_tool_id = radio_tool_id;
@@ -275,10 +346,8 @@ void world_editor_state::draw() {
 	hovered_tile = hovered_pixel.xy + world.terrain.offset();
 
 	renderer.draw();
-	renderer.draw_tile_highlight(hovered_tile);
-	for (auto& tile : brush_tiles) {
-		renderer.draw_tile_highlight(tile);
-	}
+	//renderer.draw_tile_highlights({ hovered_tile }, { 1.0f, 0.0f, 0.0f, 0.75f });
+	renderer.draw_tile_highlights(brush_tiles, { 1.0f, 0.0f, 0.0f, 0.7f });
 	tool().draw();
 
 	if (show_wireframe) {
@@ -302,6 +371,7 @@ world_editor_tool& world_editor_state::tool() {
 	case elevate_tool_id: return elevate;
 	case tiling_tool_id: return tiling;
 	case object_tool_id: return object;
+	case tile_flag_tool_id: return tile_flag;
 	default: return elevate;
 	}
 }

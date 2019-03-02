@@ -5,6 +5,7 @@ uniform vec3 uni_LightPosition;
 uniform vec3 uni_LightColor;
 uniform float uni_FogStart;
 uniform float uni_FogDistance;
+uniform vec4 uni_Color;
 
 in vec2 ex_TexCoords;
 in vec3 ex_Normal;
@@ -20,5 +21,5 @@ void main() {
 	diffuse = diffuse * (1.0f / (1.0f + (0.1f * distance * distance)));
 	vec3 result = min(1.0f, ambient + diffuse) * uni_LightColor;
 	float fog = distance > uni_FogStart ? (distance - uni_FogStart) / uni_FogDistance : 0.0f;
-	out_Color = texture(uni_Texture, ex_TexCoords).rgba * vec4(result, min(1.0f, 1.0f - fog));
+	out_Color = texture(uni_Texture, ex_TexCoords).rgba * vec4(result, min(1.0f, 1.0f - fog)) * uni_Color;
 }

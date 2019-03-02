@@ -7,11 +7,9 @@
 namespace no {
 
 surface::surface(surface&& that) {
-	pixels = that.pixels;
-	size = that.size;
-	format_ = that.format_;
-	that.pixels = nullptr;
-	that.size = 0;
+	std::swap(pixels, that.pixels);
+	std::swap(size, that.size);
+	std::swap(format_, that.format_);
 }
 
 surface::surface(const std::string& path) {

@@ -2,6 +2,8 @@
 
 #include "debug.hpp"
 
+#include <functional>
+
 namespace no {
 
 template<typename T>
@@ -60,6 +62,39 @@ public:
 
 	void set(int x, int y, T value) {
 		values[local_index(x, y)] = value;
+	}
+
+	void for_each_neighbour(vector2i index, const std::function<void(vector2i, const T&)>& function) const {
+		const int x = index.x;
+		const int y = index.y;
+		const bool left = (x - 1 - offset.x >= 0);
+		const bool right = (x + 1 - offset.x < size.x);
+		const bool up = (y - 1 - offset.y >= 0);
+		const bool down = (y + 1 - offset.y < size.y);
+		if (left) {
+			function({ x - 1, y }, at(x - 1, y));
+			if (up) {
+				function({ x - 1, y - 1 }, at(x - 1, y - 1));
+			}
+			if (down) {
+				function({ x - 1, y + 1 }, at(x - 1, y + 1));
+			}
+		}
+		if (right) {
+			function({ x + 1, y }, at(x + 1, y));
+			if (up) {
+				function({ x + 1, y - 1 }, at(x + 1, y - 1));
+			}
+			if (down) {
+				function({ x + 1, y + 1 }, at(x + 1, y + 1));
+			}
+		}
+		if (up) {
+			function({ x, y - 1 }, at(x, y - 1));
+		}
+		if (down) {
+			function({ x, y + 1 }, at(x, y + 1));
+		}
 	}
 
 	vector2i position() const {

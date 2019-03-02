@@ -24,14 +24,13 @@ public:
 	void read(no::io_stream& stream) override;
 
 	bool is_moving() const;
-	void start_movement_to(int x, int z);
+	void start_path_movement(const std::vector<no::vector2i>& path);
 
 private:
 
 	void move_towards_target();
 
-	int target_x = -1;
-	int target_z = -1;
+	std::vector<no::vector2i> target_path;
 
 	bool moving = false;
 

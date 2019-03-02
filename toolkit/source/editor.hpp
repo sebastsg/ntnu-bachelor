@@ -72,6 +72,28 @@ private:
 
 };
 
+class tile_flag_tool : public world_editor_tool {
+public:
+
+	tile_flag_tool(world_editor_state& editor);
+
+	void update() override;
+	void update_imgui() override;
+	void draw() override;
+
+	void refresh();
+
+private:
+
+	void apply();
+	void erase(no::vector2i tile);
+
+	int flag = world_tile::solid_flag;
+	bool value = false;
+	std::vector<no::vector2i> tiles_with_flag;
+
+};
+
 class object_tool : public world_editor_tool {
 public:
 
@@ -115,9 +137,10 @@ public:
 
 private:
 
-	static constexpr int elevate_tool_id = 0;
-	static constexpr int tiling_tool_id = 1;
-	static constexpr int object_tool_id = 2;
+	static const int elevate_tool_id = 0;
+	static const int tiling_tool_id = 1;
+	static const int object_tool_id = 2;
+	static const int tile_flag_tool_id = 3;
 
 	void update_editor();
 	void update_imgui();
@@ -128,6 +151,7 @@ private:
 	elevate_tool elevate;
 	tiling_tool tiling;
 	object_tool object;
+	tile_flag_tool tile_flag;
 
 	bool show_wireframe = false;
 	bool is_selected = false;

@@ -9,22 +9,40 @@
 class world_state;
 
 struct world_tile {
+
+	static const size_t solid_flag = 0;
+	static const size_t unused_1_flag = 1;
+	static const size_t unused_2_flag = 2;
+	static const size_t unused_3_flag = 3;
+
+	// max is 127 - the leftmost bit is reserved for flags
+	static const uint8_t grass = 0;
+	static const uint8_t dirt = 1;
+	static const uint8_t water = 2;
+
 	float height = 0.0f;
+
+	void set(uint8_t type);
+	void set_corner(int index, uint8_t type);
+	uint8_t corner(int index) const;
+
+	bool is_solid() const;
+	void set_solid(bool solid);
+
+	bool flag(int index) const;
+	void set_flag(int index, bool value);
+
+private:
+
 	uint8_t corners[4] = {};
-	void set(int type) {
-		corners[0] = (uint8_t)type;
-		corners[1] = (uint8_t)type;
-		corners[2] = (uint8_t)type;
-		corners[3] = (uint8_t)type;
-	}
+
+	static const uint8_t flag_bits = 0b10000000;
+	static const uint8_t tile_bits = 0b01111111;
+	
 };
 
 class world_autotiler {
 public:
-
-	static constexpr int grass = 0;
-	static constexpr int dirt = 1;
-	static constexpr int water = 2;
 
 	world_autotiler();
 
@@ -59,6 +77,8 @@ public:
 	void elevate_tile(no::vector2i tile, float amount);
 
 	void set_tile_type(no::vector2i tile, int type);
+	void set_tile_solid(no::vector2i tile, bool solid);
+	void set_tile_flag(no::vector2i tile, int flag, bool value);
 
 	no::vector2i offset() const;
 	no::vector2i size() const;

@@ -86,5 +86,6 @@ private:
 	no::perspective_camera::drag_controller dragger;
 	no::perspective_camera::rotate_controller rotater;
 	no::perspective_camera::follow_controller follower;
+	std::vector<no::vector2i> path_found;
 
 };
