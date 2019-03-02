@@ -9,7 +9,8 @@ lobby_state::lobby_state() :
 	login_label(*this, camera), 
 	login_button(*this, camera),
 	username(*this, camera, font), 
-	password(*this, camera, font) {
+	password(*this, camera, font),
+	remember_username(*this, camera) {
 	camera.zoom = 2.0f;
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
 	color = no::get_shader_variable("uni_Color");
@@ -34,23 +35,44 @@ lobby_state::lobby_state() :
 	window().set_clear_color(0.3f);
 	login_label.render(font, "Enter your username and password");
 	login_button.label.render(font, "Login");
-	no::surface surface(3, 1, no::pixel_format::rgba);
-	surface.set(0, 0xFFFFFFFF);
-	surface.set(1, 0xFFFF7777);
-	surface.set(2, 0xFFEE5555);
-	button_texture = no::create_texture(surface);
+	no::surface button_surface(6, 1, no::pixel_format::rgba);
+	button_surface.set(0, 0xFFFFFFFF);
+	button_surface.set(1, 0xFFFF7777);
+	button_surface.set(2, 0xFFEE5555);
+	button_surface.set(3, 0xFF44FFFF);
+	button_surface.set(4, 0xFF447777);
+	button_surface.set(5, 0xFFAA4455);
+	button_texture = no::create_texture(button_surface);
 	login_button.events.click.listen([this] {
+		save_config();
 		to_server::lobby::login_attempt packet;
 		packet.name = username.value();
 		packet.password = password.value();
 		server().send_async(no::packet_stream(packet));
 	});
 	login_button.color = color;
-	surface.set(0, 0xFF999999);
-	surface.set(1, 0xFF666666);
-	surface.set(2, 0xFF555555);
-	input_background = no::create_texture(surface);
+	login_button.set_tex_coords(0.0f, 0.5f);
+	no::surface input_surface = { 3, 1, no::pixel_format::rgba };
+	input_surface.set(0, 0xFF999999);
+	input_surface.set(1, 0xFF666666);
+	input_surface.set(2, 0xFF555555);
+	input_background = no::create_texture(input_surface);
 	password.censor = true;
+
+	remember_username.label.render(font, "Remember username");
+	remember_username.set_tex_coords(0.0f, 0.5f);
+	remember_username.label_alignment = no::align_type::left;
+	remember_username.label_padding.x = 40.0f;
+	remember_username.color = color;
+	remember_username.events.click.listen([this] {
+		remember_username_check = !remember_username_check;
+		if (remember_username_check) {
+			remember_username.set_tex_coords(0.5f, 0.5f);
+		} else {
+			remember_username.set_tex_coords(0.0f, 0.5f);
+		}
+	});
+	load_config();
 }
 
 lobby_state::~lobby_state() {
@@ -75,6 +97,9 @@ void lobby_state::update() {
 	login_button.transform.position = { 128.0f, 264.0f };
 	login_button.transform.scale = { 160.0f, 32.0f };
 	login_button.update();
+	remember_username.transform.position = { 480.0f, 160.0f };
+	remember_username.transform.scale = { 32.0f, 32.0f };
+	remember_username.update();
 }
 
 void lobby_state::draw() {
@@ -82,8 +107,37 @@ void lobby_state::draw() {
 	no::set_shader_view_projection(camera);
 	color.set(no::vector4f{ 1.0f });
 	login_label.draw(rectangle);
-	login_button.draw(button_texture);
+
+	no::bind_texture(button_texture);
+	login_button.draw_button();
+	remember_username.draw_button();
+
+	login_button.draw_label();
+	remember_username.draw_label();
+
 	color.set(no::vector4f{ 1.0f });
 	username.draw(input_background);
 	password.draw(input_background);
+}
+
+void lobby_state::save_config() {
+	no::io_stream stream;
+	stream.write<uint8_t>(remember_username_check ? 1 : 0);
+	if (remember_username_check) {
+		stream.write(username.value());
+	}
+	no::file::write("config.data", stream);
+}
+
+void lobby_state::load_config() {
+	no::io_stream stream;
+	no::file::read("config.data", stream);
+	if (stream.size_left_to_read() == 0) {
+		return;
+	}
+	remember_username_check = (stream.read<uint8_t>() != 0);
+	if (remember_username_check) {
+		remember_username.set_tex_coords(0.5f, 0.5f);
+		username.set_value(stream.read<std::string>());
+	}
 }

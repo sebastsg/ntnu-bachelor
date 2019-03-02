@@ -91,16 +91,10 @@ void button::update() {
 			animation.set_frame(0);
 		}
 	}
-	label.transform.align(align_type::middle, transform, label_padding);
+	label.transform.align(label_alignment, transform, label_padding);
 }
 
-void button::draw(int sprite) {
-	draw_button(sprite);
-	draw_label();
-}
-
-void button::draw_button(int sprite) {
-	bind_texture(sprite);
+void button::draw_button() {
 	if (transition.enabled) {
 		color.set({ 1.0f, 1.0f, 1.0f, 1.0f });
 		animation.set_frame((int)transition.previous_frame);
@@ -121,6 +115,10 @@ void button::draw_label() {
 		color.set({ label_hover_color.x, label_hover_color.y, label_hover_color.z, transition.current });
 		label.draw(text_rectangle);
 	}
+}
+
+void button::set_tex_coords(vector2f position, vector2f size) {
+	animation.set_tex_coords(position, size);
 }
 
 input_field::input_field(const window_state& state_, const ortho_camera& camera_, const font& font) : ui_element(state_, camera_), label(state_, camera_), input_font(font) {
@@ -203,6 +201,10 @@ void input_field::draw_text() {
 
 std::string input_field::value() const {
 	return input;
+}
+
+void input_field::set_value(const std::string& value) {
+	input = value;
 }
 
 }

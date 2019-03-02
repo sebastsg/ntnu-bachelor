@@ -514,7 +514,7 @@ void sprite_animation::update(float delta) {
 		sub_frame = 0.0f;
 	}
 	if (previous_frame != current_frame) {
-		set_tex_coords();
+		set_tex_coords(uv_position, uv_size);
 	}
 }
 
@@ -546,12 +546,14 @@ void sprite_animation::set_frame(int frame) {
 	previous_frame = current_frame;
 	current_frame = frame;
 	sub_frame = (float)frame;
-	set_tex_coords();
+	set_tex_coords(uv_position, uv_size);
 }
 
-void sprite_animation::set_tex_coords() {
-	const float frame_width = 1.0f / (float)frames;
-	rectangle.set_tex_coords(frame_width * (float)current_frame, 0.0f, frame_width, 1.0f);
+void sprite_animation::set_tex_coords(vector2f position, vector2f size) {
+	uv_position = position;
+	uv_size = size;
+	const float frame_width = uv_position.x + uv_size.x / (float)frames;
+	rectangle.set_tex_coords(uv_position.x + frame_width * (float)current_frame, uv_position.y, frame_width, uv_size.y);
 }
 
 }

@@ -16,6 +16,9 @@ public:
 
 private:
 
+	void save_config();
+	void load_config();
+
 	int mouse_press_id = -1;
 	int keyboard_press_id = -1;
 	int receive_packet_id = -1;
@@ -33,5 +36,8 @@ private:
 	no::input_field username;
 	no::input_field password;
 	int input_background = -1;
+
+	no::button remember_username;
+	bool remember_username_check = false;
 
 };

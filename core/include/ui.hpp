@@ -68,6 +68,8 @@ public:
 	shader_variable color;
 	vector3f label_color;
 	vector3f label_hover_color = 1.0f;
+	align_type label_alignment = align_type::middle;
+	vector2f label_padding;
 
 	button(const window_state& state, const ortho_camera& camera);
 	button(const button&) = delete;
@@ -79,12 +81,12 @@ public:
 	button& operator=(button&&) = delete;
 
 	void update();
-	void draw(int sprite);
+	void draw_button();
+	void draw_label();
+	
+	void set_tex_coords(vector2f position, vector2f size);
 
 private:
-
-	void draw_button(int sprite);
-	void draw_label();
 
 	struct {
 		bool enabled = true;
@@ -96,7 +98,6 @@ private:
 	} transition;
 
 	sprite_animation animation;
-	vector2f label_padding;
 	rectangle text_rectangle;
 
 };
@@ -123,6 +124,7 @@ public:
 	void blur();
 
 	std::string value() const;
+	void set_value(const std::string& value);
 
 private:
 

@@ -429,16 +429,17 @@ public:
 	void resume();
 	bool is_paused() const;
 	void set_frame(int frame);
+	void set_tex_coords(vector2f position, vector2f size);
 
 private:
-
-	void set_tex_coords();
 
 	rectangle rectangle;
 	int current_frame = 0;
 	float sub_frame = 0.0f;
 	int previous_frame;
 	bool paused = false;
+	vector2f uv_position;
+	vector2f uv_size = 1.0f;
 
 };
 
