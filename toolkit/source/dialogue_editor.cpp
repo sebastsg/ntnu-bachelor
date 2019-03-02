@@ -17,24 +17,6 @@ static no::vector2f item_uv2(no::vector2f uv, int texture) {
 	return (uv + 32.0f) / no::texture_size(texture).to<float>();
 }
 
-template<int Size>
-static bool imgui_input_text(const std::string& label, std::string& value) {
-	char buffer[Size] = {};
-	strcpy_s(buffer, value.c_str());
-	bool changed = ImGui::InputText(label.c_str(), buffer, Size);
-	value = buffer;
-	return changed;
-}
-
-template<int Size>
-static bool imgui_input_text_multiline(const std::string& label, std::string& value, no::vector2f box_size) {
-	char buffer[Size] = {};
-	strcpy_s(buffer, value.c_str());
-	bool changed = ImGui::InputTextMultiline(label.c_str(), buffer, Size, box_size);
-	value = buffer;
-	return changed;
-}
-
 dialogue_editor_state::dialogue_editor_state() {
 	no::imgui::create(window());
 	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));

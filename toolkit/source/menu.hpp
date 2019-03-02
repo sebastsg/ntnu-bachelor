@@ -1,6 +1,7 @@
 #pragma once
 
 #include "loop.hpp"
+#include "common_ui.hpp"
 
 class menu_bar_state : public no::window_state {
 public:

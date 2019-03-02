@@ -253,6 +253,8 @@ void attachments_tool::update() {
 
 	ImGui::Separator();
 
+	ImGui::Checkbox("Freeze animation", &freeze_animation);
+
 	ImGui::Text("View animation");
 	int old_animation = animation;
 	ImGui::ListBox("##ViewAnimationList", &animation, [](void* data, int i, const char** out) -> bool {
@@ -512,6 +514,9 @@ void attachments_tool::draw() {
 		return;
 	}
 	no::set_shader_model(no::transform3{});
+	if (freeze_animation) {
+		instance.reset_animation();
+	}
 	instance.animate();
 	if (texture != -1) {
 		no::bind_texture(texture);

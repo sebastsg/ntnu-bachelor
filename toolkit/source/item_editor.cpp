@@ -44,6 +44,7 @@ void item_editor::ui_create_item() {
 	if (ImGui::CollapsingHeader("Create new item")) {
 		ImGui::InputText("Name##NewItemName", new_item.name, 100);
 		ImGui::InputInt("Max stack##NewItemMaxStack", &new_item.max_stack);
+		ImGui::InputText("Model##NewItemModel", new_item.model, 100);
 		item_type_combo(new_item.type, "New");
 		equipment_slot_combo(new_item.slot, "New");
 		if (ImGui::Button("Save##SaveNewItem")) {
@@ -53,6 +54,7 @@ void item_editor::ui_create_item() {
 			item.max_stack = new_item.max_stack;
 			item.type = new_item.type;
 			item.slot = new_item.slot;
+			item.model = new_item.model;
 			item_definitions().add(item);
 		}
 	}
@@ -74,7 +76,7 @@ void item_editor::ui_select_item() {
 		return;
 	}
 	ImGui::Text(CSTRING("ID: " << selected.id));
-	ImGui::InputText("Name##EditItemName", selected.name.data(), selected.name.capacity());
+	imgui_input_text<64>("Name##EditItemName", selected.name);
 	int max_stack = (int)selected.max_stack;
 	ImGui::InputInt("Max stack##EditItemMaxStack", &max_stack);
 	max_stack = std::max(1, max_stack);
@@ -85,6 +87,7 @@ void item_editor::ui_select_item() {
 	no::vector2f uv_start = selected.uv / no::texture_size(ui_texture).to<float>();
 	no::vector2f uv_end = (selected.uv + 32.0f) / no::texture_size(ui_texture).to<float>();
 	ImGui::Image((ImTextureID)ui_texture, { 64.0f, 64.0f }, { uv_start }, { uv_end }, { 1.0f }, { 1.0f });
+	imgui_input_text<64>("Model##EditItemModel", selected.model);
 }
 
 void item_editor::update() {

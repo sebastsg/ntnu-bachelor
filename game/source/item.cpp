@@ -28,6 +28,7 @@ void item_definition_list::save(const std::string& path) const {
 		stream.write((int64_t)definition.id);
 		stream.write(definition.uv);
 		stream.write(definition.name);
+		stream.write(definition.model);
 	}
 	no::file::write(path, stream);
 }
@@ -48,6 +49,7 @@ void item_definition_list::load(const std::string& path) {
 		definition.id = stream.read<int64_t>();
 		definition.uv = stream.read<no::vector2f>();
 		definition.name = stream.read<std::string>();
+		definition.model = stream.read<std::string>();
 		definitions.push_back(definition);
 	}
 }

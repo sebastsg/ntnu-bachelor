@@ -309,6 +309,7 @@ public:
 	void animate();
 	void start_animation(int index);
 	bool can_animate() const;
+	void reset_animation();
 
 	void draw() const;
 

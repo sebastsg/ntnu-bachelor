@@ -271,6 +271,11 @@ bool model_instance::can_animate() const {
 	return source && (int)source->animations.size() > animation_index && animation_index >= 0;
 }
 
+void model_instance::reset_animation() {
+	animation_timer.start();
+	is_new_animation = true;
+}
+
 void model_instance::draw() const {
 	get_shader_variable("uni_Bones").set(bones);
 	source->bind();

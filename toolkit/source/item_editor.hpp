@@ -25,6 +25,7 @@ private:
 
 	struct {
 		char name[100] = {};
+		char model[100] = {};
 		int max_stack = 1;
 		item_type type = item_type::other;
 		equipment_slot slot = equipment_slot::none;

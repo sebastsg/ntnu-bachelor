@@ -34,6 +34,7 @@ struct item_definition {
 	equipment_slot slot = equipment_slot::none;
 	std::string name;
 	no::vector2f uv;
+	std::string model;
 };
 
 struct item_instance {

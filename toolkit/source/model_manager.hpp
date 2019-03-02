@@ -110,6 +110,7 @@ private:
 	no::model_instance instance;
 	int animation = 0;
 	int texture = -1;
+	bool freeze_animation = false;
 
 };
 

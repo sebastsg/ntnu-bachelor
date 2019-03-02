@@ -7,10 +7,11 @@ character_renderer::character_renderer(world_view& world) : world(world) {
 	model.load<no::animated_mesh_vertex>(no::asset_path("models/character.nom"));
 	idle = model.index_of_animation("idle");
 	run = model.index_of_animation("run");
-	equipments[0] = new no::model();
-	equipments[0]->load<no::animated_mesh_vertex>(no::asset_path("models/sword.nom"));
-	equipments[1] = new no::model();
-	equipments[1]->load<no::animated_mesh_vertex>(no::asset_path("models/shield.nom"));
+	auto items = item_definitions().of_type(item_type::equipment);
+	for (auto& item : items) {
+		equipments[item.id] = new no::model();
+		equipments[item.id]->load<no::animated_mesh_vertex>(no::asset_path(STRING("models/" << item.model << ".nom")));
+	}
 }
 
 character_renderer::~character_renderer() {
@@ -30,7 +31,10 @@ void character_renderer::add(character_object* object) {
 			characters[i].attachments.erase(attachment->first);
 		}
 		if (event.item_id != -1) {
-			characters[i].attachments[event.slot] = characters[i].model.attach(*equipments[event.item_id], world.mappings);
+			auto equipment = equipments.find(event.item_id);
+			if (equipment != equipments.end()) {
+				characters[i].attachments[event.slot] = characters[i].model.attach(*equipment->second, world.mappings);
+			}
 		}
 	});
 }
