@@ -6,7 +6,7 @@ class window;
 
 namespace imgui {
 
-void create(no::window& window);
+void create(window& window);
 void destroy();
 void start_frame();
 void end_frame();

@@ -34,6 +34,9 @@ void game_object_definition_list::save(const std::string& path) const {
 		stream.write((int32_t)definition.id);
 		stream.write(definition.name);
 		stream.write(definition.model);
+		stream.write(definition.bounding_box);
+		stream.write<int32_t>(definition.dialogue_id);
+		stream.write(definition.description);
 	}
 	no::file::write(path, stream);
 }
@@ -52,6 +55,9 @@ void game_object_definition_list::load(const std::string& path) {
 		definition.id = stream.read<int32_t>();
 		definition.name = stream.read<std::string>();
 		definition.model = stream.read<std::string>();
+		definition.bounding_box = stream.read<no::transform3>();
+		definition.dialogue_id = stream.read<int32_t>();
+		definition.description = stream.read<std::string>();
 		definitions.push_back(definition);
 	}
 }

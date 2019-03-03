@@ -226,7 +226,7 @@ void perspective_camera::move_controller::update(perspective_camera& camera, con
 	}
 }
 
-void perspective_camera::follow_controller::update(perspective_camera& camera, const no::transform3& transform) const {
+void perspective_camera::follow_controller::update(perspective_camera& camera, const transform3& transform) const {
 	// todo: interpolate
 	camera.transform.position = transform.position + offset;
 }

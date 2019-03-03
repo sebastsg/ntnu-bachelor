@@ -396,40 +396,38 @@ shader_variable get_shader_variable(const std::string& name) {
 	return { renderer.shaders[renderer.bound_shader].id, name };
 }
 
-template<typename M>
-static void set_shader_model_generic(const M& transform) {
+void set_shader_model(const glm::mat4& transform) {
 	auto& shader = renderer.shaders[renderer.bound_shader];
-	shader.model = transform.to_matrix4();
+	shader.model = transform;
 	auto model_view_projection = shader.projection * shader.view * shader.model;
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_view_projection_location, 1, false, glm::value_ptr(model_view_projection)));
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_location, 1, false, glm::value_ptr(shader.model)));
 }
 
-template<typename C>
-static void set_shader_view_projection_generic(const C& camera) {
+void set_shader_model(const transform2& transform) {
+	set_shader_model(transform.to_matrix4());
+}
+
+void set_shader_model(const transform3& transform) {
+	set_shader_model(transform.to_matrix4());
+}
+
+void set_shader_view_projection(const glm::mat4& view, const glm::mat4& projection) {
 	auto& shader = renderer.shaders[renderer.bound_shader];
-	shader.view = camera.view();
-	shader.projection = camera.projection();
+	shader.view = view;
+	shader.projection = projection;
 	auto model_view_projection = shader.projection * shader.view * shader.model;
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.model_view_projection_location, 1, false, glm::value_ptr(model_view_projection)));
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.view_location, 1, false, glm::value_ptr(shader.view)));
 	CHECK_GL_ERROR(glUniformMatrix4fv(shader.projection_location, 1, false, glm::value_ptr(shader.projection)));
 }
 
-void set_shader_model(const transform2& transform) {
-	set_shader_model_generic(transform);
-}
-
-void set_shader_model(const transform3& transform) {
-	set_shader_model_generic(transform);
-}
-
 void set_shader_view_projection(const ortho_camera& camera) {
-	set_shader_view_projection_generic(camera);
+	set_shader_view_projection(camera.view(), camera.projection());
 }
 
 void set_shader_view_projection(const perspective_camera& camera) {
-	set_shader_view_projection_generic(camera);
+	set_shader_view_projection(camera.view(), camera.projection());
 }
 
 void delete_shader(int id) {

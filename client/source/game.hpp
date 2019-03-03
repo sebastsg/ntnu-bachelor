@@ -63,11 +63,12 @@ public:
 	void draw() override;
 
 	const no::font& font() const;
-
-private:
+	no::vector2i hovered_tile() const;
 
 	void start_dialogue(int target_id);
 	void close_dialogue();
+
+private:
 
 	no::vector3i hovered_pixel;
 

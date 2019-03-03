@@ -308,4 +308,18 @@ void convert_model(const std::string& source, const std::string& destination, mo
 	options.exporter(destination, importer.model);
 }
 
+transform3 load_model_bounding_box(const std::string& path) {
+	io_stream stream;
+	file::read(path, stream);
+	if (stream.write_index() == 0) {
+		WARNING("Failed to open file: " << path);
+		return {};
+	}
+	stream.move_read_index(sizeof(glm::mat4));
+	transform3 transform;
+	transform.position = stream.read<vector3f>();
+	transform.scale = stream.read<vector3f>();
+	return transform;
+}
+
 }

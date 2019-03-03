@@ -87,6 +87,32 @@ private:
 
 };
 
+class object_pick_renderer {
+public:
+
+	no::shader_variable var_pick_color;
+
+	object_pick_renderer();
+	object_pick_renderer(const object_pick_renderer&) = delete;
+	object_pick_renderer(object_pick_renderer&&) = delete;
+
+	~object_pick_renderer();
+
+	object_pick_renderer& operator=(const object_pick_renderer&) = delete;
+	object_pick_renderer& operator=(object_pick_renderer&&) = delete;
+
+	void draw();
+
+	void add(game_object* object);
+	void remove(game_object* object);
+
+private:
+
+	std::vector<game_object*> objects;
+	no::model box;
+
+};
+
 class world_view {
 public:
 
@@ -107,6 +133,7 @@ public:
 	} light;
 
 	no::shader_variable var_color;
+	no::shader_variable var_pick_color;
 
 	no::perspective_camera camera;
 	no::model_attachment_mapping_list mappings;
@@ -149,6 +176,7 @@ private:
 	world_state& world;
 	decoration_renderer decorations;
 	character_renderer characters;
+	object_pick_renderer pick_objects;
 
 	int animate_diffuse_shader = -1;
 	int static_diffuse_shader = -1;

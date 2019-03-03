@@ -546,6 +546,8 @@ model_manager_state::model_manager_state() : dragger(mouse()) {
 
 model_manager_state::~model_manager_state() {
 	mouse().scroll.ignore(mouse_scroll_id);
+	no::delete_shader(animate_shader);
+	no::delete_shader(static_shader);
 	no::imgui::destroy();
 }
 

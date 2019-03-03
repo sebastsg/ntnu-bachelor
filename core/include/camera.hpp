@@ -136,7 +136,7 @@ public:
 	vector3f speed = 2.0f;
 	vector3f offset = { 0.0f, 1.0f, 0.0f };
 
-	void update(perspective_camera& camera, const no::transform3& transform) const;
+	void update(perspective_camera& camera, const transform3& transform) const;
 
 };
 

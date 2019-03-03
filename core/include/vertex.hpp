@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math.hpp"
+#include "transform.hpp"
 #include "io.hpp"
 #include "debug.hpp"
 
@@ -161,6 +161,36 @@ struct model_data {
 	}
 
 };
+
+template<typename V>
+model_data<V> create_box_model_data(const std::function<V(const vector3f&)>& mapper) {
+	model_data<V> data;
+	data.name = "box";
+	data.min = 0.0f;
+	data.max = 1.0f;
+	const vector3f vertices[] = {
+		{ 0.0f, 0.0f, 0.0f }, // (top left) lower - 0
+		{ 0.0f, 1.0f, 0.0f }, // (top left) upper - 1
+		{ 1.0f, 0.0f, 0.0f }, // (top right) lower - 2
+		{ 1.0f, 1.0f, 0.0f }, // (top right) upper - 3
+		{ 0.0f, 0.0f, 1.0f }, // (bottom left) lower - 4
+		{ 0.0f, 1.0f, 1.0f }, // (bottom left) upper - 5
+		{ 1.0f, 0.0f, 1.0f }, // (bottom right) lower - 6
+		{ 1.0f, 1.0f, 1.0f }, // (bottom right) upper - 7
+	};
+	for (auto& vertex : vertices) {
+		data.shape.vertices.push_back(mapper(vertex));
+	}
+	data.shape.indices = {
+		0, 1, 5, 5, 4, 0, // left
+		0, 1, 3, 3, 2, 0, // back
+		2, 3, 7, 7, 6, 2, // right
+		5, 7, 6, 6, 4, 5, // front
+		0, 2, 6, 6, 4, 0, // bottom
+		1, 3, 7, 7, 5, 1, // top
+	};
+	return data;
+}
 
 struct model_import_options {
 	struct {
@@ -359,5 +389,7 @@ model_data<V> merge_model_animations(const std::vector<model_data<V>>& models) {
 	output.name = "";
 	return output;
 }
+
+transform3 load_model_bounding_box(const std::string& path);
 
 }

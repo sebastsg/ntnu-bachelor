@@ -41,8 +41,10 @@ void delete_texture(int id);
 int create_shader(const std::string& path);
 void bind_shader(int id);
 shader_variable get_shader_variable(const std::string& name);
+void set_shader_model(const glm::mat4& transform);
 void set_shader_model(const transform2& transform);
 void set_shader_model(const transform3& transform);
+void set_shader_view_projection(const glm::mat4& view, const glm::mat4& projection);
 void set_shader_view_projection(const ortho_camera& camera);
 void set_shader_view_projection(const perspective_camera& camera);
 void delete_shader(int id);
@@ -315,7 +317,7 @@ public:
 
 	int attach(model& attachment, model_attachment_mapping_list& mappings);
 	void detach(int id);
-	void set_attachment_bone(int id, const no::vector3f& position, const glm::quat& rotation);
+	void set_attachment_bone(int id, const vector3f& position, const glm::quat& rotation);
 	void update_attachment_bone(int id, const model_attachment_mapping_list& mappings);
 
 private:

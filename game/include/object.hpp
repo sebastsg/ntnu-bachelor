@@ -23,6 +23,9 @@ struct game_object_definition {
 	game_object_type type = game_object_type::decoration;
 	std::string name;
 	std::string model;
+	no::transform3 bounding_box;
+	int dialogue_id = -1;
+	std::string description;
 };
 
 class game_object_definition_list {

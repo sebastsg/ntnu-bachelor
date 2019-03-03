@@ -405,5 +405,26 @@ void user_interface_view::create_context() {
 				});
 			}
 		}
+	} else {
+		no::vector2i tile = game.hovered_tile();
+		auto& objects = game.world.objects;
+		objects.for_each([this, tile](game_object* object) {
+			if (object->tile() != tile) {
+				return;
+			}
+			if (object->definition().dialogue_id != -1) {
+				std::string option_name = "Use ";
+				if (object->definition().type == game_object_type::character) {
+					option_name = "Talk to ";
+				}
+				context->add_option(option_name + object->definition().name, [this, object] {
+					game.start_dialogue(object->definition().dialogue_id);
+				});
+			}
+		});
+	}
+	if (context->count() == 0) {
+		delete context;
+		context = nullptr;
 	}
 }

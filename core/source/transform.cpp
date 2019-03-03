@@ -201,7 +201,21 @@ glm::mat4 transform3::to_matrix4() const {
 	matrix = glm::rotate(matrix, deg_to_rad(rotation.x), { 1.0f, 0.0f, 0.0f });
 	matrix = glm::rotate(matrix, deg_to_rad(rotation.y), { 0.0f, 1.0f, 0.0f });
 	matrix = glm::rotate(matrix, deg_to_rad(rotation.z), { 0.0f, 0.0f, 1.0f });
+	
+	matrix = glm::scale(matrix, { scale.x, scale.y, scale.z });
+	return matrix;
+}
 
+glm::mat4 transform3::to_matrix4_origin() const {
+	glm::mat4 matrix(1.0f);
+	no::vector3f origin = position + scale / 2.0f;
+	matrix = glm::translate(matrix, { origin.x, origin.y, origin.z });
+	matrix = glm::rotate(matrix, deg_to_rad(rotation.x), { 1.0f, 0.0f, 0.0f });
+	matrix = glm::rotate(matrix, deg_to_rad(rotation.y), { 0.0f, 1.0f, 0.0f });
+	matrix = glm::rotate(matrix, deg_to_rad(rotation.z), { 0.0f, 0.0f, 1.0f });
+	matrix = glm::translate(matrix, { -origin.x, -origin.y, -origin.z });
+
+	matrix = glm::translate(matrix, { position.x, position.y, position.z });
 	matrix = glm::scale(matrix, { scale.x, scale.y, scale.z });
 	return matrix;
 }

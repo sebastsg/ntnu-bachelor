@@ -10,7 +10,7 @@ character_renderer::character_renderer(world_view& world) : world(world) {
 	auto items = item_definitions().of_type(item_type::equipment);
 	for (auto& item : items) {
 		equipments[item.id] = new no::model();
-		equipments[item.id]->load<no::animated_mesh_vertex>(no::asset_path(STRING("models/" << item.model << ".nom")));
+		equipments[item.id]->load<no::animated_mesh_vertex>(no::asset_path("models/" + item.model + ".nom"));
 	}
 }
 
@@ -113,6 +113,48 @@ void decoration_renderer::draw() {
 	}
 }
 
+object_pick_renderer::object_pick_renderer() {
+	box.load(no::create_box_model_data<no::pick_vertex>([](const no::vector3f& vertex) {
+		return no::pick_vertex{ vertex, 1.0f };
+	}));
+}
+
+object_pick_renderer::~object_pick_renderer() {
+
+}
+
+void object_pick_renderer::draw() {
+	if (!box.is_drawable()) {
+		return;
+	}
+	box.bind();
+	for (auto object : objects) {
+		no::transform3 bbox = object->definition().bounding_box;
+		no::transform3 transform;
+		transform.position = object->transform.position + object->transform.scale * bbox.position;
+		transform.scale = object->transform.scale * bbox.scale;
+		transform.rotation.x = 270.0f;
+		transform.rotation.z = object->transform.rotation.y;
+		no::vector2f tile = (object->tile() + 1).to<float>();
+		var_pick_color.set(no::vector3f{ tile.x / 255.0f, tile.y / 255.0f, 0.0f });
+		no::set_shader_model(transform.to_matrix4_origin());
+		box.draw();
+	}
+}
+
+void object_pick_renderer::add(game_object* object) {
+	objects.push_back(object);
+}
+
+void object_pick_renderer::remove(game_object* object) {
+	for (int i = 0; i < (int)objects.size(); i++) {
+		if (objects[i] == object) {
+			objects.erase(objects.begin() + i);
+			break;
+		}
+	}
+}
+
 world_view::world_view(world_state& world) : world(world), characters(*this) {
 	mappings.load(no::asset_path("models/attachments.noma"));
 	camera.transform.scale.xy = 1.0f;
@@ -121,6 +163,8 @@ world_view::world_view(world_state& world) : world(world), characters(*this) {
 	light.var_position_animate = no::get_shader_variable("uni_LightPosition");
 	light.var_color_animate = no::get_shader_variable("uni_LightColor");
 	pick_shader = no::create_shader(no::asset_path("shaders/pick"));
+	var_pick_color = no::get_shader_variable("uni_Color");
+	pick_objects.var_pick_color = var_pick_color;
 	static_diffuse_shader = no::create_shader(no::asset_path("shaders/staticdiffuse"));
 	light.var_position_static = no::get_shader_variable("uni_LightPosition");
 	light.var_color_static = no::get_shader_variable("uni_LightColor");
@@ -132,6 +176,7 @@ world_view::world_view(world_state& world) : world(world), characters(*this) {
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 4, 2);
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 5, 1);
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 6, 2);
+	
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, false);
 	no::surface surface = { 2, 2, no::pixel_format::rgba };
@@ -193,6 +238,7 @@ void world_view::add(game_object* object) {
 	if (!object) {
 		return;
 	}
+	pick_objects.add(object);
 	switch (object->definition().type) {
 	case game_object_type::decoration:
 		decorations.add((decoration_object*)object);
@@ -213,6 +259,7 @@ void world_view::remove(game_object* object) {
 	if (!object) {
 		return;
 	}
+	pick_objects.remove(object);
 	switch (object->definition().type) {
 	case game_object_type::decoration:
 		decorations.remove((decoration_object*)object);
@@ -263,10 +310,12 @@ void world_view::draw_terrain() {
 void world_view::draw_for_picking() {
 	no::bind_shader(pick_shader);
 	no::set_shader_view_projection(camera);
+	var_pick_color.set(no::vector3f{ 1.0f });
 	no::transform3 transform;
 	transform.position.x = (float)world.terrain.offset().x;
 	transform.position.z = (float)world.terrain.offset().y;
 	no::draw_shape(height_map_pick, transform);
+	pick_objects.draw();
 }
 
 void world_view::draw_tile_highlights(const std::vector<no::vector2i>& tiles, const no::vector4f& color) {

@@ -324,7 +324,7 @@ void model_instance::detach(int id) {
 	}
 }
 
-void model_instance::set_attachment_bone(int id, const no::vector3f& position, const glm::quat& rotation) {
+void model_instance::set_attachment_bone(int id, const vector3f& position, const glm::quat& rotation) {
 	for (auto& animation : animations) {
 		for (auto& node : animation.channels) {
 			for (auto& attachment : node.attachments) {
@@ -378,7 +378,7 @@ std::string model_attachment_mapping::mapping_string() const {
 }
 
 void model_attachment_mapping_list::save(const std::string& path) {
-	no::io_stream stream;
+	io_stream stream;
 	stream.write((int32_t)mappings.size());
 	for (auto& attachment : mappings) {
 		stream.write(attachment.root_model);
@@ -389,12 +389,12 @@ void model_attachment_mapping_list::save(const std::string& path) {
 		stream.write(attachment.position);
 		stream.write(attachment.rotation);
 	}
-	no::file::write(path, stream);
+	file::write(path, stream);
 }
 
 void model_attachment_mapping_list::load(const std::string& path) {
-	no::io_stream stream;
-	no::file::read(path, stream);
+	io_stream stream;
+	file::read(path, stream);
 	if (stream.write_index() == 0) {
 		return;
 	}
@@ -406,7 +406,7 @@ void model_attachment_mapping_list::load(const std::string& path) {
 		mapping.attached_model = stream.read<std::string>();
 		mapping.attached_animation = stream.read<std::string>();
 		mapping.attached_to_channel = stream.read<int32_t>();
-		mapping.position = stream.read<no::vector3f>();
+		mapping.position = stream.read<vector3f>();
 		mapping.rotation = stream.read<glm::quat>();
 		mappings.push_back(mapping);
 	}

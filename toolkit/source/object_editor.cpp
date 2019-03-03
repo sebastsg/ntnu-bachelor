@@ -2,15 +2,43 @@
 #include "window.hpp"
 #include "assets.hpp"
 #include "platform.hpp"
+#include "surface.hpp"
+#include "dialogue.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
 
-object_editor::object_editor() {
+object_editor::object_editor() : dragger(mouse()) {
+	window().set_clear_color({ 0.3f });
 	no::imgui::create(window());
+	box.load(no::create_box_model_data<no::static_mesh_vertex>([](const no::vector3f& vertex) {
+		return no::static_mesh_vertex{ vertex, 1.0f };
+	}));
+	mouse_scroll_id = mouse().scroll.listen([this](const no::mouse::scroll_message& event) {
+		if (is_mouse_over_ui()) {
+			return;
+		}
+		float& factor = camera.rotation_offset_factor;
+		factor -= (float)event.steps;
+		if (factor > 12.0f) {
+			factor = 12.0f;
+		} else if (factor < 4.0f) {
+			factor = 4.0f;
+		}
+	});
+	camera.transform.position.y = 1.0f;
+	camera.rotation_offset_factor = 12.0f;
+	animate_shader = no::create_shader(no::asset_path("shaders/animatediffuse"));
+	static_shader = no::create_shader(no::asset_path("shaders/staticdiffuse"));
+	blank_texture = no::create_texture({ 2, 2, no::pixel_format::rgba, 0xFFBBAAFF });
 }
 
 object_editor::~object_editor() {
+	mouse().scroll.ignore(mouse_scroll_id);
+	no::delete_shader(animate_shader);
+	no::delete_shader(static_shader);
+	no::delete_texture(blank_texture);
+	no::delete_texture(model_texture);
 	no::imgui::destroy();
 }
 
@@ -46,6 +74,7 @@ void object_editor::ui_create_object() {
 void object_editor::ui_select_object() {
 	ImGui::Text("Select object:");
 	ImGui::SameLine();
+	int previous_object = current_object;
 	if (ImGui::BeginCombo("##SelectEditObject", object_definitions().get(current_object).name.c_str())) {
 		for (int id = 0; id < object_definitions().count(); id++) {
 			if (ImGui::Selectable(object_definitions().get(id).name.c_str())) {
@@ -58,18 +87,46 @@ void object_editor::ui_select_object() {
 	if (selected.id == -1) {
 		return;
 	}
-	char name[100] = {};
-	char model[100] = {};
-	strcpy(name, selected.name.c_str());
-	strcpy(model, selected.model.c_str());
-	ImGui::InputText("Name##EditObjectName", name, 100);
+	if (previous_object != current_object) {
+		if (selected.type == game_object_type::character) {
+			model.load<no::animated_mesh_vertex>(no::asset_path("models/" + selected.model + ".nom"));
+			instance = { model };
+			if (selected.model == "character") {
+				// todo: select animation list, like in model manager
+				instance.start_animation(model.index_of_animation("idle"));
+			}
+		} else {
+			model.load<no::static_mesh_vertex>(no::asset_path("models/" + selected.model + ".nom"));
+		}
+		no::delete_texture(model_texture);
+		model_texture = no::create_texture(no::surface(no::asset_path("textures/" + model.texture_name() + ".png")), no::scale_option::nearest_neighbour, true);
+	}
+	imgui_input_text<128>("Name##EditObjectName", selected.name);
+	imgui_input_text<128>("Description##EditObjectDescription", selected.description);
 	object_type_combo(selected.type, "Edit");
-	ImGui::InputText("Model##EditObjectModel", model, 100);
-	selected.name = name;
-	selected.model = model;
+	imgui_input_text<128>("Model##EditObjectModel", selected.model);
+	ImGui::InputInt("Dialogue ID##EditObjectDialogue", &selected.dialogue_id);
+	if (!dialogue_meta().find(selected.dialogue_id)) {
+		selected.dialogue_id = -1;
+	}
+	ImGui::Separator();
+	ImGui::InputFloat3("Min##EditObjectBBoxMin", &selected.bounding_box.position.x);
+	ImGui::InputFloat3("Max##EditObjectBBoxMax", &selected.bounding_box.scale.x);
+	if (ImGui::Button("Use model bounding box##EditObjectBBox")) {
+		selected.bounding_box = no::load_model_bounding_box(no::asset_path("models/" + selected.model + ".nom"));
+	}
+	ImGui::InputFloat("Rotate bounding box", &rotation, 45.0f, 45.0f);
+	if (rotation >= 360.0f || rotation < 0.0f) {
+		rotation = 0.0f;
+	}
 }
 
 void object_editor::update() {
+	camera.size = window().size().to<float>();
+	if (!is_mouse_over_ui()) {
+		dragger.update(camera);
+	}
+	camera.update();
 	no::imgui::start_frame();
 	menu_bar_state::update();
 	ImGuiWindowFlags imgui_flags
@@ -97,5 +154,42 @@ void object_editor::update() {
 
 void object_editor::draw() {
 	no::imgui::draw();
+	auto& selected = object_definitions().get(current_object);
+	if (selected.type == game_object_type::character) {
+		no::bind_shader(animate_shader);
+	} else {
+		no::bind_shader(static_shader);
+	}
+	no::set_shader_view_projection(camera);
+	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + camera.offset());
+	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f });
+	no::get_shader_variable("uni_FogStart").set(100.0f);
+	no::get_shader_variable("uni_FogDistance").set(0.0f);
+	if (model_texture != -1) {
+		no::bind_texture(model_texture);
+	}
+	if (selected.type == game_object_type::character && instance.can_animate()) {
+		no::set_shader_model(no::transform3{ {}, { 0.0f, rotation, 0.0f }, { 1.0f } });
+		instance.animate();
+		instance.draw();
+	} else if (model.is_drawable()) {
+		no::draw_shape(model, no::transform3{});
+	}
+	no::bind_shader(static_shader);
+	no::set_shader_view_projection(camera);
+	no::bind_texture(blank_texture);
+	no::set_polygon_render_mode(no::polygon_render_mode::wireframe);
+	no::transform3 box_transform;
+	box_transform.position = selected.bounding_box.position;
+	//box_transform.position.z -= 2.0f;
+	box_transform.scale = selected.bounding_box.scale;
+	box_transform.rotation.x = 270.0f;
+	box_transform.rotation.z = rotation;
+	no::draw_shape(box, box_transform.to_matrix4_origin());
+	no::set_polygon_render_mode(no::polygon_render_mode::fill);
+}
+
+bool object_editor::is_mouse_over_ui() const {
+	return mouse().position().x < 320;
 }
 

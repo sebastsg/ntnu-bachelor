@@ -67,6 +67,7 @@ struct transform3 {
 	transform3(vector3f position, vector3f rotation, vector3f scale);
 
 	glm::mat4 to_matrix4() const;
+	glm::mat4 to_matrix4_origin() const;
 	
 	float center_x(float width) const;
 	float center_y(float height) const;

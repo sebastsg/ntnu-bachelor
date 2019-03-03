@@ -85,9 +85,7 @@ game_state::game_state() :
 	});
 
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		if (event.key == no::key::num_9) {
-			start_dialogue(0);
-		}
+		
 	});
 
 	chat.events.message.listen([this](const chat_view::message_event& event) {
@@ -193,8 +191,6 @@ void game_state::draw() {
 			}
 			renderer.draw_tile_highlights(path_found, { 1.0f, 1.0f, 0.2f, 0.8f });
 		}
-
-
 	}
 	ui.draw();
 	chat.draw();
@@ -206,6 +202,10 @@ void game_state::draw() {
 
 const no::font& game_state::font() const {
 	return ui_font;
+}
+
+no::vector2i game_state::hovered_tile() const {
+	return hovered_pixel.xy;
 }
 
 void game_state::start_dialogue(int target_id) {

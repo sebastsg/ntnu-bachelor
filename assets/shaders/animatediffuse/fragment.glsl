@@ -12,7 +12,7 @@ in vec3 ex_ModelPosition;
 out vec4 out_Color;
 
 void main() {
-	float ambient = 0.6f;
+	float ambient = 0.8f;
 	vec3 normal = normalize(ex_Normal);
 	vec3 light = normalize(uni_LightPosition - ex_ModelPosition);
 	float intensity = max(dot(normal, light), 0.0f);

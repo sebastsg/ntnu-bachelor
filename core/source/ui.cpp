@@ -170,10 +170,10 @@ void input_field::focus() {
 		return;
 	}
 	key_input = state.keyboard().input.listen([this](const keyboard::input_message& event) {
-		if (event.character == (unsigned int)no::key::enter) {
+		if (event.character == (unsigned int)key::enter) {
 			return;
 		}
-		if (event.character == (unsigned int)no::key::backspace) {
+		if (event.character == (unsigned int)key::backspace) {
 			if (!input.empty()) {
 				input = input.substr(0, input.size() - 1);
 			}
