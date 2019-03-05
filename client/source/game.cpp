@@ -117,6 +117,7 @@ game_state::game_state() :
 			world.my_player_id = packet.player.id();
 			ui.listen(world.my_player());
 			variables = packet.variables;
+			quests = packet.quests;
 			break;
 		}
 		case to_client::game::other_player_joined::type:
