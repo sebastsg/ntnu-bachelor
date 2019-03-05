@@ -28,12 +28,12 @@ void chat_view::draw() const {
 }
 
 void chat_view::add(const std::string& author, const std::string& message) {
-	history.emplace_back(game, camera).render(game.font(), author + ": " + message);
+	history.emplace_back(game, camera).render(game.font(), (author.empty() ? "" : (author + ": ")) + message);
 }
 
 void chat_view::enable() {
 	key_press = game.keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		if (event.key == no::key::enter) {
+		if (event.key == no::key::enter && !input.text().empty()) {
 			events.message.emit(input.text());
 			add(game.player_name(), input.text());
 			input.render(game.font(), "");

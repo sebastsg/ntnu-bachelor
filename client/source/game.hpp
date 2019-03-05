@@ -5,6 +5,7 @@
 #include "ui.hpp"
 #include "dialogue_ui.hpp"
 #include "chat_ui.hpp"
+#include "quest.hpp"
 
 #include "client.hpp"
 #include "camera.hpp"
@@ -55,6 +56,7 @@ public:
 	
 	game_world world;
 	game_variable_map variables;
+	quest_instance_list quests;
 
 	game_state();
 	~game_state() override;
@@ -67,6 +69,8 @@ public:
 
 	void start_dialogue(int target_id);
 	void close_dialogue();
+
+	chat_view chat;
 
 private:
 
@@ -81,7 +85,6 @@ private:
 	no::font ui_font;
 	hud_view hud;
 	user_interface_view ui;
-	chat_view chat;
 	dialogue_view* dialogue = nullptr;
 
 	no::perspective_camera::drag_controller dragger;

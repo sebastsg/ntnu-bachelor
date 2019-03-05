@@ -9,6 +9,7 @@ dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera_,
 		open = false;
 		return;
 	}
+	dialogue.quests = &game.quests;
 	dialogue.variables = &game.variables;
 	dialogue.player = player;
 	dialogue.inventory = &player->inventory;

@@ -8,6 +8,7 @@
 #include "character.hpp"
 #include "packets.hpp"
 #include "dialogue.hpp"
+#include "quest.hpp"
 
 constexpr int inventory_container_type = 0;
 constexpr int equipment_container_type = 1;
@@ -42,11 +43,12 @@ private:
 	struct {
 		int id = -1;
 		std::string display_name;
+		game_variable_map variables;
+		quest_instance_list quests;
 	} player;
 
 	struct {
 		int player_instance_id = -1;
-		game_variable_map variables;
 	} object;
 
 	dialogue_tree* dialogue = nullptr;

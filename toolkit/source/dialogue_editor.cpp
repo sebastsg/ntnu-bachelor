@@ -4,9 +4,6 @@
 #include "platform.hpp"
 #include "surface.hpp"
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_platform.h"
-
 #include <filesystem>
 
 static no::vector2f item_uv1(no::vector2f uv, int texture) {
@@ -96,7 +93,7 @@ void dialogue_editor_state::update() {
 	offset -= scrolling;
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	draw_list->ChannelsSplit(2);
-	update_grid(draw_list, offset);
+	imgui_draw_grid(draw_list, offset);
 	draw_list->ChannelsSetCurrent(0);
 	update_node_links(draw_list, offset);
 
@@ -184,23 +181,6 @@ void dialogue_editor_state::update_selected_dialogue() {
 	}
 	ImGui::Separator();
 	ImGui::PopID();
-}
-
-void dialogue_editor_state::update_grid(ImDrawList* draw_list, no::vector2f offset) {
-	const float grid_size = 32.0f;
-	const ImColor line_color{ 200, 200, 200, 40 };
-	no::vector2f win_pos = ImGui::GetCursorScreenPos();
-	no::vector2f canvas_size = ImGui::GetWindowSize();
-	for (float x = std::fmodf(offset.x, grid_size); x < canvas_size.x; x += grid_size) {
-		no::vector2f pos1 = { x + win_pos.x, win_pos.y };
-		no::vector2f pos2 = { x + win_pos.x, canvas_size.y + win_pos.y };
-		draw_list->AddLine(pos1, pos2, line_color);
-	}
-	for (float y = std::fmodf(offset.y, grid_size); y < canvas_size.y; y += grid_size) {
-		no::vector2f pos1 = { win_pos.x, y + win_pos.y };
-		no::vector2f pos2 = { canvas_size.x + win_pos.x, y + win_pos.y };
-		draw_list->AddLine(pos1, pos2, line_color);
-	}
 }
 
 void dialogue_editor_state::update_node_links(ImDrawList* draw_list, no::vector2f offset) {
@@ -410,6 +390,9 @@ void dialogue_editor_state::update_nodes(ImDrawList* draw_list, no::vector2f off
 		case node_type::delete_var: update_node_ui(*(delete_var_node*)node); break;
 		case node_type::random: update_node_ui(*(random_node*)node); break;
 		case node_type::random_condition: update_node_ui(*(random_condition_node*)node); break;
+		case node_type::quest_task_condition: update_node_ui(*(quest_task_condition_node*)node); break;
+		case node_type::quest_done_condition: update_node_ui(*(quest_done_condition_node*)node); break;
+		case node_type::quest_update_task_effect: update_node_ui(*(quest_update_task_effect_node*)node); break;
 		default: break;
 		}
 		ImGui::EndGroup();
@@ -580,6 +563,18 @@ void dialogue_editor_state::update_context_menu(no::vector2f offset) {
 				}
 				ImGui::EndMenu();
 			}
+			if (ImGui::BeginMenu("Quests")) {
+				if (ImGui::MenuItem("Is quest task done")) {
+					node = new quest_task_condition_node();
+				}
+				if (ImGui::MenuItem("Is quest done")) {
+					node = new quest_done_condition_node();
+				}
+				if (ImGui::MenuItem("Update quest progress")) {
+					node = new quest_update_task_effect_node();
+				}
+				ImGui::EndMenu();
+			}
 			if (ImGui::BeginMenu("Special")) {
 				if (ImGui::MenuItem("Random")) {
 					node = new random_node();
@@ -621,6 +616,89 @@ void dialogue_editor_state::update_scrolling() {
 	if (keyboard().is_key_down(no::key::right)) {
 		scrolling.x += scroll_speed;
 	}
+}
+
+bool dialogue_editor_state::item_popup_context(std::string imgui_id, item_instance* out_item) {
+	bool opened = false;
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+	ImGui::PushID(CSTRING("ItemContext" << imgui_id));
+	if (ImGui::BeginPopupContextItem(CSTRING(imgui_id << out_item))) {
+		for (int type_num = 0; type_num < (int)item_type::total_types; type_num++) {
+			ImGui::PushID(CSTRING("Type" << type_num));
+			if (ImGui::BeginMenu(CSTRING((item_type)type_num))) {
+				auto definitions = item_definitions().of_type((item_type)type_num);
+				for (auto& definition : definitions) {
+					ImGui::Image((ImTextureID)ui_texture, { 12.0f }, item_uv1(definition.uv, ui_texture), item_uv2(definition.uv, ui_texture));
+					ImGui::SameLine();
+					if (ImGui::MenuItem(CSTRING(definition.name << "##Item" << definition.id))) {
+						out_item->definition_id = definition.id;
+						out_item->stack = (int)std::min((int)definition.max_stack, (int)out_item->stack);
+						dirty = true;
+					}
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::PopID();
+		}
+		if (ImGui::MenuItem(CSTRING("Nothing##NoItem" << imgui_id))) {
+			out_item->definition_id = -1;
+			out_item->stack = 0;
+		}
+		if (out_item->definition_id != -1) {
+			int stack = (int)out_item->stack;
+			ImGui::PushItemWidth(100.0f);
+			dirty |= ImGui::InputInt("Stack", &stack);
+			ImGui::PopItemWidth();
+			out_item->stack = (int64_t)std::max(1, stack);
+		} else {
+			out_item->stack = 0;
+		}
+		ImGui::EndPopup();
+		opened = true;
+	}
+	ImGui::PopID();
+	ImGui::PopStyleVar();
+	return opened;
+}
+
+bool dialogue_editor_state::select_stat_combo(int* stat) {
+	return ImGui::Combo(CSTRING("Stat##" << stat), stat, "Sword\0Axe\0Spear\0Defense\0Archery\0Stamina\0Fishing\0\0");
+}
+
+bool dialogue_editor_state::select_quest_combo(int* quest_id) {
+	bool changed = false;
+	auto current_quest = quest_definitions().find(*quest_id);
+	if (ImGui::BeginCombo("Quest", current_quest ? current_quest->name.c_str() : "No quest selected")) {
+		for (int i = 0; i < quest_definitions().count(); i++) {
+			auto quest = quest_definitions().find_by_index(i);
+			if (ImGui::Selectable(CSTRING(quest->name))) {
+				*quest_id = quest->id;
+				changed = true;
+			}
+		}
+		ImGui::EndCombo();
+	}
+	return changed;
+}
+
+bool dialogue_editor_state::select_quest_task_combo(int quest_id, int* task_id) {
+	auto quest = quest_definitions().find(quest_id);
+	if (!quest) {
+		return false;
+	}
+	bool changed = false;
+	auto current_task = quest->tasks.find(*task_id);
+	if (ImGui::BeginCombo("Task", current_task ? current_task->name.c_str() : "No task selected")) {
+		for (int i = 0; i < quest->tasks.count(); i++) {
+			auto task = quest->tasks.find_by_index(i);
+			if (ImGui::Selectable(CSTRING(task->name))) {
+				*task_id = task->id;
+				changed = true;
+			}
+		}
+		ImGui::EndCombo();
+	}
+	return changed;
 }
 
 void dialogue_editor_state::update_node_ui(message_node& node) {
@@ -779,49 +857,26 @@ void dialogue_editor_state::update_node_ui(random_condition_node& node) {
 	node.percent = no::clamp(node.percent, 0, 100);
 }
 
-bool dialogue_editor_state::item_popup_context(std::string imgui_id, item_instance* out_item) {
-	bool opened = false;
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
-	ImGui::PushID(CSTRING("ItemContext" << imgui_id));
-	if (ImGui::BeginPopupContextItem(CSTRING(imgui_id << out_item))) {
-		for (int type_num = 0; type_num < (int)item_type::total_types; type_num++) {
-			ImGui::PushID(CSTRING("Type" << type_num));
-			if (ImGui::BeginMenu(CSTRING((item_type)type_num))) {
-				auto definitions = item_definitions().of_type((item_type)type_num);
-				for (auto& definition : definitions) {
-					ImGui::Image((ImTextureID)ui_texture, { 12.0f }, item_uv1(definition.uv, ui_texture), item_uv2(definition.uv, ui_texture));
-					ImGui::SameLine();
-					if (ImGui::MenuItem(CSTRING(definition.name << "##Item" << definition.id))) {
-						out_item->definition_id = definition.id;
-						out_item->stack = (int)std::min((int)definition.max_stack, (int)out_item->stack);
-						dirty = true;
-					}
-				}
-				ImGui::EndMenu();
-			}
-			ImGui::PopID();
-		}
-		if (ImGui::MenuItem(CSTRING("Nothing##NoItem" << imgui_id))) {
-			out_item->definition_id = -1;
-			out_item->stack = 0;
-		}
-		if (out_item->definition_id != -1) {
-			int stack = (int)out_item->stack;
-			ImGui::PushItemWidth(100.0f);
-			dirty |= ImGui::InputInt("Stack", &stack);
-			ImGui::PopItemWidth();
-			out_item->stack = (int64_t)std::max(1, stack);
-		} else {
-			out_item->stack = 0;
-		}
-		ImGui::EndPopup();
-		opened = true;
-	}
-	ImGui::PopID();
-	ImGui::PopStyleVar();
-	return opened;
+void dialogue_editor_state::update_node_ui(quest_task_condition_node& node) {
+	ImGui::PushItemWidth(160.0f);
+	ImGui::Text("Is quest task done?");
+	dirty |= select_quest_combo(&node.quest_id);
+	dirty |= select_quest_task_combo(node.quest_id, &node.task_id);
+	ImGui::PopItemWidth();
 }
 
-bool dialogue_editor_state::select_stat_combo(int* stat) {
-	return ImGui::Combo(CSTRING("Stat##" << stat), stat, "Sword\0Axe\0Spear\0Defense\0Archery\0Stamina\0Fishing\0\0");
+void dialogue_editor_state::update_node_ui(quest_done_condition_node& node) {
+	ImGui::PushItemWidth(160.0f);
+	ImGui::Text("Is quest done?");
+	dirty |= select_quest_combo(&node.quest_id);
+	ImGui::PopItemWidth();
+}
+
+void dialogue_editor_state::update_node_ui(quest_update_task_effect_node& node) {
+	ImGui::PushItemWidth(160.0f);
+	ImGui::Text("Update quest task progress");
+	dirty |= select_quest_combo(&node.quest_id);
+	dirty |= select_quest_task_combo(node.quest_id, &node.task_id);
+	dirty |= ImGui::InputInt("Add progress", &node.task_progress);
+	ImGui::PopItemWidth();
 }

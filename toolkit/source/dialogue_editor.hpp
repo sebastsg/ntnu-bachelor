@@ -49,7 +49,6 @@ private:
 	void update_header();
 	void update_dialogue_list();
 	void update_selected_dialogue();
-	void update_grid(ImDrawList* draw_list, no::vector2f offset);
 	void update_node_links(ImDrawList* draw_list, no::vector2f offset);
 	void update_nodes(ImDrawList* draw_list, no::vector2f offset);
 	void update_context_menu(no::vector2f offset);
@@ -59,6 +58,11 @@ private:
 	void create_new_dialogue();
 	void load_dialogue(int index);
 	void save_dialogue();
+
+	bool item_popup_context(std::string label, item_instance* out_item);
+	bool select_stat_combo(int* stat);
+	bool select_quest_combo(int* quest_id);
+	bool select_quest_task_combo(int quest_id, int* task_id);
 
 	void update_node_ui(message_node& node);
 	void update_node_ui(choice_node& node);
@@ -74,8 +78,8 @@ private:
 	void update_node_ui(delete_var_node& node);
 	void update_node_ui(random_node& node);
 	void update_node_ui(random_condition_node& node);
-
-	bool item_popup_context(std::string label, item_instance* out_item);
-	bool select_stat_combo(int* stat);
+	void update_node_ui(quest_task_condition_node& node);
+	void update_node_ui(quest_done_condition_node& node);
+	void update_node_ui(quest_update_task_effect_node& node);
 
 };

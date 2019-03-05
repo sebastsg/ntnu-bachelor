@@ -1,5 +1,6 @@
 drop table if exists item_ownership;
 drop table if exists variable;
+drop table if exists quest_task;
 drop table if exists player;
 drop table if exists account;
 
@@ -38,4 +39,14 @@ create table variable (
     created_at timestamp    not null default current_timestamp,
     constraint pk_variable           primary key (player_id, scope, var_name),
     constraint fk_variable_player_id foreign key (player_id) references player (id)
+);
+
+create quest_task (
+    player_id  int       not null,
+    quest      int       not null,
+    task       int       not null,
+    progress   int       not null,
+    created_at timestamp not null default current_timestamp,
+    constraint pk_quest_task           primary key (player_id, quest, task),
+    constraint fk_quest_task_player_id foreign key (player_id) references player (id)
 );

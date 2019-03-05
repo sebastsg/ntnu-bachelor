@@ -4,6 +4,7 @@
 #include "item_editor.hpp"
 #include "object_editor.hpp"
 #include "dialogue_editor.hpp"
+#include "quest_editor.hpp"
 #include "window.hpp"
 
 #include "imgui/imgui.h"
@@ -35,6 +36,9 @@ void menu_bar_state::update_menu() {
 		}
 		if (ImGui::MenuItem("Dialogue editor")) {
 			change_state<dialogue_editor_state>();
+		}
+		if (ImGui::MenuItem("Quest editor")) {
+			change_state<quest_editor>();
 		}
 		ImGui::PopItemWidth();
 		ImGui::EndMenu();

@@ -181,7 +181,6 @@ void object_editor::draw() {
 	no::set_polygon_render_mode(no::polygon_render_mode::wireframe);
 	no::transform3 box_transform;
 	box_transform.position = selected.bounding_box.position;
-	//box_transform.position.z -= 2.0f;
 	box_transform.scale = selected.bounding_box.scale;
 	box_transform.rotation.x = 270.0f;
 	box_transform.rotation.z = rotation;

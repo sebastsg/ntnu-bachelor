@@ -29,6 +29,9 @@ static abstract_node* create_dialogue_node(node_type type) {
 	case node_type::delete_var: return new delete_var_node();
 	case node_type::random: return new random_node();
 	case node_type::random_condition: return new random_condition_node();
+	case node_type::quest_task_condition: return new quest_task_condition_node();
+	case node_type::quest_done_condition: return new quest_done_condition_node();
+	case node_type::quest_update_task_effect: return new quest_update_task_effect_node();
 	default: return nullptr;
 	}
 }
@@ -681,4 +684,68 @@ void random_condition_node::write(no::io_stream& stream) {
 void random_condition_node::read(no::io_stream& stream) {
 	abstract_node::read(stream);
 	percent = stream.read<int32_t>();
+}
+
+int quest_task_condition_node::process() {
+	auto quest = tree->quests->find(quest_id);
+	if (quest) {
+		return quest->is_task_done(task_id);
+	}
+	return 0;
+}
+
+void quest_task_condition_node::write(no::io_stream& stream) {
+	abstract_node::write(stream);
+	stream.write<int32_t>(quest_id);
+	stream.write<int32_t>(task_id);
+	stream.write<int32_t>(task_progress);
+}
+
+void quest_task_condition_node::read(no::io_stream& stream) {
+	abstract_node::read(stream);
+	quest_id = stream.read<int32_t>();
+	task_id = stream.read<int32_t>();
+	task_progress = stream.read<int32_t>();
+}
+
+int quest_done_condition_node::process() {
+	auto quest = tree->quests->find(quest_id);
+	if (quest) {
+		return quest->is_done(require_optionals);
+	}
+	return 0;
+}
+
+void quest_done_condition_node::write(no::io_stream& stream) {
+	abstract_node::write(stream);
+	stream.write<int32_t>(quest_id);
+	stream.write<uint8_t>(require_optionals ? 1 : 0);
+}
+
+void quest_done_condition_node::read(no::io_stream& stream) {
+	abstract_node::read(stream);
+	quest_id = stream.read<int32_t>();
+	require_optionals = stream.read<uint8_t>() != 0;
+}
+
+int quest_update_task_effect_node::process() {
+	auto quest = tree->quests->find(quest_id);
+	if (quest) {
+		quest->add_task_progress(task_id, task_progress);
+	}
+	return 0;
+}
+
+void quest_update_task_effect_node::write(no::io_stream& stream) {
+	abstract_node::write(stream);
+	stream.write<int32_t>(quest_id);
+	stream.write<int32_t>(task_id);
+	stream.write<int32_t>(task_progress);
+}
+
+void quest_update_task_effect_node::read(no::io_stream& stream) {
+	abstract_node::read(stream);
+	quest_id = stream.read<int32_t>();
+	task_id = stream.read<int32_t>();
+	task_progress = stream.read<int32_t>();
 }

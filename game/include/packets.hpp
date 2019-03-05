@@ -2,6 +2,7 @@
 
 #include "character.hpp"
 #include "gamevar.hpp"
+#include "quest.hpp"
 #include "io.hpp"
 #include "math.hpp"
 
@@ -22,6 +23,7 @@ Begin(to_client::game, 0)
 Packet1(my_player_info, 0)
 	character_object player;
 	game_variable_map variables;
+	quest_instance_list quests;
 
 Packet(other_player_joined, 1)
 	character_object player;

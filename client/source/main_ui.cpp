@@ -412,13 +412,19 @@ void user_interface_view::create_context() {
 			if (object->tile() != tile) {
 				return;
 			}
-			if (object->definition().dialogue_id != -1) {
+			auto& definition = object->definition();
+			if (definition.dialogue_id != -1) {
 				std::string option_name = "Use ";
-				if (object->definition().type == game_object_type::character) {
+				if (definition.type == game_object_type::character) {
 					option_name = "Talk to ";
 				}
-				context->add_option(option_name + object->definition().name, [this, object] {
-					game.start_dialogue(object->definition().dialogue_id);
+				context->add_option(option_name + definition.name, [&] {
+					game.start_dialogue(definition.dialogue_id);
+				});
+			}
+			if (!definition.description.empty()) {
+				context->add_option("Examine " + definition.name, [&] {
+					game.chat.add("", definition.description);
 				});
 			}
 		});

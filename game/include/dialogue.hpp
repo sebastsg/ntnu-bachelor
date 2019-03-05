@@ -5,6 +5,7 @@
 
 #include "item.hpp"
 #include "gamevar.hpp"
+#include "quest.hpp"
 
 #include <unordered_set>
 
@@ -24,7 +25,10 @@ enum class node_type {
 	var_exists,
 	delete_var,
 	random,
-	random_condition
+	random_condition,
+	quest_task_condition,
+	quest_done_condition,
+	quest_update_task_effect
 };
 
 enum class node_output_type { unknown, variable, single, boolean };
@@ -135,6 +139,7 @@ public:
 	character_object* player = nullptr;
 	item_container* inventory = nullptr;
 	item_container* equipment = nullptr;
+	quest_instance_list* quests = nullptr;
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);
@@ -406,6 +411,56 @@ public:
 
 	node_type type() const override {
 		return node_type::random_condition;
+	}
+
+	int process() override;
+	void write(no::io_stream& stream) override;
+	void read(no::io_stream& stream) override;
+
+};
+
+class quest_task_condition_node : public condition_node {
+public:
+
+	int quest_id = -1;
+	int task_id = -1;
+	int task_progress = 1;
+
+	node_type type() const override {
+		return node_type::quest_task_condition;
+	}
+
+	int process() override;
+	void write(no::io_stream& stream) override;
+	void read(no::io_stream& stream) override;
+
+};
+
+class quest_done_condition_node : public condition_node {
+public:
+
+	int quest_id = -1;
+	bool require_optionals = false;
+
+	node_type type() const override {
+		return node_type::quest_done_condition;
+	}
+
+	int process() override;
+	void write(no::io_stream& stream) override;
+	void read(no::io_stream& stream) override;
+
+};
+
+class quest_update_task_effect_node : public effect_node {
+public:
+
+	int quest_id = -1;
+	int task_id = -1;
+	int task_progress = 1;
+
+	node_type type() const override {
+		return node_type::quest_update_task_effect;
 	}
 
 	int process() override;

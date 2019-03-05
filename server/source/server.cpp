@@ -53,7 +53,8 @@ character_object* server_state::load_player(int client_index) {
 	player->equipment.resize({ 4, 4 });
 	auto& client = clients[client_index];
 	no::vector2i tile = persister.load_player_tile(client.player.id);
-	client.object.variables = persister.load_player_variables(client.player.id);
+	client.player.variables = persister.load_player_variables(client.player.id);
+	client.player.quests = persister.load_player_quests(client.player.id);
 	client.object.player_instance_id = player->id();
 	persister.load_player_items(client.player.id, 0, player->inventory);
 	persister.load_player_items(client.player.id, 1, player->equipment);
@@ -74,7 +75,8 @@ void server_state::save_player(int client_index) {
 		return;
 	}
 	persister.save_player_tile(client.player.id, player->tile());
-	persister.save_player_variables(client.player.id, client.object.variables);
+	persister.save_player_variables(client.player.id, client.player.variables);
+	persister.save_player_quests(client.player.id, client.player.quests);
 	persister.save_player_items(client.player.id, inventory_container_type, player->inventory);
 	persister.save_player_items(client.player.id, equipment_container_type, player->equipment);
 	client.last_saved.start();
@@ -177,7 +179,8 @@ void server_state::on_start_dialogue(int client_index, const to_server::game::st
 	}
 	int dialogue_id = 0; // todo: associate dialogues with objects
 	client.dialogue = new dialogue_tree();
-	client.dialogue->variables = &client.object.variables;
+	client.dialogue->quests = &client.player.quests;
+	client.dialogue->variables = &client.player.variables;
 	client.dialogue->player = (character_object*)player;
 	client.dialogue->inventory = &client.dialogue->player->inventory;
 	client.dialogue->equipment = &client.dialogue->player->equipment;
@@ -222,7 +225,8 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 
 	to_client::game::my_player_info my_info;
 	my_info.player = *player;
-	my_info.variables = clients[client_index].object.variables;
+	my_info.variables = clients[client_index].player.variables;
+	my_info.quests = clients[client_index].player.quests;
 	sockets[client_index].send(no::packet_stream(my_info));
 
 	for (int j = 0; j < max_clients; j++) {

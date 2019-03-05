@@ -196,3 +196,27 @@ void game_persister::save_player_items(int player_id, int container, item_contai
 		});
 	});
 }
+
+quest_instance_list game_persister::load_player_quests(int player_id) {
+	quest_instance_list quests;
+	auto result = database.execute("select * from quest_task where player_id = $1", { std::to_string(player_id) });
+	for (int i = 0; i < result.count(); i++) {
+		auto row = result.row(i);
+		auto quest = quests.find(row.integer("quest"));
+		quest->add_task_progress(row.integer("task"), row.integer("progress"));
+	}
+	return quests;
+}
+
+void game_persister::save_player_quests(int player_id, quest_instance_list& quests) {
+	quests.for_each([&](const quest_instance& quest) {
+		quest.for_each_task([&](const quest_task_instance& task) {
+			database.call("set_quest_task", {
+				std::to_string(player_id),
+				std::to_string(quest.id()),
+				std::to_string(task.task_id),
+				std::to_string(task.progress)
+			});
+		});
+	});
+}

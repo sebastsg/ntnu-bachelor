@@ -5,6 +5,7 @@
 #include "math.hpp"
 #include "gamevar.hpp"
 #include "character.hpp"
+#include "quest.hpp"
 
 #include <string>
 #include <functional>
@@ -93,6 +94,9 @@ public:
 
 	void load_player_items(int player_id, int container, item_container& items);
 	void save_player_items(int player_id, int container, item_container& items);
+
+	quest_instance_list load_player_quests(int player_id);
+	void save_player_quests(int player_id, quest_instance_list& quests);
 
 private:
 
