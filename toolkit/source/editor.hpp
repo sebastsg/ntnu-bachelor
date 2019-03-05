@@ -112,6 +112,8 @@ private:
 	game_object* object = nullptr;
 
 	int mouse_press_id = -1;
+	no::vector2i context_menu_tile;
+	int selected_object_instance_id = -1;
 
 };
 

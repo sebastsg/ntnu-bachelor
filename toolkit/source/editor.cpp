@@ -206,6 +206,42 @@ void object_tool::update_imgui() {
 		object = object_definitions().construct(object_definition_id);
 		editor.renderer.add(object);
 	}
+
+	if (ImGui::IsMouseClicked(1) && !editor.is_mouse_over_ui()) { // right click in world
+		ImGui::OpenPopup("SelectObjectInWorld");
+		context_menu_tile = editor.hovered_tile;
+	}
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+	if (ImGui::BeginPopup("SelectObjectInWorld")) {
+		editor.world.objects.for_each([this](game_object* object) {
+			if (object->tile() != context_menu_tile) {
+				return;
+			}
+			auto& definition = object->definition();
+			if (ImGui::MenuItem(CSTRING(definition.name << " (" << object->id() << ")"))) {
+				selected_object_instance_id = object->id();
+			}
+		});
+		ImGui::EndPopup();
+	}
+	ImGui::PopStyleVar();
+
+	auto object = editor.world.objects.find(selected_object_instance_id);
+	if (object) {
+		ImGui::Separator();
+		ImGui::PushID(CSTRING("SelectedObject"));
+		ImGui::Text(CSTRING("Selected object: " << object->definition().name << " (" << object->id() << ")"));
+		ImGui::Text("Transform");
+		ImGui::InputFloat3("Position", &object->transform.position.x);
+		ImGui::InputFloat3("Scale", &object->transform.scale.x);
+		ImGui::InputFloat3("Rotation", &object->transform.rotation.x);
+		
+		if (ImGui::Button("Delete")) {
+			editor.world.objects.remove(selected_object_instance_id);
+			selected_object_instance_id = -1;
+		}
+		ImGui::PopID();
+	}
 }
 
 void object_tool::draw() {
@@ -333,6 +369,7 @@ void world_editor_state::update_imgui() {
 		world.terrain.shift_down();
 	}
 	ImGui::Separator();
+
 	ImGui::End();
 	no::imgui::end_frame();
 }
@@ -346,7 +383,6 @@ void world_editor_state::draw() {
 	hovered_tile = hovered_pixel.xy + world.terrain.offset();
 
 	renderer.draw();
-	//renderer.draw_tile_highlights({ hovered_tile }, { 1.0f, 0.0f, 0.0f, 0.75f });
 	renderer.draw_tile_highlights(brush_tiles, { 1.0f, 0.0f, 0.0f, 0.7f });
 	tool().draw();
 
