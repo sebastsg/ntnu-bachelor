@@ -41,7 +41,7 @@ create table variable (
     constraint fk_variable_player_id foreign key (player_id) references player (id)
 );
 
-create quest_task (
+create table quest_task (
     player_id  int       not null,
     quest      int       not null,
     task       int       not null,
