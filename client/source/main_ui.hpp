@@ -175,7 +175,7 @@ public:
 	~hit_splat();
 
 	hit_splat& operator=(const hit_splat&) = delete;
-	hit_splat& operator=(hit_splat&&) = default;
+	hit_splat& operator=(hit_splat&&);
 
 	void update();
 	void draw(no::shader_variable color, const no::rectangle& rectangle) const;

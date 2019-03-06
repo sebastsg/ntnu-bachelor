@@ -462,6 +462,19 @@ hit_splat::~hit_splat() {
 	no::delete_texture(background);
 }
 
+hit_splat& hit_splat::operator=(hit_splat&& that) {
+	std::swap(game, that.game);
+	std::swap(transform, that.transform);
+	std::swap(target_id, that.target_id);
+	std::swap(texture, that.texture);
+	std::swap(fade_in, that.fade_in);
+	std::swap(stay, that.stay);
+	std::swap(fade_out, that.fade_out);
+	std::swap(alpha, that.alpha);
+	std::swap(background, that.background);
+	return *this;
+}
+
 void hit_splat::update() {
 	if (fade_in < 1.0f) {
 		fade_in += 0.02f;
