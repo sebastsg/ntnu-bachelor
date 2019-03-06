@@ -15,8 +15,9 @@ int active_combat::hit() {
 	auto attacker = (character_object*)world->objects.find(attacker_id);
 	auto target = (character_object*)world->objects.find(target_id);
 	last_hit.start();
-	int damage = 3;
+	int damage = std::rand() % 4;
 	target->health.add(-damage);
+	std::swap(attacker_id, target_id);
 	return damage;
 }
 
@@ -33,8 +34,7 @@ combat_system::~combat_system() {
 void combat_system::update() {
 	for (auto& combat : combats) {
 		if (combat.can_hit()) {
-			int damage = combat.hit();
-			events.hit.emit(combat.attacker_id, combat.target_id, damage);
+			events.hit.emit(combat.attacker_id, combat.target_id, combat.hit());
 		}
 	}
 }

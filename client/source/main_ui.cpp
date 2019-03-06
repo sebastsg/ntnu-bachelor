@@ -101,13 +101,13 @@ void hit_splat::update(const no::ortho_camera& camera) {
 
 void hit_splat::draw(no::shader_variable color, const no::rectangle& rectangle) const {
 	auto background_transform = transform;
-	background_transform.position -= 4.0f;
-	background_transform.scale.x += 4.0f;
+	background_transform.position -= 2.0f;
+	background_transform.scale.x += 2.0f;
 	no::bind_texture(background);
 	color.set({ 1.0f, 1.0f, 1.0f, alpha * 0.75f });
 	no::draw_shape(rectangle, background_transform);
 	auto shadow_transform = transform;
-	shadow_transform.position += 2.0f;
+	shadow_transform.position += 1.0f;
 	no::bind_texture(texture);
 	color.set({ 0.0f, 0.0f, 0.0f, alpha });
 	no::draw_shape(rectangle, shadow_transform);
@@ -365,7 +365,7 @@ void hud_view::draw(no::shader_variable color, int ui_texture, character_object*
 		} else {
 			no::draw_shape(health_background, transform);
 		}
-		transform.position.x += transform.scale.x + 2.0f;
+		transform.position.x += transform.scale.x + 1.0f;
 	}
 }
 

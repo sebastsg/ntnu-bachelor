@@ -102,6 +102,7 @@ game_state::game_state() :
 			ui.hud.hit_splats.emplace_back(*this, packet.target_id, packet.damage);
 			auto attacker = (character_object*)world.objects.find(packet.attacker_id);
 			auto target = (character_object*)world.objects.find(packet.target_id);
+			target->health.add(-packet.damage);
 			attacker->events.attack.emit();
 			target->events.defend.emit();
 			break;
