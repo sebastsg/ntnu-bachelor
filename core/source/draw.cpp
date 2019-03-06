@@ -276,6 +276,17 @@ void model_instance::reset_animation() {
 	is_new_animation = true;
 }
 
+bool model_instance::will_be_reset() const {
+	auto& animation = source->animations[animation_index];
+	double seconds = (double)animation_timer.milliseconds() * 0.001;
+	double play_duration = seconds * (double)animation.ticks_per_second;
+	return play_duration >= (double)animation.duration;
+}
+
+int model_instance::current_animation() const {
+	return animation_index;
+}
+
 void model_instance::draw() const {
 	get_shader_variable("uni_Bones").set(bones);
 	source->bind();

@@ -39,6 +39,16 @@ Packet(chat_message, 4)
 	std::string author;
 	std::string message;
 
+Packet(combat_hit, 5)
+	int32_t attacker_id = -1;
+	int32_t target_id = -1;
+	int32_t damage = 0;
+
+Packet(character_equips, 6)
+	int32_t instance_id = -1;
+	int32_t item_id = -1;
+	int64_t stack = 0;
+
 End
 
 Begin(to_server::game, 1000)
@@ -54,6 +64,12 @@ Packet(continue_dialogue, 2)
 
 Packet(chat_message, 3)
 	std::string message;
+
+Packet(start_combat, 4)
+	int32_t target_id = -1;
+
+Packet(equip_from_inventory, 5)
+	no::vector2i slot;
 
 End
 

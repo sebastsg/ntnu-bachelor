@@ -164,3 +164,33 @@ private:
 	no::font font;
 
 };
+
+class hit_splat {
+public:
+
+	hit_splat(game_state& game, int target_id, int value);
+	hit_splat(const hit_splat&) = delete;
+	hit_splat(hit_splat&&);
+
+	~hit_splat();
+
+	hit_splat& operator=(const hit_splat&) = delete;
+	hit_splat& operator=(hit_splat&&) = default;
+
+	void update();
+	void draw(no::shader_variable color, const no::rectangle& rectangle) const;
+	bool is_visible() const;
+
+private:
+
+	game_state* game = nullptr;
+	no::transform2 transform;
+	int target_id = -1;
+	int texture = -1;
+	float fade_in = 0.0f;
+	float stay = 0.0f;
+	float fade_out = 0.0f;
+	float alpha = 0.0f;
+	int background = -1;
+
+};

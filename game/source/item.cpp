@@ -71,7 +71,6 @@ std::vector<item_definition> item_definition_list::of_type(item_type type) const
 	return result;
 }
 
-
 int item_definition_list::count() const {
 	return (int)definitions.size();
 }
@@ -103,6 +102,12 @@ item_instance item_container::at(no::vector2i slot) const {
 	if (index < 0 || index >= count()) {
 		return {};
 	}
+	return items[index];
+}
+
+item_instance& item_container::at(no::vector2i slot) {
+	int index = slot.y * size.x + slot.x;
+	ASSERT(index >= 0 && index < count());
 	return items[index];
 }
 

@@ -6,14 +6,6 @@
 
 #include <filesystem>
 
-static no::vector2f item_uv1(no::vector2f uv, int texture) {
-	return uv / no::texture_size(texture).to<float>();
-}
-
-static no::vector2f item_uv2(no::vector2f uv, int texture) {
-	return (uv + 32.0f) / no::texture_size(texture).to<float>();
-}
-
 dialogue_editor_state::dialogue_editor_state() {
 	no::imgui::create(window());
 	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));
@@ -618,89 +610,6 @@ void dialogue_editor_state::update_scrolling() {
 	}
 }
 
-bool dialogue_editor_state::item_popup_context(std::string imgui_id, item_instance* out_item) {
-	bool opened = false;
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
-	ImGui::PushID(CSTRING("ItemContext" << imgui_id));
-	if (ImGui::BeginPopupContextItem(CSTRING(imgui_id << out_item))) {
-		for (int type_num = 0; type_num < (int)item_type::total_types; type_num++) {
-			ImGui::PushID(CSTRING("Type" << type_num));
-			if (ImGui::BeginMenu(CSTRING((item_type)type_num))) {
-				auto definitions = item_definitions().of_type((item_type)type_num);
-				for (auto& definition : definitions) {
-					ImGui::Image((ImTextureID)ui_texture, { 12.0f }, item_uv1(definition.uv, ui_texture), item_uv2(definition.uv, ui_texture));
-					ImGui::SameLine();
-					if (ImGui::MenuItem(CSTRING(definition.name << "##Item" << definition.id))) {
-						out_item->definition_id = definition.id;
-						out_item->stack = (int)std::min((int)definition.max_stack, (int)out_item->stack);
-						dirty = true;
-					}
-				}
-				ImGui::EndMenu();
-			}
-			ImGui::PopID();
-		}
-		if (ImGui::MenuItem(CSTRING("Nothing##NoItem" << imgui_id))) {
-			out_item->definition_id = -1;
-			out_item->stack = 0;
-		}
-		if (out_item->definition_id != -1) {
-			int stack = (int)out_item->stack;
-			ImGui::PushItemWidth(100.0f);
-			dirty |= ImGui::InputInt("Stack", &stack);
-			ImGui::PopItemWidth();
-			out_item->stack = (int64_t)std::max(1, stack);
-		} else {
-			out_item->stack = 0;
-		}
-		ImGui::EndPopup();
-		opened = true;
-	}
-	ImGui::PopID();
-	ImGui::PopStyleVar();
-	return opened;
-}
-
-bool dialogue_editor_state::select_stat_combo(int* stat) {
-	return ImGui::Combo(CSTRING("Stat##" << stat), stat, "Sword\0Axe\0Spear\0Defense\0Archery\0Stamina\0Fishing\0\0");
-}
-
-bool dialogue_editor_state::select_quest_combo(int* quest_id) {
-	bool changed = false;
-	auto current_quest = quest_definitions().find(*quest_id);
-	if (ImGui::BeginCombo("Quest", current_quest ? current_quest->name.c_str() : "No quest selected")) {
-		for (int i = 0; i < quest_definitions().count(); i++) {
-			auto quest = quest_definitions().find_by_index(i);
-			if (ImGui::Selectable(CSTRING(quest->name))) {
-				*quest_id = quest->id;
-				changed = true;
-			}
-		}
-		ImGui::EndCombo();
-	}
-	return changed;
-}
-
-bool dialogue_editor_state::select_quest_task_combo(int quest_id, int* task_id) {
-	auto quest = quest_definitions().find(quest_id);
-	if (!quest) {
-		return false;
-	}
-	bool changed = false;
-	auto current_task = quest->tasks.find(*task_id);
-	if (ImGui::BeginCombo("Task", current_task ? current_task->name.c_str() : "No task selected")) {
-		for (int i = 0; i < quest->tasks.count(); i++) {
-			auto task = quest->tasks.find_by_index(i);
-			if (ImGui::Selectable(CSTRING(task->name))) {
-				*task_id = task->id;
-				changed = true;
-			}
-		}
-		ImGui::EndCombo();
-	}
-	return changed;
-}
-
 void dialogue_editor_state::update_node_ui(message_node& node) {
 	ImGui::Text("Message");
 	dirty |= imgui_input_text_multiline<1024>("##Message", node.text, { 350.0f, ImGui::GetTextLineHeight() * 8.0f });
@@ -715,8 +624,8 @@ void dialogue_editor_state::update_node_ui(has_item_condition_node& node) {
 	ImGui::Text("Has item");
 	auto uv = item_definitions().get(node.item.definition_id).uv;
 	ImGui::ImageButton((ImTextureID)ui_texture, { 32.0f }, item_uv1(uv, ui_texture), item_uv2(uv, ui_texture), 1);
-	bool shown = item_popup_context("##ItemConditionPopup", &node.item);
-	if (shown && can_show_context_menu) {
+	bool shown = item_popup_context("##ItemConditionPopup", &node.item, ui_texture, dirty);
+	if (shown) {
 		can_show_context_menu = false;
 	}
 	ImGui::SameLine();
@@ -745,8 +654,8 @@ void dialogue_editor_state::update_node_ui(inventory_effect_node& node) {
 	node.give = (current == 0);
 	auto uv = item_definitions().get(node.item.definition_id).uv;
 	ImGui::ImageButton((ImTextureID)ui_texture, { 32.0f }, item_uv1(uv, ui_texture), item_uv2(uv, ui_texture), 1);
-	bool shown = item_popup_context("##ItemEffectPopup", &node.item);
-	if (shown && can_show_context_menu) {
+	bool shown = item_popup_context("##ItemEffectPopup", &node.item, ui_texture, dirty);
+	if (shown) {
 		can_show_context_menu = false;
 	}
 	ImGui::SameLine();

@@ -4,6 +4,37 @@
 #include "assets.hpp"
 #include "surface.hpp"
 
+ranged_value::ranged_value(int value, int min, int max) : min_value(min), max_value(max) {
+	ASSERT(max > min);
+	add(value);
+}
+
+int ranged_value::add(int amount) {
+	int old_value = current_value;
+	current_value = std::max(min_value, std::min(max_value, current_value + amount));
+	return current_value - old_value;
+}
+
+float ranged_value::normalized() const {
+	return (float)(current_value - min_value) / (float)(max_value - min_value);
+}
+
+int ranged_value::value() const {
+	return current_value;
+}
+
+void ranged_value::write(no::io_stream& stream) const {
+	stream.write<int32_t>(current_value);
+	stream.write<int32_t>(min_value);
+	stream.write<int32_t>(max_value);
+}
+
+void ranged_value::read(no::io_stream& stream) {
+	current_value = stream.read<int32_t>();
+	min_value = stream.read<int32_t>();
+	max_value = stream.read<int32_t>();
+}
+
 void character_object::update() {
 	move_towards_target();
 }
@@ -12,12 +43,35 @@ void character_object::write(no::io_stream& stream) const {
 	game_object::write(stream);
 	inventory.write(stream);
 	equipment.write(stream);
+	health.write(stream);
 }
 
 void character_object::read(no::io_stream& stream) {
 	game_object::read(stream);
 	inventory.read(stream);
 	equipment.read(stream);
+	health.read(stream);
+}
+
+void character_object::equip_from_inventory(no::vector2i slot) {
+	item_instance item = inventory.at(slot);
+	item.stack = 0;
+	inventory.remove_to(inventory.at(slot).stack, item);
+	events.equip.emit(item);
+	equipment.add_from(item);
+}
+
+void character_object::unequip_to_inventory(no::vector2i slot) {
+	item_instance item = equipment.at(slot);
+	item.stack = 0;
+	equipment.remove_to(equipment.at(slot).stack, item);
+	inventory.add_from(item);
+	events.unequip.emit(item_definitions().get(item.definition_id).slot);
+}
+
+void character_object::equip(item_instance item) {
+	equipment.add_from(item);
+	events.equip.emit(item);
 }
 
 bool character_object::is_moving() const {

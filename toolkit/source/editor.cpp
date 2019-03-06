@@ -5,6 +5,7 @@
 #include "debug.hpp"
 #include "surface.hpp"
 #include "io.hpp"
+#include "character.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
@@ -150,13 +151,14 @@ void tile_flag_tool::erase(no::vector2i tile) {
 }
 
 object_tool::object_tool(world_editor_state& editor) : world_editor_tool(editor) {
-
+	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));
 }
 
 object_tool::~object_tool() {
 	disable();
 	editor.renderer.remove(object);
 	delete object;
+	no::delete_texture(ui_texture);
 }
 
 void object_tool::enable() {
@@ -236,6 +238,32 @@ void object_tool::update_imgui() {
 		ImGui::InputFloat3("Scale", &object->transform.scale.x);
 		ImGui::InputFloat3("Rotation", &object->transform.rotation.x);
 		
+		if (object->definition().type == game_object_type::character) {
+			auto character = (character_object*)object;
+			int health = character->health.value();
+			ImGui::InputInt("Health", &health);
+			if (health != character->health.value()) {
+				character->health = { health, 0, health };
+			}
+			ImGui::Text("Equipment");
+			auto& equipment = character->equipment;
+			bool dirty = false;
+			if (equipment.columns() == 0) {
+				equipment.resize(4);
+			}
+			for (int x = 0; x < equipment.columns(); x++) {
+				for (int y = 0; y < equipment.rows(); y++) {
+					auto& item = equipment.at({ x, y });
+					auto& definition = item_definitions().get(item.definition_id);
+					auto uv = definition.uv;
+					ImGui::Text(CSTRING((equipment_slot)definition.slot << ":"));
+					ImGui::SameLine();
+					ImGui::ImageButton((ImTextureID)ui_texture, { 32.0f }, item_uv1(uv, ui_texture), item_uv2(uv, ui_texture), 1);
+					item_popup_context(CSTRING("##Equip" << x << y << character), &item, ui_texture, dirty);
+				}
+			}
+		}
+
 		if (ImGui::Button("Delete")) {
 			editor.world.objects.remove(selected_object_instance_id);
 			selected_object_instance_id = -1;

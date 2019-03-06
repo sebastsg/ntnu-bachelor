@@ -11,14 +11,25 @@
 
 hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
+	color = no::get_shader_variable("uni_Color");
 	fps_texture = no::create_texture();
 	debug_texture = no::create_texture();
+}
+
+void hud_view::update() {
+	for (int i = 0; i < (int)hit_splats.size(); i++) {
+		hit_splats[i].update();
+		if (!hit_splats[i].is_visible()) {
+			hit_splats.erase(hit_splats.begin() + i);
+			i--;
+		}
+	}
 }
 
 void hud_view::draw() const {
 	no::bind_shader(shader);
 	no::set_shader_view_projection(camera);
-	no::get_shader_variable("uni_Color").set({ 1.0f, 1.0f, 1.0f, 1.0f });
+	color.set({ 1.0f, 1.0f, 1.0f, 1.0f });
 
 	no::transform2 transform;
 	transform.position = { 300.0f, 4.0f };
@@ -32,6 +43,10 @@ void hud_view::draw() const {
 	no::bind_texture(debug_texture);
 	no::set_shader_model(transform);
 	rectangle.draw();
+
+	for (auto& hit_splat : hit_splats) {
+		hit_splat.draw(color, rectangle);
+	}
 }
 
 void hud_view::set_fps(long long fps) {
@@ -132,6 +147,25 @@ game_state::game_state() :
 			chat.add(packet.author, packet.message);
 			break;
 		}
+		case to_client::game::combat_hit::type:
+		{
+			to_client::game::combat_hit packet{ stream };
+			hud.hit_splats.emplace_back(*this, packet.target_id, packet.damage);
+			auto attacker = (character_object*)world.objects.find(packet.attacker_id);
+			auto target = (character_object*)world.objects.find(packet.target_id);
+			attacker->events.attack.emit();
+			target->events.defend.emit();
+			break;
+		}
+		case to_client::game::character_equips::type:
+		{
+			to_client::game::character_equips packet{ stream };
+			auto character = (character_object*)world.objects.find(packet.instance_id);
+			if (character) {
+				character->equip({ packet.item_id, packet.stack });
+			}
+			break;
+		}
 		default:
 			break;
 		}
@@ -163,6 +197,7 @@ void game_state::update() {
 	world.update();
 	renderer.camera.update();
 	hud.set_debug(STRING("Tile: " << world.my_player()->tile()));
+	hud.update();
 	chat.update();
 	if (dialogue) {
 		if (dialogue->is_open()) {
@@ -209,6 +244,10 @@ no::vector2i game_state::hovered_tile() const {
 	return hovered_pixel.xy;
 }
 
+const no::perspective_camera& game_state::world_camera() const {
+	return renderer.camera;
+}
+
 void game_state::start_dialogue(int target_id) {
 	close_dialogue();
 	to_server::game::start_dialogue packet;
@@ -225,4 +264,17 @@ void game_state::start_dialogue(int target_id) {
 void game_state::close_dialogue() {
 	delete dialogue;
 	dialogue = nullptr;
+}
+
+void game_state::start_combat(int target_id) {
+	to_server::game::start_combat packet;
+	packet.target_id = target_id;
+	server().send_async(no::packet_stream(packet));
+}
+
+void game_state::equip_from_inventory(no::vector2i slot) {
+	world.my_player()->equip_from_inventory(slot);
+	to_server::game::equip_from_inventory packet;
+	packet.slot = slot;
+	server().send_async(no::packet_stream(packet));
 }

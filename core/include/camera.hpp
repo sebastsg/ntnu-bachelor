@@ -70,6 +70,8 @@ public:
 	ray unproject(const vector2f& position_in_window) const;
 	ray unproject(const mouse& mouse) const;
 
+	vector2f world_to_screen(const vector3f& position) const;
+
 private:
 	
 	void update_rotation();

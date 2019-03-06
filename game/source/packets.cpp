@@ -44,6 +44,26 @@ Read(chat_message)
 	message = stream.read<std::string>();
 End
 
+Write(combat_hit)
+	stream.write(attacker_id);
+	stream.write(target_id);
+	stream.write(damage);
+Read(combat_hit)
+	attacker_id = stream.read<int32_t>();
+	target_id = stream.read<int32_t>();
+	damage = stream.read<int32_t>();
+End
+
+Write(character_equips)
+	stream.write(instance_id);
+	stream.write(item_id);
+	stream.write(stack);
+Read(character_equips)
+	instance_id = stream.read<int32_t>();
+	item_id = stream.read<int32_t>();
+	stack = stream.read<int64_t>();
+End
+
 }
 
 namespace to_server::game {
@@ -70,6 +90,18 @@ Write(chat_message)
 	stream.write(message);
 Read(chat_message)
 	message = stream.read<std::string>();
+End
+
+Write(start_combat)
+	stream.write(target_id);
+Read(start_combat)
+	target_id = stream.read<int32_t>();
+End
+
+Write(equip_from_inventory)
+	stream.write(slot);
+Read(equip_from_inventory)
+	slot = stream.read<no::vector2i>();
 End
 
 }

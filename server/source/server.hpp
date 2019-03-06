@@ -9,6 +9,7 @@
 #include "packets.hpp"
 #include "dialogue.hpp"
 #include "quest.hpp"
+#include "combat.hpp"
 
 constexpr int inventory_container_type = 0;
 constexpr int equipment_container_type = 1;
@@ -58,7 +59,11 @@ private:
 class server_world : public world_state {
 public:
 
+	combat_system combat;
+
 	server_world(const std::string& name);
+
+	void update() override;
 
 };
 
@@ -86,12 +91,13 @@ private:
 	void on_receive_packet(int client_index, int16_t type, no::io_stream& stream);
 	void on_disconnect(int client_index);
 
-	void send_player_joined(int client_index_joined);
-
 	void on_move_to_tile(int client_index, const to_server::game::move_to_tile& packet);
 	void on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet);
 	void on_continue_dialogue(int client_index, const to_server::game::continue_dialogue& packet);
 	void on_chat_message(int client_index, const to_server::game::chat_message& packet);
+	void on_start_combat(int client_index, const to_server::game::start_combat& packet);
+	void on_equip_from_inventory(int client_index, const to_server::game::equip_from_inventory& packet);
+
 	void on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet);
 	void on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet);
 	void on_version_check(int client_index, const to_server::updates::update_query& packet);
@@ -100,7 +106,8 @@ private:
 	no::socket_container sockets;
 	client_state clients[max_clients];
 
-	std::vector<server_world> worlds;
+	server_world world;
+	int combat_hit_event_id = -1;
 
 	std::vector<client_updater> updaters;
 

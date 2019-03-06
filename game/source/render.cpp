@@ -7,6 +7,8 @@ character_renderer::character_renderer(world_view& world) : world(world) {
 	model.load<no::animated_mesh_vertex>(no::asset_path("models/character.nom"));
 	idle = model.index_of_animation("idle");
 	run = model.index_of_animation("run");
+	attack = model.index_of_animation("swing");
+	defend = model.index_of_animation("shielding");
 	auto items = item_definitions().of_type(item_type::equipment);
 	for (auto& item : items) {
 		equipments[item.id] = new no::model();
@@ -25,17 +27,19 @@ void character_renderer::add(character_object* object) {
 	int i = (int)characters.size();
 	auto& character = characters.emplace_back(object, model);
 	character.equip_event = character.object->events.equip.listen([i, this](const character_object::equip_event& event) {
-		auto& attachment = characters[i].attachments.find(event.slot);
-		if (attachment != characters[i].attachments.end()) {
-			characters[i].model.detach(attachment->second);
-			characters[i].attachments.erase(attachment->first);
-		}
-		if (event.item_id != -1) {
-			auto equipment = equipments.find(event.item_id);
-			if (equipment != equipments.end()) {
-				characters[i].attachments[event.slot] = characters[i].model.attach(*equipment->second, world.mappings);
-			}
-		}
+		on_equip(characters[i], event.item);
+	});
+	character.unequip_event = character.object->events.unequip.listen([i, this](const character_object::unequip_event& event) {
+		on_unequip(characters[i], event.slot);
+	});
+	character.attack_event = character.object->events.attack.listen([i, this] {
+		characters[i].next_state.animation = attack;
+	});
+	character.defend_event = character.object->events.defend.listen([i, this] {
+		characters[i].next_state.animation = defend;
+	});
+	object->equipment.for_each([&](no::vector2i slot, const item_instance& item) {
+		on_equip(characters[i], item);
 	});
 }
 
@@ -43,6 +47,9 @@ void character_renderer::remove(character_object* object) {
 	for (size_t i = 0; i < characters.size(); i++) {
 		if (characters[i].object == object) {
 			object->events.equip.ignore(characters[i].equip_event);
+			object->events.unequip.ignore(characters[i].unequip_event);
+			object->events.attack.ignore(characters[i].attack_event);
+			object->events.defend.ignore(characters[i].defend_event);
 			characters.erase(characters.begin() + i);
 			break;
 		}
@@ -52,14 +59,40 @@ void character_renderer::remove(character_object* object) {
 void character_renderer::draw() {
 	no::bind_texture(player_texture);
 	for (auto& character : characters) {
-		if (character.object->is_moving()) {
-			character.model.start_animation(run);
+		if (character.next_state.animation == -1) {
+			bool will_reset = character.model.will_be_reset();
+			bool one_time_animation = (character.model.current_animation() == attack || character.model.current_animation() == defend);
+			if ((will_reset && one_time_animation) || !one_time_animation) {
+				if (character.object->is_moving()) {
+					character.model.start_animation(run);
+				} else {
+					character.model.start_animation(idle);
+				}
+			}
 		} else {
-			character.model.start_animation(idle);
+			character.model.start_animation(character.next_state.animation);
+			character.next_state = {};
 		}
 		character.model.animate();
 		no::set_shader_model(character.object->transform);
 		character.model.draw();
+	}
+}
+
+void character_renderer::on_equip(object_data& character, const item_instance& item) {
+	auto slot = item_definitions().get(item.definition_id).slot;
+	on_unequip(character, slot);
+	auto equipment = equipments.find(item.definition_id);
+	if (equipment != equipments.end()) {
+		character.attachments[slot] = character.model.attach(*equipment->second, world.mappings);
+	}
+}
+
+void character_renderer::on_unequip(object_data& character, equipment_slot slot) {
+	auto& attachment = character.attachments.find(slot);
+	if (attachment != character.attachments.end()) {
+		character.model.detach(attachment->second);
+		character.attachments.erase(attachment->first);
 	}
 }
 

@@ -5,17 +5,27 @@
 #include "assets.hpp"
 #include "packets.hpp"
 
-server_world::server_world(const std::string& name) {
+server_world::server_world(const std::string& name) : combat(*this) {
 	load(no::asset_path("worlds/" + name + ".ew"));
 }
 
-server_state::server_state() : persister(database) {
-	worlds.emplace_back("main");
-	
+void server_world::update() {
+	world_state::update();
+	combat.update();
+}
+
+server_state::server_state() : persister(database), world("main") {
 	establisher.container = &sockets;
 	establisher.listen("10.0.0.130", 7524); // todo: config file
 	establisher.events.established.listen([this](const no::connection_establisher::established_message& event) {
 		connect((int)event.index);
+	});
+	combat_hit_event_id = world.combat.events.hit.listen([this](const combat_system::hit_event& event) {
+		to_client::game::combat_hit packet;
+		packet.attacker_id = event.attacker_id;
+		packet.target_id = event.target_id;
+		packet.damage = event.damage;
+		sockets.broadcast<false>(no::packet_stream(packet));
 	});
 }
 
@@ -23,6 +33,7 @@ server_state::~server_state() {
 	for (int i = 0; i < max_clients; i++) {
 		save_player(i);
 	}
+	world.combat.events.hit.ignore(combat_hit_event_id);
 }
 
 void server_state::update() {
@@ -40,6 +51,7 @@ void server_state::update() {
 			save_player(i);
 		}
 	}
+	world.update();
 }
 
 void server_state::draw() {
@@ -47,8 +59,8 @@ void server_state::draw() {
 }
 
 character_object* server_state::load_player(int client_index) {
-	auto player = (character_object*)worlds.front().objects.add(1);
-	player->change_id(worlds.front().objects.next_dynamic_id());
+	auto player = (character_object*)world.objects.add(1);
+	player->change_id(world.objects.next_dynamic_id());
 	player->inventory.resize({ 4, 6 });
 	player->equipment.resize({ 4, 4 });
 	auto& client = clients[client_index];
@@ -69,7 +81,7 @@ void server_state::save_player(int client_index) {
 	if (!client.is_connected()) {
 		return;
 	}
-	character_object* player = (character_object*)worlds.front().objects.find(client.object.player_instance_id);
+	character_object* player = (character_object*)world.objects.find(client.object.player_instance_id);
 	if (!player) {
 		WARNING("Failed to save player");
 		return;
@@ -120,6 +132,12 @@ void server_state::on_receive_packet(int client_index, int16_t type, no::io_stre
 	case to_server::game::chat_message::type:
 		on_chat_message(client_index, { stream });
 		break;
+	case to_server::game::start_combat::type:
+		on_start_combat(client_index, { stream });
+		break;
+	case to_server::game::equip_from_inventory::type:
+		on_equip_from_inventory(client_index, { stream });
+		break;
 	case to_server::lobby::login_attempt::type:
 		on_login_attempt(client_index, { stream });
 		break;
@@ -142,16 +160,12 @@ void server_state::on_disconnect(int client_index) {
 	sockets.broadcast<false>(no::packet_stream(disconnection));
 }
 
-void server_state::send_player_joined(int client_index_joined) {
-
-}
-
 void server_state::on_move_to_tile(int client_index, const to_server::game::move_to_tile& packet) {
 	auto& client = clients[client_index];
 	to_client::game::move_to_tile new_packet;
 	new_packet.tile = packet.tile;
 	new_packet.player_instance_id = client.object.player_instance_id;
-	auto player = worlds.front().objects.find(new_packet.player_instance_id);
+	auto player = world.objects.find(new_packet.player_instance_id);
 	if (player) {
 		// todo: pathfinding
 		player->transform.position.x = (float)packet.tile.x;
@@ -167,12 +181,12 @@ void server_state::on_start_dialogue(int client_index, const to_server::game::st
 		WARNING("Player is already in a dialogue");
 		return;
 	}
-	auto target = worlds.front().objects.find(packet.target_instance_id);
+	auto target = world.objects.find(packet.target_instance_id);
 	if (!target) {
 		WARNING("Target " << packet.target_instance_id << " not found.");
 		return;
 	}
-	auto player = worlds.front().objects.find(client.object.player_instance_id);
+	auto player = world.objects.find(client.object.player_instance_id);
 	if (!player) {
 		WARNING("Player not found");
 		return;
@@ -204,6 +218,22 @@ void server_state::on_chat_message(int client_index, const to_server::game::chat
 	sockets.broadcast<true>(no::packet_stream(client_packet), client_index);
 }
 
+void server_state::on_start_combat(int client_index, const to_server::game::start_combat& packet) {
+	world.combat.add(clients[client_index].object.player_instance_id, packet.target_id);
+}
+
+void server_state::on_equip_from_inventory(int client_index, const to_server::game::equip_from_inventory& packet) {
+	auto& client = clients[client_index];
+	auto character = (character_object*)world.objects.find(client.object.player_instance_id);
+	auto item = character->inventory.at(packet.slot);
+	character->equip_from_inventory(packet.slot);
+	to_client::game::character_equips client_packet;
+	client_packet.instance_id = client.object.player_instance_id;
+	client_packet.item_id = item.definition_id;
+	client_packet.stack = item.stack;
+	sockets.broadcast<true>(no::packet_stream(client_packet), client_index);
+}
+
 void server_state::on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet) {
 	auto result = database.execute("select * from player where account_email = $1", { packet.name });
 	if (result.count() != 1) {
@@ -231,7 +261,7 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 
 	for (int j = 0; j < max_clients; j++) {
 		if (clients[j].is_connected() && client_index != j) {
-			auto existing_player = worlds.front().objects.find(clients[j].object.player_instance_id);
+			auto existing_player = world.objects.find(clients[j].object.player_instance_id);
 			if (!existing_player) {
 				WARNING("Player not found");
 				continue;
@@ -243,7 +273,7 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 	}
 
 	to_client::game::other_player_joined other_info;
-	other_info.player = *(character_object*)worlds.front().objects.find(clients[client_index].object.player_instance_id);
+	other_info.player = *(character_object*)world.objects.find(clients[client_index].object.player_instance_id);
 	sockets.broadcast<false>(no::packet_stream(other_info), client_index);
 }
 
@@ -255,4 +285,3 @@ void server_state::on_version_check(int client_index, const to_server::updates::
 	new_packet.version = newest_client_version;
 	sockets[client_index].send(no::packet_stream(new_packet));
 }
-

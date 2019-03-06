@@ -115,8 +115,15 @@ public:
 	world_objects objects;
 
 	world_state();
+	world_state(const world_state&) = delete;
+	world_state(world_state&&) = delete;
+	
+	virtual ~world_state() = default;
 
-	void update();
+	world_state& operator=(const world_state&) = delete;
+	world_state& operator=(world_state&&) = delete;
+
+	virtual void update();
 
 	no::vector2i world_position_to_tile_index(float x, float z) const;
 	no::vector3f tile_index_to_world_position(int x, int z) const;

@@ -146,6 +146,14 @@ ray perspective_camera::unproject(const mouse& mouse) const {
 	return unproject(mouse.position().to<float>());
 }
 
+vector2f perspective_camera::world_to_screen(const vector3f& position) const {
+	glm::vec4 clip = projection() * view() * glm::vec4{ position.x, position.y, position.z, 1.0f };
+	return {
+		(((clip.x / clip.w) + 1.0f) / 2.0f) * size.x,
+		((1.0f - (clip.y / clip.w)) / 2.0f) * size.y
+	};
+}
+
 void perspective_camera::update_rotation() {
 	transform.rotation.x = std::fmodf(transform.rotation.x, 360.0f);
 	transform.rotation.y = std::fmodf(transform.rotation.y, 360.0f);

@@ -59,11 +59,6 @@ private:
 	void load_dialogue(int index);
 	void save_dialogue();
 
-	bool item_popup_context(std::string label, item_instance* out_item);
-	bool select_stat_combo(int* stat);
-	bool select_quest_combo(int* quest_id);
-	bool select_quest_task_combo(int quest_id, int* task_id);
-
 	void update_node_ui(message_node& node);
 	void update_node_ui(choice_node& node);
 	void update_node_ui(has_item_condition_node& node);

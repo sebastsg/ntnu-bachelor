@@ -312,6 +312,8 @@ public:
 	void start_animation(int index);
 	bool can_animate() const;
 	void reset_animation();
+	bool will_be_reset() const;
+	int current_animation() const;
 
 	void draw() const;
 

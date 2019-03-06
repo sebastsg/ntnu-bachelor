@@ -262,11 +262,7 @@ void user_interface_view::listen(character_object* player_) {
 	ASSERT(player_);
 	player = player_;
 	equipment_event = player->events.equip.listen([this](const character_object::equip_event& event) {
-		if (event.item_id == -1) {
-
-		} else {
-
-		}
+		
 	});
 	press_event_id = game.mouse().press.listen([this](const no::mouse::press_message& event) {
 		if (event.button == no::mouse::button::left) {
@@ -393,8 +389,8 @@ void user_interface_view::create_context() {
 
 				});
 				if (definition.type == item_type::equipment) {
-					context->add_option("Equip", [this, definition, item, slot] {
-						player->events.equip.emit({ definition.slot, item.definition_id });
+					context->add_option("Equip", [this, slot] {
+						game.equip_from_inventory(slot);
 					});
 				}
 				context->add_option("Drop", [this, item, slot] {
@@ -413,6 +409,15 @@ void user_interface_view::create_context() {
 				return;
 			}
 			auto& definition = object->definition();
+			if (definition.type == game_object_type::character) {
+				auto character = (character_object*)object;
+				if (character->health.value() > 0) {
+					int target_id = object->id(); // objects array can be resized
+					context->add_option("Attack " + definition.name, [this, target_id] {
+						game.start_combat(target_id);
+					});
+				}
+			}
 			if (definition.dialogue_id != -1) {
 				std::string option_name = "Use ";
 				if (definition.type == game_object_type::character) {
@@ -433,4 +438,67 @@ void user_interface_view::create_context() {
 		delete context;
 		context = nullptr;
 	}
+}
+
+hit_splat::hit_splat(game_state& game, int target_id, int value) : game(&game), target_id(target_id) {
+	texture = no::create_texture(game.font().render(std::to_string(value)));
+	background = no::create_texture({ 2, 2, no::pixel_format::rgba, 0xFF0000FF });
+}
+
+hit_splat::hit_splat(hit_splat&& that) {
+	std::swap(game, that.game);
+	std::swap(transform, that.transform);
+	std::swap(target_id, that.target_id);
+	std::swap(texture, that.texture);
+	std::swap(fade_in, that.fade_in);
+	std::swap(stay, that.stay);
+	std::swap(fade_out, that.fade_out);
+	std::swap(alpha, that.alpha);
+	std::swap(background, that.background);
+}
+
+hit_splat::~hit_splat() {
+	no::delete_texture(texture);
+	no::delete_texture(background);
+}
+
+void hit_splat::update() {
+	if (fade_in < 1.0f) {
+		fade_in += 0.02f;
+		alpha = fade_in;
+	} else if (stay < 1.0f) {
+		stay += 0.04f;
+		alpha = 1.0f;
+	} else if (fade_out < 1.0f) {
+		fade_out += 0.03f;
+		alpha = 1.0f - fade_out;
+	}
+	auto target = game->world.objects.find(target_id);
+	if (target) {
+		no::vector3f position = target->transform.position;
+		position.y += 2.0f; // todo: height of model
+		transform.position = game->world_camera().world_to_screen(position);
+		transform.position.y -= (fade_in * 0.5f + fade_out) * 32.0f;
+	}
+	transform.scale = no::texture_size(texture).to<float>() * 2.0f;
+}
+
+void hit_splat::draw(no::shader_variable color, const no::rectangle& rectangle) const {
+	auto background_transform = transform;
+	background_transform.position -= 4.0f;
+	background_transform.scale.x += 4.0f;
+	no::bind_texture(background);
+	color.set({ 1.0f, 1.0f, 1.0f, alpha * 0.75f });
+	no::draw_shape(rectangle, background_transform);
+	auto shadow_transform = transform;
+	shadow_transform.position += 2.0f;
+	no::bind_texture(texture);
+	color.set({ 0.0f, 0.0f, 0.0f, alpha });
+	no::draw_shape(rectangle, shadow_transform);
+	color.set({ 1.0f, 1.0f, 1.0f, alpha });
+	no::draw_shape(rectangle, transform);
+}
+
+bool hit_splat::is_visible() const {
+	return fade_out < 1.0f;
 }

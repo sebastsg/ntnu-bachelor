@@ -37,11 +37,21 @@ private:
 		character_object* object = nullptr;
 		no::model_instance model;
 		int equip_event = -1;
+		int unequip_event = -1;
+		int attack_event = -1;
+		int defend_event = -1;
 		std::unordered_map<equipment_slot, int> attachments;
+
+		struct {
+			int animation = -1;
+		} next_state;
 
 		object_data() = default;
 		object_data(character_object* object, no::model& model) : object(object), model(model) {}
 	};
+
+	void on_equip(object_data& object, const item_instance& item);
+	void on_unequip(object_data& object, equipment_slot slot);
 
 	no::model model;
 	std::unordered_map<long long, no::model*> equipments;
@@ -50,6 +60,8 @@ private:
 
 	int idle = 0;
 	int run = 0;
+	int attack = 0;
+	int defend = 0;
 
 	std::vector<object_data> characters;
 
