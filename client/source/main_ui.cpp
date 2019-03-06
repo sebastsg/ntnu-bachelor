@@ -4,23 +4,32 @@
 #include "assets.hpp"
 #include "surface.hpp"
 
-constexpr no::vector2f ui_size = 1024.0f;
-constexpr no::vector2f item_size = 32.0f;
-constexpr no::vector2f item_grid = item_size + 2.0f;
-constexpr no::vector4f background_uv = { 391.0f, 48.0f, 184.0f, 352.0f };
-constexpr no::vector2f tab_background_uv = { 128.0f, 24.0f };
-constexpr no::vector2f tab_inventory_uv = { 160.0f, 24.0f };
-constexpr no::vector2f tab_equipment_uv = { 224.0f, 24.0f };
-constexpr no::vector2f tab_quests_uv = { 192.0f, 24.0f };
-constexpr no::vector2f tab_size = 24.0f;
-constexpr no::vector2f hud_uv = { 108.0f, 128.0f };
-constexpr no::vector2f hud_size = { 88.0f, 68.0f };
-constexpr no::vector4f inventory_uv = { 200.0f, 128.0f, 138.0f, 205.0f };
-constexpr no::vector2f inventory_offset = { 23.0f, 130.0f };
+const no::vector2f ui_size = 1024.0f;
+const no::vector2f item_size = 32.0f;
+const no::vector2f item_grid = item_size + 2.0f;
+const no::vector4f background_uv = { 391.0f, 48.0f, 184.0f, 352.0f };
+const no::vector2f tab_background_uv = { 128.0f, 24.0f };
+const no::vector2f tab_inventory_uv = { 160.0f, 24.0f };
+const no::vector2f tab_equipment_uv = { 224.0f, 24.0f };
+const no::vector2f tab_quests_uv = { 192.0f, 24.0f };
+const no::vector2f tab_size = 24.0f;
 
-constexpr no::vector4f context_uv_top = { 121.0f, 58.0f, 191.0f - 121.0f, 67.0f - 58.0f };
-constexpr no::vector4f context_uv_row = { 121.0f, 68.0f, 191.0f - 121.0f, 79.0f - 68.0f };
-constexpr no::vector4f context_uv_bottom = { 121.0f, 111.0f, 191.0f - 121.0f, 116.0f - 111.0f };
+const no::vector2f hud_left_uv = { 8.0f, 128.0f };
+const no::vector2f hud_left_size = { 64.0f, 68.0f };
+const no::vector2f hud_tile_uv = { 72.0f, 128.0f };
+const no::vector2f hud_tile_size = { 16.0f, 68.0f };
+const no::vector2f hud_right_uv = { 88.0f, 128.0f };
+const no::vector2f hud_right_size = { 16.0f, 68.0f };
+const no::vector2f hud_health_background = { 104.0f, 152.0f };
+const no::vector2f hud_health_foreground = { 112.0f, 152.0f };
+const no::vector2f hud_health_size = { 8.0f, 12.0f };
+
+const no::vector4f inventory_uv = { 200.0f, 128.0f, 138.0f, 205.0f };
+const no::vector2f inventory_offset = { 23.0f, 130.0f };
+
+const no::vector4f context_uv_top = { 121.0f, 58.0f, 191.0f - 121.0f, 67.0f - 58.0f };
+const no::vector4f context_uv_row = { 121.0f, 68.0f, 191.0f - 121.0f, 79.0f - 68.0f };
+const no::vector4f context_uv_bottom = { 121.0f, 111.0f, 191.0f - 121.0f, 116.0f - 111.0f };
 
 static void set_ui_uv(no::rectangle& rectangle, no::vector2f uv, no::vector2f uv_size) {
 	rectangle.set_tex_coords(uv.x / ui_size.x, uv.y / ui_size.y, uv_size.x / ui_size.x, uv_size.y / ui_size.y);
@@ -32,6 +41,82 @@ static void set_ui_uv(no::rectangle& rectangle, no::vector4f uv) {
 
 static void set_item_uv(no::rectangle& rectangle, no::vector2f uv) {
 	set_ui_uv(rectangle, uv, item_size);
+}
+
+hit_splat::hit_splat(game_state& game, int target_id, int value) : game(&game), target_id(target_id) {
+	texture = no::create_texture(game.font().render(std::to_string(value)));
+	background = no::create_texture({ 2, 2, no::pixel_format::rgba, 0xFF0000FF });
+}
+
+hit_splat::hit_splat(hit_splat&& that) {
+	std::swap(game, that.game);
+	std::swap(transform, that.transform);
+	std::swap(target_id, that.target_id);
+	std::swap(texture, that.texture);
+	std::swap(fade_in, that.fade_in);
+	std::swap(stay, that.stay);
+	std::swap(fade_out, that.fade_out);
+	std::swap(alpha, that.alpha);
+	std::swap(background, that.background);
+}
+
+hit_splat::~hit_splat() {
+	no::delete_texture(texture);
+	no::delete_texture(background);
+}
+
+hit_splat& hit_splat::operator=(hit_splat&& that) {
+	std::swap(game, that.game);
+	std::swap(transform, that.transform);
+	std::swap(target_id, that.target_id);
+	std::swap(texture, that.texture);
+	std::swap(fade_in, that.fade_in);
+	std::swap(stay, that.stay);
+	std::swap(fade_out, that.fade_out);
+	std::swap(alpha, that.alpha);
+	std::swap(background, that.background);
+	return *this;
+}
+
+void hit_splat::update(const no::ortho_camera& camera) {
+	if (fade_in < 1.0f) {
+		fade_in += 0.02f;
+		alpha = fade_in;
+	} else if (stay < 1.0f) {
+		stay += 0.04f;
+		alpha = 1.0f;
+	} else if (fade_out < 1.0f) {
+		fade_out += 0.03f;
+		alpha = 1.0f - fade_out;
+	}
+	auto target = game->world.objects.find(target_id);
+	if (target) {
+		no::vector3f position = target->transform.position;
+		position.y += 2.0f; // todo: height of model
+		transform.position = game->world_camera().world_to_screen(position) / camera.zoom;
+		transform.position.y -= (fade_in * 0.5f + fade_out) * 32.0f;
+	}
+	transform.scale = no::texture_size(texture).to<float>();
+}
+
+void hit_splat::draw(no::shader_variable color, const no::rectangle& rectangle) const {
+	auto background_transform = transform;
+	background_transform.position -= 4.0f;
+	background_transform.scale.x += 4.0f;
+	no::bind_texture(background);
+	color.set({ 1.0f, 1.0f, 1.0f, alpha * 0.75f });
+	no::draw_shape(rectangle, background_transform);
+	auto shadow_transform = transform;
+	shadow_transform.position += 2.0f;
+	no::bind_texture(texture);
+	color.set({ 0.0f, 0.0f, 0.0f, alpha });
+	no::draw_shape(rectangle, shadow_transform);
+	color.set({ 1.0f, 1.0f, 1.0f, alpha });
+	no::draw_shape(rectangle, transform);
+}
+
+bool hit_splat::is_visible() const {
+	return fade_out < 1.0f;
 }
 
 context_menu::context_menu(const no::ortho_camera& camera_, no::vector2f position_, const no::font& font, no::mouse& mouse_)
@@ -215,6 +300,86 @@ no::vector2i inventory_view::hovered_slot() const {
 	return -1;
 }
 
+hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
+	fps_texture = no::create_texture();
+	debug_texture = no::create_texture();
+	set_ui_uv(hud_left, hud_left_uv, hud_left_size);
+	set_ui_uv(hud_tile, hud_tile_uv, hud_tile_size);
+	set_ui_uv(hud_right, hud_right_uv, hud_right_size);
+	set_ui_uv(health_background, hud_health_background, hud_health_size);
+	set_ui_uv(health_foreground, hud_health_foreground, hud_health_size);
+}
+
+void hud_view::update(const no::ortho_camera& camera) {
+	for (int i = 0; i < (int)hit_splats.size(); i++) {
+		hit_splats[i].update(camera);
+		if (!hit_splats[i].is_visible()) {
+			hit_splats.erase(hit_splats.begin() + i);
+			i--;
+		}
+	}
+}
+
+void hud_view::draw(no::shader_variable color, int ui_texture, character_object* player) const {
+	color.set(no::vector4f{ 1.0f });
+	no::transform2 transform;
+	transform.position = { 300.0f, 4.0f };
+	transform.scale = no::texture_size(fps_texture).to<float>();
+	no::bind_texture(fps_texture);
+	no::set_shader_model(transform);
+	rectangle.bind();
+	rectangle.draw();
+	transform.position.y = 24.0f;
+	transform.scale = no::texture_size(debug_texture).to<float>();
+	no::bind_texture(debug_texture);
+	no::set_shader_model(transform);
+	rectangle.draw();
+
+	for (auto& hit_splat : hit_splats) {
+		hit_splat.draw(color, rectangle);
+	}
+	color.set(no::vector4f{ 1.0f });
+
+	// background
+	no::bind_texture(ui_texture);
+	transform.position = 8.0f;
+	transform.scale = hud_left_size;
+	no::draw_shape(hud_left, transform);
+	transform.position.x += transform.scale.x;
+	transform.scale = hud_tile_size;
+	for (int i = 0; i <= player->health.max() / 2; i++) {
+		no::draw_shape(hud_tile, transform);
+		transform.position.x += transform.scale.x;
+	}
+	transform.scale = hud_right_size;
+	no::draw_shape(hud_right, transform);
+
+	// health
+	transform.scale = hud_health_size;
+	transform.position = 8.0f;
+	transform.position.x += 36.0f;
+	transform.position.y += 32.0f;
+	for (int i = 1; i <= player->health.max(); i++) {
+		if (player->health.value() >= i) {
+			no::draw_shape(health_foreground, transform);
+		} else {
+			no::draw_shape(health_background, transform);
+		}
+		transform.position.x += transform.scale.x + 2.0f;
+	}
+}
+
+void hud_view::set_fps(long long fps) {
+	if (this->fps == fps) {
+		return;
+	}
+	no::load_texture(fps_texture, font.render("FPS: " + std::to_string(fps)));
+}
+
+void hud_view::set_debug(const std::string& debug) {
+	no::load_texture(debug_texture, font.render(debug));
+}
+
 user_interface_view::user_interface_view(game_state& game, world_state& world) 
 	: game(game), world(world), inventory(camera, game, world), font(no::asset_path("fonts/leo.ttf"), 9) {
 	camera.zoom = 2.0f;
@@ -226,7 +391,6 @@ user_interface_view::user_interface_view(game_state& game, world_state& world)
 	set_ui_uv(tabs.inventory, tab_inventory_uv, tab_size);
 	set_ui_uv(tabs.equipment, tab_equipment_uv, tab_size);
 	set_ui_uv(tabs.quests, tab_quests_uv, tab_size);
-	set_ui_uv(hud_background, hud_uv, hud_size);
 }
 
 user_interface_view::~user_interface_view() {
@@ -304,7 +468,9 @@ void user_interface_view::ignore() {
 }
 
 void user_interface_view::update() {
-	
+	hud.set_fps(((const game_state&)game).frame_counter().current_fps());
+	hud.set_debug(STRING("Tile: " << game.world.my_player()->tile()));
+	hud.update(camera);
 }
 
 void user_interface_view::draw() const {
@@ -330,19 +496,10 @@ void user_interface_view::draw() const {
 		break;
 	}
 	draw_tabs();
-	draw_hud();
+	hud.draw(color, ui_texture, player);
 	if (context) {
 		context->draw();
 	}
-}
-
-void user_interface_view::draw_hud() const {
-	no::transform2 transform;
-	transform.position = 8.0f;
-	transform.scale = hud_size;
-	no::set_shader_model(transform);
-	hud_background.bind();
-	hud_background.draw();
 }
 
 void user_interface_view::draw_tabs() const {
@@ -438,80 +595,4 @@ void user_interface_view::create_context() {
 		delete context;
 		context = nullptr;
 	}
-}
-
-hit_splat::hit_splat(game_state& game, int target_id, int value) : game(&game), target_id(target_id) {
-	texture = no::create_texture(game.font().render(std::to_string(value)));
-	background = no::create_texture({ 2, 2, no::pixel_format::rgba, 0xFF0000FF });
-}
-
-hit_splat::hit_splat(hit_splat&& that) {
-	std::swap(game, that.game);
-	std::swap(transform, that.transform);
-	std::swap(target_id, that.target_id);
-	std::swap(texture, that.texture);
-	std::swap(fade_in, that.fade_in);
-	std::swap(stay, that.stay);
-	std::swap(fade_out, that.fade_out);
-	std::swap(alpha, that.alpha);
-	std::swap(background, that.background);
-}
-
-hit_splat::~hit_splat() {
-	no::delete_texture(texture);
-	no::delete_texture(background);
-}
-
-hit_splat& hit_splat::operator=(hit_splat&& that) {
-	std::swap(game, that.game);
-	std::swap(transform, that.transform);
-	std::swap(target_id, that.target_id);
-	std::swap(texture, that.texture);
-	std::swap(fade_in, that.fade_in);
-	std::swap(stay, that.stay);
-	std::swap(fade_out, that.fade_out);
-	std::swap(alpha, that.alpha);
-	std::swap(background, that.background);
-	return *this;
-}
-
-void hit_splat::update() {
-	if (fade_in < 1.0f) {
-		fade_in += 0.02f;
-		alpha = fade_in;
-	} else if (stay < 1.0f) {
-		stay += 0.04f;
-		alpha = 1.0f;
-	} else if (fade_out < 1.0f) {
-		fade_out += 0.03f;
-		alpha = 1.0f - fade_out;
-	}
-	auto target = game->world.objects.find(target_id);
-	if (target) {
-		no::vector3f position = target->transform.position;
-		position.y += 2.0f; // todo: height of model
-		transform.position = game->world_camera().world_to_screen(position);
-		transform.position.y -= (fade_in * 0.5f + fade_out) * 32.0f;
-	}
-	transform.scale = no::texture_size(texture).to<float>() * 2.0f;
-}
-
-void hit_splat::draw(no::shader_variable color, const no::rectangle& rectangle) const {
-	auto background_transform = transform;
-	background_transform.position -= 4.0f;
-	background_transform.scale.x += 4.0f;
-	no::bind_texture(background);
-	color.set({ 1.0f, 1.0f, 1.0f, alpha * 0.75f });
-	no::draw_shape(rectangle, background_transform);
-	auto shadow_transform = transform;
-	shadow_transform.position += 2.0f;
-	no::bind_texture(texture);
-	color.set({ 0.0f, 0.0f, 0.0f, alpha });
-	no::draw_shape(rectangle, shadow_transform);
-	color.set({ 1.0f, 1.0f, 1.0f, alpha });
-	no::draw_shape(rectangle, transform);
-}
-
-bool hit_splat::is_visible() const {
-	return fade_out < 1.0f;
 }

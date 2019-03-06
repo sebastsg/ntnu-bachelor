@@ -23,6 +23,14 @@ int ranged_value::value() const {
 	return current_value;
 }
 
+int ranged_value::min() const {
+	return min_value;
+}
+
+int ranged_value::max() const {
+	return max_value;
+}
+
 void ranged_value::write(no::io_stream& stream) const {
 	stream.write<int32_t>(current_value);
 	stream.write<int32_t>(min_value);

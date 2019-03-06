@@ -9,57 +9,6 @@
 #include "network.hpp"
 #include "pathfinding.hpp"
 
-hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
-	shader = no::create_shader(no::asset_path("shaders/sprite"));
-	color = no::get_shader_variable("uni_Color");
-	fps_texture = no::create_texture();
-	debug_texture = no::create_texture();
-}
-
-void hud_view::update() {
-	for (int i = 0; i < (int)hit_splats.size(); i++) {
-		hit_splats[i].update();
-		if (!hit_splats[i].is_visible()) {
-			hit_splats.erase(hit_splats.begin() + i);
-			i--;
-		}
-	}
-}
-
-void hud_view::draw() const {
-	no::bind_shader(shader);
-	no::set_shader_view_projection(camera);
-	color.set({ 1.0f, 1.0f, 1.0f, 1.0f });
-
-	no::transform2 transform;
-	transform.position = { 300.0f, 4.0f };
-	transform.scale = no::texture_size(fps_texture).to<float>();
-	no::bind_texture(fps_texture);
-	no::set_shader_model(transform);
-	rectangle.bind();
-	rectangle.draw();
-	transform.position.y = 24.0f;
-	transform.scale = no::texture_size(debug_texture).to<float>();
-	no::bind_texture(debug_texture);
-	no::set_shader_model(transform);
-	rectangle.draw();
-
-	for (auto& hit_splat : hit_splats) {
-		hit_splat.draw(color, rectangle);
-	}
-}
-
-void hud_view::set_fps(long long fps) {
-	if (this->fps == fps) {
-		return;
-	}
-	no::load_texture(fps_texture, font.render("FPS: " + std::to_string(fps)));
-}
-
-void hud_view::set_debug(const std::string& debug) {
-	no::load_texture(debug_texture, font.render(debug));
-}
-
 game_world::game_world() {
 	load(no::asset_path("worlds/main.ew"));
 }
@@ -150,7 +99,7 @@ game_state::game_state() :
 		case to_client::game::combat_hit::type:
 		{
 			to_client::game::combat_hit packet{ stream };
-			hud.hit_splats.emplace_back(*this, packet.target_id, packet.damage);
+			ui.hud.hit_splats.emplace_back(*this, packet.target_id, packet.damage);
 			auto attacker = (character_object*)world.objects.find(packet.attacker_id);
 			auto target = (character_object*)world.objects.find(packet.target_id);
 			attacker->events.attack.emit();
@@ -184,7 +133,6 @@ game_state::~game_state() {
 
 void game_state::update() {
 	renderer.camera.size = window().size().to<float>();
-	hud.camera.transform.scale = window().size().to<float>();
 	ui.camera.transform.scale = window().size().to<float>();
 	server().synchronise();
 	if (world.my_player_id == -1) {
@@ -193,11 +141,9 @@ void game_state::update() {
 	follower.update(renderer.camera, world.my_player()->transform);
 	dragger.update(renderer.camera);
 	rotater.update(renderer.camera, keyboard());
-	hud.set_fps(frame_counter().current_fps());
 	world.update();
 	renderer.camera.update();
-	hud.set_debug(STRING("Tile: " << world.my_player()->tile()));
-	hud.update();
+	ui.update();
 	chat.update();
 	if (dialogue) {
 		if (dialogue->is_open()) {
@@ -230,7 +176,6 @@ void game_state::draw() {
 	}
 	ui.draw();
 	chat.draw();
-	hud.draw();
 	if (dialogue) {
 		dialogue->draw();
 	}

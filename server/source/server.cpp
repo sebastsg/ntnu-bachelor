@@ -73,6 +73,7 @@ character_object* server_state::load_player(int client_index) {
 	player->transform.position.x = (float)tile.x;
 	player->transform.position.z = (float)tile.y;
 	player->transform.scale = 0.5f;
+	player->health = { 20, 0, 20 };
 	return player;
 }
 

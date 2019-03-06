@@ -13,6 +13,8 @@ public:
 	int add(int amount);
 	float normalized() const;
 	int value() const;
+	int min() const;
+	int max() const;
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);

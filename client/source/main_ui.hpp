@@ -8,6 +8,36 @@
 
 class game_state;
 
+class hit_splat {
+public:
+
+	hit_splat(game_state& game, int target_id, int value);
+	hit_splat(const hit_splat&) = delete;
+	hit_splat(hit_splat&&);
+
+	~hit_splat();
+
+	hit_splat& operator=(const hit_splat&) = delete;
+	hit_splat& operator=(hit_splat&&);
+
+	void update(const no::ortho_camera& camera);
+	void draw(no::shader_variable color, const no::rectangle& rectangle) const;
+	bool is_visible() const;
+
+private:
+
+	game_state* game = nullptr;
+	no::transform2 transform;
+	int target_id = -1;
+	int texture = -1;
+	float fade_in = 0.0f;
+	float stay = 0.0f;
+	float fade_out = 0.0f;
+	float alpha = 0.0f;
+	int background = -1;
+
+};
+
 class context_menu {
 public:
 
@@ -97,9 +127,39 @@ private:
 
 };
 
+class hud_view {
+public:
+
+	std::vector<hit_splat> hit_splats;
+
+	hud_view();
+
+	void update(const no::ortho_camera& camera);
+	void draw(no::shader_variable color, int ui_texture, character_object* player) const;
+	void set_fps(long long fps);
+	void set_debug(const std::string& debug);
+
+private:
+
+	no::rectangle rectangle;
+	no::font font;
+	int fps_texture = -1;
+	int debug_texture = -1;
+
+	long long fps = 0;
+
+	no::rectangle hud_left;
+	no::rectangle hud_tile;
+	no::rectangle hud_right;
+	no::rectangle health_background;
+	no::rectangle health_foreground;
+
+};
+
 class user_interface_view {
 public:
-	
+
+	hud_view hud;
 	no::ortho_camera camera;
 
 	user_interface_view(game_state& game, world_state& world);
@@ -125,12 +185,9 @@ public:
 
 private:
 
-	no::rectangle hud_background;
 	inventory_view inventory;
 	context_menu* context = nullptr;
 	
-	void draw_hud() const;
-
 	void draw_tabs() const;
 	void draw_tab(int index, const no::rectangle& tab) const;
 
@@ -162,35 +219,5 @@ private:
 	int press_event_id = -1;
 
 	no::font font;
-
-};
-
-class hit_splat {
-public:
-
-	hit_splat(game_state& game, int target_id, int value);
-	hit_splat(const hit_splat&) = delete;
-	hit_splat(hit_splat&&);
-
-	~hit_splat();
-
-	hit_splat& operator=(const hit_splat&) = delete;
-	hit_splat& operator=(hit_splat&&);
-
-	void update();
-	void draw(no::shader_variable color, const no::rectangle& rectangle) const;
-	bool is_visible() const;
-
-private:
-
-	game_state* game = nullptr;
-	no::transform2 transform;
-	int target_id = -1;
-	int texture = -1;
-	float fade_in = 0.0f;
-	float stay = 0.0f;
-	float fade_out = 0.0f;
-	float alpha = 0.0f;
-	int background = -1;
 
 };

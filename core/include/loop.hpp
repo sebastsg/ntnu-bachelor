@@ -23,10 +23,10 @@ void destroy_main_loop();
 
 }
 
-class frame_counter {
+class loop_frame_counter {
 public:
 
-	frame_counter();
+	loop_frame_counter();
 
 	void next_frame();
 
@@ -70,6 +70,7 @@ public:
 	window& window() const;
 	keyboard& keyboard() const;
 	mouse& mouse() const;
+	const loop_frame_counter& frame_counter() const;
 
 	bool has_next_state() const;
 
@@ -82,7 +83,7 @@ protected:
 		});
 	}
 
-	frame_counter& frame_counter();
+	loop_frame_counter& frame_counter();
 	void set_synchronization(draw_synchronization synchronization);
 	long redundant_bind_calls_this_frame();
 

@@ -13,11 +13,11 @@ extern void start();
 
 namespace no {
 
-frame_counter::frame_counter() {
+loop_frame_counter::loop_frame_counter() {
 	timer.start();
 }
 
-void frame_counter::next_frame() {
+void loop_frame_counter::next_frame() {
 	delta_time = (double)(new_time - old_time) / 1000000.0;
 	old_time = new_time;
 	new_time = timer.microseconds();
@@ -30,23 +30,23 @@ void frame_counter::next_frame() {
 	frame_count++;
 }
 
-long long frame_counter::ticks() const {
+long long loop_frame_counter::ticks() const {
 	return timer.microseconds();
 }
 
-long long frame_counter::frames() const {
+long long loop_frame_counter::frames() const {
 	return frame_count;
 }
 
-long long frame_counter::current_fps() const {
+long long loop_frame_counter::current_fps() const {
 	return frames_last_second;
 }
 
-double frame_counter::average_fps() const {
+double loop_frame_counter::average_fps() const {
 	return (double)frame_count / (double)ticks();
 }
 
-double frame_counter::delta() const {
+double loop_frame_counter::delta() const {
 	return delta_time;
 }
 
@@ -54,7 +54,7 @@ static struct {
 
 	int ticks_per_second = 60;
 	int max_update_count = 5;
-	frame_counter frame_counter;
+	loop_frame_counter frame_counter;
 	draw_synchronization synchronization = draw_synchronization::if_updated;
 
 	audio_endpoint* audio = nullptr;
@@ -154,7 +154,11 @@ mouse& window_state::mouse() const {
 	return window().mouse;
 }
 
-frame_counter& window_state::frame_counter() {
+const loop_frame_counter& window_state::frame_counter() const {
+	return loop.frame_counter;
+}
+
+loop_frame_counter& window_state::frame_counter() {
 	return loop.frame_counter;
 }
 

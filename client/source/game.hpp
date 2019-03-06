@@ -13,32 +13,6 @@
 #include "assets.hpp"
 #include "font.hpp"
 
-class hud_view {
-public:
-
-	std::vector<hit_splat> hit_splats;
-	no::ortho_camera camera;
-
-	hud_view();
-
-	void update();
-	void draw() const;
-	void set_fps(long long fps);
-	void set_debug(const std::string& debug);
-
-private:
-
-	no::rectangle rectangle;
-	no::font font;
-	int shader = -1;
-	int fps_texture = -1;
-	int debug_texture = -1;
-	no::shader_variable color;
-	
-	long long fps = 0;
-
-};
-
 class game_world : public world_state {
 public:
 	
@@ -91,7 +65,6 @@ private:
 
 	world_view renderer;
 	no::font ui_font;
-	hud_view hud;
 	user_interface_view ui;
 	dialogue_view* dialogue = nullptr;
 
