@@ -79,7 +79,10 @@ hit_splat& hit_splat::operator=(hit_splat&& that) {
 }
 
 void hit_splat::update(const no::ortho_camera& camera) {
-	if (fade_in < 1.0f) {
+	if (wait < 1.0f) {
+		wait += 0.04f;
+		alpha = 0.0f;
+	} else if (fade_in < 1.0f) {
 		fade_in += 0.02f;
 		alpha = fade_in;
 	} else if (stay < 1.0f) {
@@ -347,7 +350,7 @@ void hud_view::draw(no::shader_variable color, int ui_texture, character_object*
 	no::draw_shape(hud_left, transform);
 	transform.position.x += transform.scale.x;
 	transform.scale = hud_tile_size;
-	for (int i = 0; i <= player->health.max() / 2; i++) {
+	for (int i = 0; i <= player->stat(stat_type::health).real() / 2; i++) {
 		no::draw_shape(hud_tile, transform);
 		transform.position.x += transform.scale.x;
 	}
@@ -359,8 +362,8 @@ void hud_view::draw(no::shader_variable color, int ui_texture, character_object*
 	transform.position = 8.0f;
 	transform.position.x += 36.0f;
 	transform.position.y += 32.0f;
-	for (int i = 1; i <= player->health.max(); i++) {
-		if (player->health.value() >= i) {
+	for (int i = 1; i <= player->stat(stat_type::health).real(); i++) {
+		if (player->stat(stat_type::health).effective() >= i) {
 			no::draw_shape(health_foreground, transform);
 		} else {
 			no::draw_shape(health_background, transform);
@@ -568,7 +571,7 @@ void user_interface_view::create_context() {
 			auto& definition = object->definition();
 			if (definition.type == game_object_type::character) {
 				auto character = (character_object*)object;
-				if (character->health.value() > 0) {
+				if (character->stat(stat_type::health).real() > 0) {
 					int target_id = object->id(); // objects array can be resized
 					context->add_option("Attack " + definition.name, [this, target_id] {
 						game.start_combat(target_id);

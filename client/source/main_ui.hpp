@@ -30,6 +30,7 @@ private:
 	no::transform2 transform;
 	int target_id = -1;
 	int texture = -1;
+	float wait = 0.0f;
 	float fade_in = 0.0f;
 	float stay = 0.0f;
 	float fade_out = 0.0f;

@@ -1,6 +1,7 @@
 drop table if exists item_ownership;
 drop table if exists variable;
 drop table if exists quest_task;
+drop table if exists stat;
 drop table if exists player;
 drop table if exists account;
 
@@ -18,6 +19,14 @@ create table player (
     tile_z        int          not null default 0,
     created_at    timestamp    not null default current_timestamp,
     constraint fk_player_account_email foreign key (account_email) references account (email)
+);
+
+create table stat (
+    player_id  int not null,
+    stat_type  int not null,
+    experience int not null default 0,
+    constraint pk_stat           primary key (player_id, stat_type),
+    constraint fk_stat_player_id foreign key (player_id) references player (id)
 );
 
 create table item_ownership (

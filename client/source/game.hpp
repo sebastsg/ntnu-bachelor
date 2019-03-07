@@ -49,6 +49,7 @@ public:
 	void close_dialogue();
 
 	void start_combat(int target_id);
+	void follow_character(int target_id);
 
 	void equip_from_inventory(no::vector2i slot);
 

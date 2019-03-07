@@ -166,6 +166,9 @@ void object_tool::enable() {
 		if (event.button != no::mouse::button::left || editor.is_mouse_over_ui()) {
 			return;
 		}
+		if (!editor.keyboard().is_key_down(no::key::space)) {
+			return;
+		}
 		auto object = editor.world.objects.add(object_definition_id);
 		if (!object) {
 			WARNING("Failed to add object: " << object_definition_id);
@@ -240,10 +243,11 @@ void object_tool::update_imgui() {
 		
 		if (object->definition().type == game_object_type::character) {
 			auto character = (character_object*)object;
-			int health = character->health.value();
-			ImGui::InputInt("Health", &health);
-			if (health != character->health.value()) {
-				character->health = { health, 0, health };
+			auto& health = character->stat(stat_type::health);
+			int health_level = health.real();
+			ImGui::InputInt("Health", &health_level);
+			if (health_level != health.real()) {
+				health.set_experience(health.experience_for_level(health_level));
 			}
 			ImGui::Text("Equipment");
 			auto& equipment = character->equipment;

@@ -97,6 +97,7 @@ private:
 	void on_chat_message(int client_index, const to_server::game::chat_message& packet);
 	void on_start_combat(int client_index, const to_server::game::start_combat& packet);
 	void on_equip_from_inventory(int client_index, const to_server::game::equip_from_inventory& packet);
+	void on_follow_character(int client_index, const to_server::game::follow_character& packet);
 
 	void on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet);
 	void on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet);

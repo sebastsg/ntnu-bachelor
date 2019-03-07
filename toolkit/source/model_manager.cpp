@@ -600,6 +600,7 @@ void model_manager_state::draw() {
 	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
 	no::get_shader_variable("uni_FogStart").set(100.0f);
 	no::get_shader_variable("uni_FogDistance").set(0.0f);
+	no::get_shader_variable("uni_Color").set(no::vector4f{ 1.0f });
 	if (current_tool == 0) {
 		converter.draw();
 	} else if (current_tool == 1) {

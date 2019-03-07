@@ -13,12 +13,16 @@ client_updater::client_updater(no::io_socket& client) : client(client) {
 client_updater::client_updater(client_updater&& that) : client(that.client) {
 	std::swap(paths, that.paths);
 	std::swap(done, that.done);
+	std::swap(total_files, that.total_files);
+	std::swap(current_file, that.current_file);
 }
 
 client_updater& client_updater::operator=(client_updater&& that) {
 	std::swap(client, that.client);
 	std::swap(paths, that.paths);
 	std::swap(done, that.done);
+	std::swap(total_files, that.total_files);
+	std::swap(current_file, that.current_file);
 	return *this;
 }
 

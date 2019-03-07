@@ -73,7 +73,7 @@ character_object* server_state::load_player(int client_index) {
 	player->transform.position.x = (float)tile.x;
 	player->transform.position.z = (float)tile.y;
 	player->transform.scale = 0.5f;
-	player->health = { 20, 0, 20 };
+	player->stat(stat_type::health).add_experience(player->stat(stat_type::health).experience_for_level(20));
 	return player;
 }
 
@@ -139,6 +139,9 @@ void server_state::on_receive_packet(int client_index, int16_t type, no::io_stre
 	case to_server::game::equip_from_inventory::type:
 		on_equip_from_inventory(client_index, { stream });
 		break;
+	case to_server::game::follow_character::type:
+		on_follow_character(client_index, { stream });
+		break;
 	case to_server::lobby::login_attempt::type:
 		on_login_attempt(client_index, { stream });
 		break;
@@ -174,6 +177,13 @@ void server_state::on_move_to_tile(int client_index, const to_server::game::move
 	}
 	sockets.broadcast<false>(no::packet_stream(new_packet), client_index);
 	sockets[client_index].send(no::packet_stream(new_packet));
+
+	// todo: this should be its own function, just testing now
+	to_client::game::character_follows client_packet;
+	client_packet.follower_id = client.object.player_instance_id;
+	client_packet.target_id = -1;
+	sockets.broadcast<false>(no::packet_stream(client_packet), client_index);
+	sockets[client_index].send(no::packet_stream(client_packet));
 }
 
 void server_state::on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet) {
@@ -235,6 +245,19 @@ void server_state::on_equip_from_inventory(int client_index, const to_server::ga
 	sockets.broadcast<true>(no::packet_stream(client_packet), client_index);
 }
 
+void server_state::on_follow_character(int client_index, const to_server::game::follow_character& packet) {
+	auto& client = clients[client_index];
+	auto follower = (character_object*)world.objects.find(client.object.player_instance_id);
+	if (follower) {
+		follower->follow_object_id = packet.target_id;
+		to_client::game::character_follows client_packet;
+		client_packet.follower_id = follower->id();
+		client_packet.target_id = packet.target_id;
+		sockets.broadcast<true>(no::packet_stream(client_packet), client_index);
+		sockets[client_index].send(no::packet_stream(client_packet));
+	}
+}
+
 void server_state::on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet) {
 	auto result = database.execute("select * from player where account_email = $1", { packet.name });
 	if (result.count() != 1) {
@@ -282,7 +305,7 @@ void server_state::on_version_check(int client_index, const to_server::updates::
 	if (packet.version != newest_client_version || packet.needs_assets) {
 		updaters.emplace_back(sockets[client_index]);
 	}
-	auto new_packet = packet;
-	new_packet.version = newest_client_version;
-	sockets[client_index].send(no::packet_stream(new_packet));
+	to_client::updates::latest_version latest_version;
+	latest_version.version = newest_client_version;
+	sockets[client_index].send(no::packet_stream(latest_version));
 }

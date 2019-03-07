@@ -2,7 +2,7 @@
 
 #include "network.hpp"
 
-constexpr int newest_client_version = 19022000; // yymmddxx
+constexpr int newest_client_version = 19030600; // yymmddxx
 
 class client_updater {
 public:

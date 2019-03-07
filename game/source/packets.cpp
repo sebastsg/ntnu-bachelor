@@ -64,6 +64,14 @@ Read(character_equips)
 	stack = stream.read<int64_t>();
 End
 
+Write(character_follows)
+	stream.write(follower_id);
+	stream.write(target_id);
+Read(character_follows)
+	follower_id = stream.read<int32_t>();
+	target_id = stream.read<int32_t>();
+End
+
 }
 
 namespace to_server::game {
@@ -102,6 +110,12 @@ Write(equip_from_inventory)
 	stream.write(slot);
 Read(equip_from_inventory)
 	slot = stream.read<no::vector2i>();
+End
+
+Write(follow_character)
+	stream.write(target_id);
+Read(follow_character)
+	target_id = stream.read<int32_t>();
 End
 
 }

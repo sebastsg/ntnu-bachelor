@@ -15,7 +15,9 @@ public:
 	active_combat(int attacker_id, int target_id, world_state& world);
 
 	bool can_hit() const;
+	bool is_target_in_range() const;
 	int hit();
+	void next_turn();
 
 private:
 

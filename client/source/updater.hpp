@@ -3,7 +3,7 @@
 #include "client.hpp"
 #include "packets.hpp"
 
-constexpr int client_version = 19022000; // yymmddxx
+constexpr int client_version = 19030600; // yymmddxx
 
 class file_transfer {
 public:

@@ -11,14 +11,28 @@ bool active_combat::can_hit()const {
 	return last_hit.milliseconds() > 1500;
 }
 
+bool active_combat::is_target_in_range() const {
+	auto attacker = (character_object*)world->objects.find(attacker_id);
+	auto target = (character_object*)world->objects.find(target_id);
+	no::vector2i distance = attacker->tile() - target->tile();
+	if (std::abs(distance.x) > 2 || std::abs(distance.y) > 2) {
+		return false;
+	}
+	return true;
+}
+
 int active_combat::hit() {
 	auto attacker = (character_object*)world->objects.find(attacker_id);
 	auto target = (character_object*)world->objects.find(target_id);
 	last_hit.start();
 	int damage = std::rand() % 4;
-	target->health.add(-damage);
-	std::swap(attacker_id, target_id);
+	target->stat(stat_type::health).add_effective(-damage);
+	next_turn();
 	return damage;
+}
+
+void active_combat::next_turn() {
+	std::swap(attacker_id, target_id);
 }
 
 combat_system::combat_system(world_state& world_) : world(world_) {
@@ -34,7 +48,11 @@ combat_system::~combat_system() {
 void combat_system::update() {
 	for (auto& combat : combats) {
 		if (combat.can_hit()) {
-			events.hit.emit(combat.attacker_id, combat.target_id, combat.hit());
+			if (combat.is_target_in_range()) {
+				events.hit.emit(combat.attacker_id, combat.target_id, combat.hit());
+			} else {
+				combat.next_turn();
+			}
 		}
 	}
 }

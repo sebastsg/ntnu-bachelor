@@ -102,9 +102,13 @@ game_state::game_state() :
 			ui.hud.hit_splats.emplace_back(*this, packet.target_id, packet.damage);
 			auto attacker = (character_object*)world.objects.find(packet.attacker_id);
 			auto target = (character_object*)world.objects.find(packet.target_id);
-			target->health.add(-packet.damage);
+			target->stat(stat_type::health).add_effective(-packet.damage);
 			attacker->events.attack.emit();
 			target->events.defend.emit();
+			attacker->follow_object_id = target->id();
+			target->follow_object_id = attacker->id();
+			attacker->follow_distance = 1;
+			target->follow_distance = 2;
 			break;
 		}
 		case to_client::game::character_equips::type:
@@ -113,6 +117,15 @@ game_state::game_state() :
 			auto character = (character_object*)world.objects.find(packet.instance_id);
 			if (character) {
 				character->equip({ packet.item_id, packet.stack });
+			}
+			break;
+		}
+		case to_client::game::character_follows::type:
+		{
+			to_client::game::character_follows packet{ stream };
+			auto follower = (character_object*)world.objects.find(packet.follower_id);
+			if (follower) {
+				follower->follow_object_id = packet.target_id;
 			}
 			break;
 		}
@@ -214,6 +227,13 @@ void game_state::close_dialogue() {
 
 void game_state::start_combat(int target_id) {
 	to_server::game::start_combat packet;
+	packet.target_id = target_id;
+	server().send_async(no::packet_stream(packet));
+	follow_character(target_id);
+}
+
+void game_state::follow_character(int target_id) {
+	to_server::game::follow_character packet;
 	packet.target_id = target_id;
 	server().send_async(no::packet_stream(packet));
 }
