@@ -10,105 +10,99 @@
 #include "io.hpp"
 
 #include <mutex>
-
-#define MAX_IO_SEND_PER_SOCKET     128
-#define MAX_IO_RECEIVE_PER_SOCKET  4
-#define MAX_IO_ACCEPT_PER_SOCKET   4
-
-// 256 KiB
-#define IO_RECEIVE_BUFFER_SIZE     262144
-
-// the buffer size for the local and remote address must be 16 bytes more than the
-// size of the sockaddr structure because the addresses are written in an internal format.
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms737524(v=vs.85).aspx
-#define IO_ACCEPT_ADDR_SIZE_PADDED  (sizeof(SOCKADDR_IN) + 16)
-#define IO_ACCEPT_BUFFER_SIZE       (IO_ACCEPT_ADDR_SIZE_PADDED * 2)
+#include <unordered_set>
 
 #if PLATFORM_WINDOWS
 
 namespace no {
 
-enum class io_completion_port_operation { invalid, send, receive, accept, connect, close };
+enum class iocp_operation { invalid, send, receive, accept, connect, close };
 
-class winsock_io_abstract_data {
+class iocp_data {
 public:
 
-	WSAOVERLAPPED overlapped;
+	WSAOVERLAPPED overlapped = {};
 	DWORD bytes = 0;
 
-	winsock_io_abstract_data();
-	winsock_io_abstract_data(const winsock_io_abstract_data&) = delete;
-	winsock_io_abstract_data(winsock_io_abstract_data&&);
+	iocp_data() = default;
+	iocp_data(const iocp_data&) = delete;
+	iocp_data(iocp_data&&);
 
-	virtual ~winsock_io_abstract_data() = default;
+	virtual ~iocp_data() = default;
 
-	winsock_io_abstract_data& operator=(const winsock_io_abstract_data&) = delete;
-	winsock_io_abstract_data& operator=(winsock_io_abstract_data&&);
+	iocp_data& operator=(const iocp_data&) = delete;
+	iocp_data& operator=(iocp_data&&);
 
-	virtual io_completion_port_operation operation() const;
-
-};
-
-class winsock_io_send_data : public winsock_io_abstract_data {
-public:
-
-	WSABUF buffer = { 0, nullptr };
-	socket_location location;
-
-	winsock_io_send_data();
-	winsock_io_send_data(const winsock_io_send_data&) = delete;
-	winsock_io_send_data(winsock_io_send_data&&);
-
-	winsock_io_send_data& operator=(const winsock_io_send_data&) = delete;
-	winsock_io_send_data& operator=(winsock_io_send_data&&);
-
-	io_completion_port_operation operation() const override;
+	virtual iocp_operation operation() const;
 
 };
 
-class winsock_io_receive_data : public winsock_io_abstract_data {
+class iocp_send_data : public iocp_data {
 public:
 
-	char* data = nullptr;
 	WSABUF buffer = { 0, nullptr };
-	socket_location location;
+	socket_location location = { nullptr };
 
-	winsock_io_receive_data();
-	winsock_io_receive_data(const winsock_io_receive_data&) = delete;
-	winsock_io_receive_data(winsock_io_receive_data&&);
+	iocp_send_data() = default;
+	iocp_send_data(const iocp_send_data&) = delete;
+	iocp_send_data(iocp_send_data&&);
 
-	~winsock_io_receive_data() override;
+	iocp_send_data& operator=(const iocp_send_data&) = delete;
+	iocp_send_data& operator=(iocp_send_data&&);
 
-	winsock_io_receive_data& operator=(const winsock_io_receive_data&) = delete;
-	winsock_io_receive_data& operator=(winsock_io_receive_data&&);
-
-	io_completion_port_operation operation() const override;
+	iocp_operation operation() const override;
 
 };
 
-class winsock_io_accept_data : public winsock_io_abstract_data {
+class iocp_receive_data : public iocp_data {
 public:
 
-	char data[IO_ACCEPT_BUFFER_SIZE];
-	WSABUF buffer = { 0, nullptr };
+	static const size_t buffer_size = 262144; // 256 KiB
+
+	char data[buffer_size];
+	WSABUF buffer = { buffer_size, data };
+	socket_location location = { nullptr };
+
+	iocp_receive_data() = default;
+	iocp_receive_data(const iocp_receive_data&) = delete;
+	iocp_receive_data(iocp_receive_data&&);
+
+	iocp_receive_data& operator=(const iocp_receive_data&) = delete;
+	iocp_receive_data& operator=(iocp_receive_data&&);
+
+	iocp_operation operation() const override;
+
+};
+
+class iocp_accept_data : public iocp_data {
+public:
+
+	// the buffer size for the local and remote address must be 16 bytes more than the
+	// size of the sockaddr structure because the addresses are written in an internal format.
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms737524(v=vs.85).aspx
+	static const size_t padded_addr_size = (sizeof(SOCKADDR_IN) + 16);
+	static const size_t buffer_size = padded_addr_size * 2;
+
+	char data[buffer_size];
+	WSABUF buffer = { buffer_size, data };
 	listener_socket* listener = nullptr;
 	int id = -1;
 
-	winsock_io_accept_data();
-	winsock_io_accept_data(const winsock_io_accept_data&) = delete;
-	winsock_io_accept_data(winsock_io_accept_data&&);
+	iocp_accept_data() = default;
+	iocp_accept_data(const iocp_accept_data&) = delete;
+	iocp_accept_data(iocp_accept_data&&);
 
-	winsock_io_accept_data& operator=(const winsock_io_accept_data&) = delete;
-	winsock_io_accept_data& operator=(winsock_io_accept_data&&);
+	iocp_accept_data& operator=(const iocp_accept_data&) = delete;
+	iocp_accept_data& operator=(iocp_accept_data&&);
 
-	io_completion_port_operation operation() const override;
+	iocp_operation operation() const override;
 
 };
 
-class winsock_io_close_data : public winsock_io_abstract_data {
+class iocp_close_data : public iocp_data {
 public:
 
-	io_completion_port_operation operation() const override;
+	iocp_operation operation() const override;
 
 };
 
@@ -119,9 +113,9 @@ public:
 	std::mutex mutex;
 
 	struct {
-		limited_queue<winsock_io_send_data, MAX_IO_SEND_PER_SOCKET> send;
-		limited_queue<winsock_io_receive_data, MAX_IO_RECEIVE_PER_SOCKET> receive;
-		limited_queue<winsock_io_accept_data, MAX_IO_ACCEPT_PER_SOCKET> accept;
+		std::unordered_set<iocp_send_data*> send;
+		std::unordered_set<iocp_receive_data*> receive;
+		std::unordered_set<iocp_accept_data*> accept;
 	} io;
 
 	winsock_socket();
@@ -149,7 +143,7 @@ public:
 
 	bool listen(listener_socket* socket);
 	bool accept(listener_socket* socket);
-	void get_accept_sockaddrs(winsock_io_accept_data& data);
+	void get_accept_sockaddrs(iocp_accept_data& data);
 	void load_extensions();
 
 private:
@@ -171,26 +165,14 @@ private:
 class winsock_state {
 public:
 
-	// worker threads to process the i/o completion port events
-	std::vector<std::thread> threads;
-
-	WSADATA wsa_data;
-	HANDLE io_port = INVALID_HANDLE_VALUE;
-
-	// stores the status of WSAStartup()
-	// generally it will always be 0, because start_network() will make sure to delete bad winsock states
-	int setup_result = -1;
-
-	// A simple counter to avoid duplicate socket keys for our unordered map below.
-	int socket_id_counter = 0;
-
-	// todo: this shouldn't use a dynamic container 
-	//       a socket can technically change address here while an event has already been posted
-	//       that will result in a crash or undefined behaviour
-	std::unordered_map<int, winsock_socket> sockets;
-
 	winsock_state();
+	winsock_state(const winsock_state&) = delete;
+	winsock_state(winsock_state&&) = delete;
+
 	~winsock_state();
+
+	winsock_state& operator=(const winsock_state&) = delete;
+	winsock_state& operator=(winsock_state&&) = delete;
 
 	int create_socket();
 	bool destroy_socket(int id);
@@ -200,11 +182,27 @@ public:
 
 	void print_error(int error, const std::string& funcsig, int line, int log) const;
 
+	int status() const;
+	HANDLE port_handle() const;
+	winsock_socket& socket(int id);
+
+private:
+
+	WSADATA wsa_data;
+	HANDLE io_port = INVALID_HANDLE_VALUE;
+	int setup_result = -1;
+	int socket_id_counter = 0;
+	std::vector<std::thread> threads;
+
+	// todo: this shouldn't use a dynamic container 
+	//       a socket can technically change address here while an event has already been posted
+	//       that will result in a crash or undefined behaviour
+	std::unordered_map<int, winsock_socket> sockets;
 };
 
 }
 
-std::ostream& operator<<(std::ostream& out, no::io_completion_port_operation operation);
+std::ostream& operator<<(std::ostream& out, no::iocp_operation operation);
 std::ostream& operator<<(std::ostream& out, no::ip_protocol protocol);
 
 #endif
