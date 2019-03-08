@@ -44,12 +44,12 @@ updater_state::updater_state() {
 	to_server::updates::update_query packet;
 	packet.version = client_version;
 	packet.needs_assets = !std::filesystem::is_directory(no::asset_path(""));
-	server().send_async(no::packet_stream(packet));
+	server().send(packet);
 
 	previous_packet.start();
 
-	server().events.receive_packet.listen([this](const no::io_socket::receive_packet_message& event) {
-		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
+	server().events.receive_packet.listen([this](const no::io_stream& packet) {
+		no::io_stream stream{ packet.data(), packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
 		case to_client::updates::latest_version::type:

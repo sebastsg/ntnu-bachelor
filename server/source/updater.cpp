@@ -50,7 +50,7 @@ void client_updater::update() {
 	packet.total_size = (int64_t)stream.write_index();
 	packet.data.resize(packet_size);
 	stream.read(packet.data.data(), packet_size);
-	client.send_async(no::packet_stream(packet));
+	client.send(packet);
 	paths.pop_back();
 }
 

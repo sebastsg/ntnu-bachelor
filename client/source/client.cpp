@@ -7,7 +7,7 @@ static no::io_socket server_socket;
 client_state::player_details_ client_state::player_details;
 
 static void connect_to_server() {
-	if (server_socket.id == -1) {
+	if (server_socket.id() == -1) {
 		// todo: config file
 		server_socket.connect("game.einheri.xyz", 7524);
 	}

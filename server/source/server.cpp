@@ -14,10 +14,9 @@ void server_world::update() {
 	combat.update();
 }
 
-server_state::server_state() : persister(database), world("main") {
-	establisher.container = &sockets;
+server_state::server_state() : establisher{ sockets }, persister(database), world("main") {
 	establisher.listen("10.0.0.130", 7524); // todo: config file
-	establisher.events.established.listen([this](const no::connection_establisher::established_message& event) {
+	establisher.events.establish.listen([this](const no::connection_establisher::establish_event& event) {
 		connect((int)event.index);
 	});
 	combat_hit_event_id = world.combat.events.hit.listen([this](const combat_system::hit_event& event) {
@@ -25,7 +24,7 @@ server_state::server_state() : persister(database), world("main") {
 		packet.attacker_id = event.attacker_id;
 		packet.target_id = event.target_id;
 		packet.damage = event.damage;
-		sockets.broadcast<false>(no::packet_stream(packet));
+		sockets.broadcast(packet);
 	});
 }
 
@@ -108,13 +107,13 @@ void server_state::connect(int index) {
 	}
 	INFO("Connecting client " << index);
 	clients[index] = { true };
-	sockets[index].events.receive_packet.listen([this, index](const no::io_socket::receive_packet_message& event) {
-		no::io_stream stream = { event.packet.data(), event.packet.size(), no::io_stream::construct_by::shallow_copy };
+	sockets[index].events.receive_packet.listen([this, index](const no::io_stream& packet) {
+		no::io_stream stream{ packet.data(), packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		on_receive_packet(index, type, stream);
 	});
-	sockets[index].events.disconnect.listen([this, index](const no::io_socket::disconnect_message& event) {
-		INFO("Client " << index << " has disconnected with status " << event.status);
+	sockets[index].events.disconnect.listen([this, index](const no::socket_close_status& status) {
+		INFO("Client " << index << " has disconnected with status " << status);
 		on_disconnect(index);
 	});
 }
@@ -161,7 +160,7 @@ void server_state::on_disconnect(int client_index) {
 	clients[client_index] = { false };
 	to_client::game::player_disconnected disconnection;
 	disconnection.player_instance_id = clients[client_index].object.player_instance_id;
-	sockets.broadcast<false>(no::packet_stream(disconnection));
+	sockets.broadcast(no::packet_stream(disconnection));
 }
 
 void server_state::on_move_to_tile(int client_index, const to_server::game::move_to_tile& packet) {
@@ -175,15 +174,15 @@ void server_state::on_move_to_tile(int client_index, const to_server::game::move
 		player->transform.position.x = (float)packet.tile.x;
 		player->transform.position.z = (float)packet.tile.y;
 	}
-	sockets.broadcast<false>(no::packet_stream(new_packet), client_index);
-	sockets[client_index].send(no::packet_stream(new_packet));
+	sockets.broadcast(new_packet, client_index);
+	sockets[client_index].send(new_packet);
 
 	// todo: this should be its own function, just testing now
 	to_client::game::character_follows client_packet;
 	client_packet.follower_id = client.object.player_instance_id;
 	client_packet.target_id = -1;
-	sockets.broadcast<false>(no::packet_stream(client_packet), client_index);
-	sockets[client_index].send(no::packet_stream(client_packet));
+	sockets.broadcast(client_packet, client_index);
+	sockets[client_index].send(client_packet);
 }
 
 void server_state::on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet) {
@@ -226,7 +225,7 @@ void server_state::on_chat_message(int client_index, const to_server::game::chat
 	to_client::game::chat_message client_packet;
 	client_packet.author = clients[client_index].player.display_name;
 	client_packet.message = packet.message;
-	sockets.broadcast<true>(no::packet_stream(client_packet), client_index);
+	sockets.broadcast(client_packet, client_index);
 }
 
 void server_state::on_start_combat(int client_index, const to_server::game::start_combat& packet) {
@@ -242,7 +241,7 @@ void server_state::on_equip_from_inventory(int client_index, const to_server::ga
 	client_packet.instance_id = client.object.player_instance_id;
 	client_packet.item_id = item.definition_id;
 	client_packet.stack = item.stack;
-	sockets.broadcast<true>(no::packet_stream(client_packet), client_index);
+	sockets.broadcast(client_packet, client_index);
 }
 
 void server_state::on_follow_character(int client_index, const to_server::game::follow_character& packet) {
@@ -253,8 +252,8 @@ void server_state::on_follow_character(int client_index, const to_server::game::
 		to_client::game::character_follows client_packet;
 		client_packet.follower_id = follower->id();
 		client_packet.target_id = packet.target_id;
-		sockets.broadcast<true>(no::packet_stream(client_packet), client_index);
-		sockets[client_index].send(no::packet_stream(client_packet));
+		sockets.broadcast(client_packet, client_index);
+		sockets[client_index].send(client_packet);
 	}
 }
 
@@ -271,7 +270,7 @@ void server_state::on_login_attempt(int client_index, const to_server::lobby::lo
 	to_client::lobby::login_status client_packet;
 	client_packet.status = 1;
 	client_packet.name = client.player.display_name;
-	sockets[client_index].send(no::packet_stream(client_packet));
+	sockets[client_index].send(client_packet);
 }
 
 void server_state::on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet) {
@@ -281,7 +280,7 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 	my_info.player = *player;
 	my_info.variables = clients[client_index].player.variables;
 	my_info.quests = clients[client_index].player.quests;
-	sockets[client_index].send(no::packet_stream(my_info));
+	sockets[client_index].send(my_info);
 
 	for (int j = 0; j < max_clients; j++) {
 		if (clients[j].is_connected() && client_index != j) {
@@ -292,13 +291,13 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 			}
 			to_client::game::other_player_joined other_info;
 			other_info.player = *(character_object*)existing_player;
-			sockets[client_index].send(no::packet_stream(other_info));
+			sockets[client_index].send(other_info);
 		}
 	}
 
 	to_client::game::other_player_joined other_info;
 	other_info.player = *(character_object*)world.objects.find(clients[client_index].object.player_instance_id);
-	sockets.broadcast<false>(no::packet_stream(other_info), client_index);
+	sockets.broadcast(other_info, client_index);
 }
 
 void server_state::on_version_check(int client_index, const to_server::updates::update_query& packet) {
@@ -307,5 +306,5 @@ void server_state::on_version_check(int client_index, const to_server::updates::
 	}
 	to_client::updates::latest_version latest_version;
 	latest_version.version = newest_client_version;
-	sockets[client_index].send(no::packet_stream(latest_version));
+	sockets[client_index].send(latest_version);
 }

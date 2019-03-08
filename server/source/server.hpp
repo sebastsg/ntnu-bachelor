@@ -103,8 +103,8 @@ private:
 	void on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet);
 	void on_version_check(int client_index, const to_server::updates::update_query& packet);
 
-	no::connection_establisher establisher;
 	no::socket_container sockets;
+	no::connection_establisher establisher;
 	client_state clients[max_clients];
 
 	server_world world;

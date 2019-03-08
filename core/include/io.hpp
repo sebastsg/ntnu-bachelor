@@ -18,7 +18,7 @@ public:
 
 	enum class construct_by { copy, move, shallow_copy };
 
-	io_stream();
+	io_stream() = default;
 	io_stream(size_t size);
 	io_stream(char* data, size_t size, construct_by construction);
 	io_stream(const io_stream&) = delete;

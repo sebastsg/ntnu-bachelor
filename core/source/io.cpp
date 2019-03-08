@@ -29,39 +29,12 @@ std::vector<std::string> entries_in_directory(const std::string& path, entry_inc
 	}
 }
 
-std::vector<std::string> entries_in_directory_recursively(const std::string& path, entry_inclusion inclusion) {
-	std::vector<std::string> files;
-	auto directory = std::filesystem::recursive_directory_iterator(path);
-	for (auto& entry : directory) {
-		if (entry.is_directory() && inclusion == entry_inclusion::only_files) {
-			continue;
-		}
-		if (!entry.is_directory() && inclusion == entry_inclusion::only_directories) {
-			continue;
-		}
-		files.push_back(entry.path().string());
-	}
-	return files;
-}
-
 std::string file_extension_in_path(const std::string& path) {
 	size_t last_dot_index = path.rfind('.');
 	if (last_dot_index == std::string::npos) {
 		return "";
 	}
 	return path.substr(last_dot_index);
-}
-
-io_stream::io_stream() {
-
-}
-
-io_stream::io_stream(io_stream&& that) {
-	std::swap(begin, that.begin);
-	std::swap(end, that.end);
-	std::swap(read_position, that.read_position);
-	std::swap(write_position, that.write_position);
-	std::swap(owner, that.owner);
 }
 
 io_stream::io_stream(size_t size) {
@@ -88,6 +61,14 @@ io_stream::io_stream(char* data, size_t size, construct_by construction) {
 		owner = false;
 		break;
 	}
+}
+
+io_stream::io_stream(io_stream&& that) {
+	std::swap(begin, that.begin);
+	std::swap(end, that.end);
+	std::swap(read_position, that.read_position);
+	std::swap(write_position, that.write_position);
+	std::swap(owner, that.owner);
 }
 
 io_stream::~io_stream() {

@@ -8,9 +8,6 @@
 
 namespace no {
 
-// inet_addr first, then gethostbyname if failed
-// with udp: SO_MAX_MSG_SIZE 
-
 DWORD io_port_thread(HANDLE io_port, int thread_num);
 
 static winsock_state* winsock = nullptr;
@@ -61,22 +58,116 @@ void stop_network() {
 	winsock = nullptr;
 }
 
-winsock_socket::winsock_socket() {
-	reset();
+winsock_io_abstract_data::winsock_io_abstract_data() {
+	SecureZeroMemory((PVOID)&overlapped, sizeof(WSAOVERLAPPED));
 }
 
-winsock_socket::winsock_socket(winsock_socket&& that) {
-	handle = that.handle;
-	hints = that.hints;
-	addr = that.addr;
-	addr_size = that.addr_size;
-	io = std::move(that.io);
-	receive_packetizer = std::move(that.receive_packetizer);
-	received = that.received;
-	is_listening = that.is_listening;
-	AcceptEx = that.AcceptEx;
-	GetAcceptExSockaddrs = that.GetAcceptExSockaddrs;
-	that.reset();
+winsock_io_abstract_data::winsock_io_abstract_data(winsock_io_abstract_data&& that) {
+	std::swap(overlapped, that.overlapped);
+	std::swap(bytes, that.bytes);
+}
+
+winsock_io_abstract_data& winsock_io_abstract_data::operator=(winsock_io_abstract_data&& that) {
+	std::swap(overlapped, that.overlapped);
+	std::swap(bytes, that.bytes);
+	return *this;
+}
+
+io_completion_port_operation winsock_io_abstract_data::operation() const {
+	return io_completion_port_operation::invalid;
+}
+
+winsock_io_send_data::winsock_io_send_data() : location{ nullptr } {
+
+}
+
+winsock_io_send_data::winsock_io_send_data(winsock_io_send_data&& that) : winsock_io_abstract_data{ std::move(that) }, location{ that.location } {
+	std::swap(buffer, that.buffer);
+	std::swap(location, that.location);
+}
+
+winsock_io_send_data& winsock_io_send_data::operator=(winsock_io_send_data&& that) {
+	winsock_io_abstract_data::operator=(std::move(that));
+	std::swap(buffer, that.buffer);
+	std::swap(location, that.location);
+	return *this;
+}
+
+io_completion_port_operation winsock_io_send_data::operation() const {
+	return io_completion_port_operation::send;
+}
+
+winsock_io_receive_data::winsock_io_receive_data() : location{ nullptr } {
+	data = new char[IO_RECEIVE_BUFFER_SIZE];
+	buffer = { IO_RECEIVE_BUFFER_SIZE, data };
+}
+
+winsock_io_receive_data::winsock_io_receive_data(winsock_io_receive_data&& that) : winsock_io_abstract_data{ std::move(that) }, location{ nullptr } {
+	std::swap(data, that.data);
+	std::swap(buffer, that.buffer);
+	std::swap(location, that.location);
+}
+
+winsock_io_receive_data::~winsock_io_receive_data() {
+	delete[] data;
+}
+
+winsock_io_receive_data& winsock_io_receive_data::operator=(winsock_io_receive_data&& that) {
+	winsock_io_abstract_data::operator=(std::move(that));
+	std::swap(data, that.data);
+	std::swap(buffer, that.buffer);
+	std::swap(location, that.location);
+	return *this;
+}
+
+io_completion_port_operation winsock_io_receive_data::operation() const {
+	return io_completion_port_operation::receive;
+}
+
+winsock_io_accept_data::winsock_io_accept_data() {
+	buffer = { IO_ACCEPT_BUFFER_SIZE, data };
+}
+
+winsock_io_accept_data::winsock_io_accept_data(winsock_io_accept_data&& that) : winsock_io_abstract_data{ std::move(that) } {
+	std::swap(data, that.data);
+	std::swap(buffer, that.buffer);
+	std::swap(listener, that.listener);
+	std::swap(id, that.id);
+}
+
+winsock_io_accept_data& winsock_io_accept_data::operator=(winsock_io_accept_data&& that) {
+	winsock_io_abstract_data::operator=(std::move(that));
+	std::swap(data, that.data);
+	std::swap(buffer, that.buffer);
+	std::swap(listener, that.listener);
+	std::swap(id, that.id);
+	return *this;
+}
+
+io_completion_port_operation winsock_io_accept_data::operation() const {
+	return io_completion_port_operation::accept;
+}
+
+io_completion_port_operation winsock_io_close_data::operation() const {
+	return io_completion_port_operation::close;
+}
+
+winsock_socket::winsock_socket() {
+	set_protocol(ip_protocol::tcp);
+	set_address_family(address_family::inet4);
+}
+
+winsock_socket::winsock_socket(winsock_socket&& that) : winsock_socket{} {
+	std::swap(handle, that.handle);
+	std::swap(hints, that.hints);
+	std::swap(addr, that.addr);
+	std::swap(addr_size, that.addr_size);
+	std::swap(io, that.io);
+	std::swap(receive_packetizer, that.receive_packetizer);
+	std::swap(received, that.received);
+	std::swap(listening, that.listening);
+	std::swap(AcceptEx, that.AcceptEx);
+	std::swap(GetAcceptExSockaddrs, that.GetAcceptExSockaddrs);
 }
 
 winsock_socket::~winsock_socket() {
@@ -84,17 +175,16 @@ winsock_socket::~winsock_socket() {
 }
 
 winsock_socket& winsock_socket::operator=(winsock_socket&& that) {
-	handle = that.handle;
-	hints = that.hints;
-	addr = that.addr;
-	addr_size = that.addr_size;
-	io = std::move(that.io);
-	receive_packetizer = std::move(that.receive_packetizer);
-	received = that.received;
-	is_listening = that.is_listening;
-	AcceptEx = that.AcceptEx;
-	GetAcceptExSockaddrs = that.GetAcceptExSockaddrs;
-	that.reset();
+	std::swap(handle, that.handle);
+	std::swap(hints, that.hints);
+	std::swap(addr, that.addr);
+	std::swap(addr_size, that.addr_size);
+	std::swap(io, that.io);
+	std::swap(receive_packetizer, that.receive_packetizer);
+	std::swap(received, that.received);
+	std::swap(listening, that.listening);
+	std::swap(AcceptEx, that.AcceptEx);
+	std::swap(GetAcceptExSockaddrs, that.GetAcceptExSockaddrs);
 	return *this;
 }
 
@@ -107,8 +197,6 @@ bool winsock_socket::open() {
 		WS_PRINT_LAST_ERROR();
 		return false;
 	}
-	// associate the winsock i/o completion port with the socket handle
-	// the 'this' pointer is passed as the completion key
 	CreateIoCompletionPort((HANDLE)handle, winsock->io_port, (ULONG_PTR)this, 0);
 	return true;
 }
@@ -126,6 +214,116 @@ bool winsock_socket::close() {
 	return true;
 }
 
+bool winsock_socket::bind() {
+	open();
+	int success = ::bind(handle, (SOCKADDR*)&addr, addr_size);
+	if (success != 0) {
+		WS_PRINT_LAST_ERROR();
+		return false;
+	}
+	return true;
+}
+
+bool winsock_socket::bind(const std::string& address, int port) {
+	addrinfo* result = nullptr;
+	int status = getaddrinfo(address.c_str(), CSTRING(port), &hints, &result);
+	if (status != 0) {
+		WARNING("Failed to get address info for " << address << ":" << port <<"\nStatus: " << status);
+		return false;
+	}
+	// todo: make ipv6 compatible
+	while (result) {
+		addr = *((SOCKADDR_IN*)result->ai_addr);
+		hints.ai_family = result->ai_family;
+		freeaddrinfo(result);
+		break; // result = result->ai_next;
+	}
+	return bind();
+}
+
+bool winsock_socket::connect() {
+	open();
+	int success = ::connect(handle, (SOCKADDR*)&addr, addr_size);
+	if (success != 0) {
+		WS_PRINT_LAST_ERROR();
+		close();
+		return false;
+	}
+	return true;
+}
+
+bool winsock_socket::connect(const std::string& address, int port) {
+	addrinfo* result = nullptr;
+	int status = getaddrinfo(address.c_str(), CSTRING(port), &hints, &result);
+	if (status != 0) {
+		WARNING("Failed to get address info for " << address << ":" << port <<"\nStatus: " << status);
+		return false;
+	}
+	// todo: make ipv6 compatible
+	while (result) {
+		addr = *((SOCKADDR_IN*)result->ai_addr);
+		hints.ai_family = result->ai_family;
+		freeaddrinfo(result);
+		break; // result = result->ai_next;
+	}
+	return connect();
+}
+
+bool winsock_socket::receive(io_socket& socket) {
+	auto data = io.receive.create();
+	if (!data) {
+		return false;
+	}
+	data->location = { &socket };
+	// unlike regular non-blocking recv(), WSARecv() will complete asynchronously. this can happen before it returns
+	DWORD flags = 0;
+	int result = WSARecv(handle, &data->buffer, 1, &data->bytes, &flags, &data->overlapped, nullptr);
+	if (result == SOCKET_ERROR) {
+		int error = WSAGetLastError();
+		switch (error) {
+		case WSAECONNRESET:
+			socket.sync.disconnect.emplace_and_push(socket_close_status::connection_reset);
+			return false;
+		case WSAENOTSOCK:
+			WS_PRINT_ERROR(error);
+			return false;
+		case WSA_IO_PENDING:
+			return true; // normal error message if the data wasn't received immediately
+		default:
+			WS_PRINT_ERROR(error);
+			return false;
+		}
+	}
+	return true;
+}
+
+bool winsock_socket::send(const io_stream& packet, io_socket& socket) {
+	winsock_io_send_data* data = io.send.create();
+	if (!data) {
+		return false;
+	}
+	data->buffer = { packet.write_index(), packet.data() };
+	data->location = { &socket };
+
+	// unlike regular non-blocking send(), WSASend() will complete the operation asynchronously,
+	// and this might happen before it returns. the data can immediately be discarded on return.
+	int result = WSASend(handle, &data->buffer, 1, &data->bytes, 0, &data->overlapped, nullptr);
+	if (result == SOCKET_ERROR) {
+		int error = WSAGetLastError();
+		switch (error) {
+		case WSAECONNRESET:
+			socket.sync.disconnect.emplace_and_push(socket_close_status::connection_reset);
+			return false;
+		case WSA_IO_PENDING:
+			return true; // normal error message if the data wasn't sent immediately
+		default:
+			WS_PRINT_ERROR(error);
+			return false;
+		}
+	}
+	return true;
+}
+
 bool winsock_socket::set_protocol(ip_protocol protocol) {
 	switch (protocol) {
 	case ip_protocol::tcp:
@@ -137,7 +335,7 @@ bool winsock_socket::set_protocol(ip_protocol protocol) {
 		hints.ai_socktype = SOCK_DGRAM;
 		return true;
 	default:
-		WARNING("Invalid protocol " << (int)protocol);
+		WARNING("Invalid protocol " << protocol);
 		return false;
 	}
 }
@@ -155,7 +353,7 @@ bool winsock_socket::set_address_family(address_family family) {
 	default:
 		hints.ai_family = AF_UNSPEC;
 		addr.sin_family = hints.ai_family;
-		WARNING("Invalid address family " << (int)family);
+		WARNING("Invalid address family " << family);
 		return false;
 	}
 }
@@ -166,7 +364,7 @@ bool winsock_socket::listen(listener_socket* listener) {
 		WS_PRINT_LAST_ERROR();
 		return false;
 	}
-	is_listening = true;
+	listening = true;
 	load_extensions();
 	return accept(listener);
 }
@@ -176,17 +374,17 @@ bool winsock_socket::accept(listener_socket* listener) {
 	if (AcceptEx) {
 		winsock_io_accept_data* data = io.accept.create();
 		if (!data) {
-			return false; // none were available
+			return false;
 		}
 		data->listener = listener;
 
 		// required to open the socket manually
 		data->id = winsock->create_socket();
-		winsock_socket* ws_accepted = &winsock->sockets[data->id];
-		ws_accepted->open();
+		winsock_socket& ws_accepted = winsock->sockets[data->id];
+		ws_accepted.open();
 
 		const DWORD addr_size = IO_ACCEPT_ADDR_SIZE_PADDED;
-		BOOL status = AcceptEx(handle, ws_accepted->handle, data->buffer.buf, 0, addr_size, addr_size, &data->bytes, &data->overlapped);
+		BOOL status = AcceptEx(handle, ws_accepted.handle, data->buffer.buf, 0, addr_size, addr_size, &data->bytes, &data->overlapped);
 		if (status == FALSE) {
 			int error = WSAGetLastError();
 			switch (error) {
@@ -214,7 +412,7 @@ bool winsock_socket::accept(listener_socket* listener) {
 		return false;
 	}
 
-	listener_socket::accept_message accept;
+	listener_socket::accept_event accept;
 	accept.id = winsock->create_socket();
 	winsock->sockets[accept.id].handle = accepted_handle;
 	listener->events.accept.emit(accept);
@@ -222,8 +420,21 @@ bool winsock_socket::accept(listener_socket* listener) {
 	return true;
 }
 
+void winsock_socket::get_accept_sockaddrs(winsock_io_accept_data& data) {
+	if (!GetAcceptExSockaddrs) {
+		return;
+	}
+	// todo: at the moment we aren't doing anything with the result here
+	DWORD addr_size = IO_ACCEPT_ADDR_SIZE_PADDED;
+	sockaddr* local = nullptr;
+	sockaddr* remote = nullptr;
+	int local_size = sizeof(local);
+	int remote_size = sizeof(remote);
+	GetAcceptExSockaddrs(data.buffer.buf, 0, addr_size, addr_size, &local, &local_size, &remote, &remote_size);
+}
+
 void winsock_socket::load_extensions() {
-	if (!is_listening) {
+	if (!listening) {
 		return; // these functions are only available for listening sockets
 	}
 	// AcceptEx
@@ -235,21 +446,6 @@ void winsock_socket::load_extensions() {
 	bytes = 0;
 	guid = WSAID_GETACCEPTEXSOCKADDRS;
 	WSAIoctl(handle, code, &guid, sizeof(guid), &GetAcceptExSockaddrs, sizeof(GetAcceptExSockaddrs), &bytes, nullptr, nullptr);
-}
-
-void winsock_socket::reset() {
-	ZeroMemory(&hints, sizeof(hints));
-	ZeroMemory(&addr, sizeof(addr));
-	addr_size = sizeof(addr);
-	handle = INVALID_SOCKET;
-	io = {};
-	receive_packetizer = {};
-	received = { 0, nullptr };
-	is_listening = false;
-	set_protocol(ip_protocol::tcp);
-	set_address_family(address_family::inet4);
-	AcceptEx = nullptr;
-	GetAcceptExSockaddrs = nullptr;
 }
 
 winsock_state::winsock_state() {
@@ -277,32 +473,19 @@ winsock_state::~winsock_state() {
 }
 
 void winsock_state::create_completion_port() {
-	// how many threads do we want to use for the i/o operations?
+	// note: 0 means to use number of CPUs on the system
+	// note: it's possible to create more threads than specified below,
+	//       but the system will only let max this amount of threads to be run simultaneously.
 	const int thread_count = 2;
-
-	// we want the handle for a new completion port, so we pass in a nullptr as the second argument
-	// we also have nothing to associate with the new port yet, so we pass an invalid handle as the first argument
-	// thread_count = 0 means to use number of CPUs on the system
 	io_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, thread_count);
-	if (io_port == nullptr) {
-		DWORD error = GetLastError();
-		CRITICAL("Failed to create I/O completion port. Error: " << error);
+	if (!io_port) {
+		CRITICAL("Failed to create I/O completion port. Error: " << GetLastError());
 		return;
 	}
-
-	// now that we have io_port, we can now start associating socket handles with the completion port object
-
-	// create the worker threads that will process the I/O completion statuses
-	// we need them to service the completion port when status events are posted to it
-	// it is possible to create more worker threads than specified in thread_count,
-	// but the system will only let thread_count amount of threads to be run at the same time.
-	// this doesn't guarantee that the system runs exactly thread_count threads simultanously
-	// it might be desirable to have more than thread_count threads to let a running thread block for a while
-	// while the idle one takes over
 	for (int i = 0; i < thread_count; i++) {
-		threads.emplace_back(std::thread([this, i]() {
+		threads.emplace_back([this, i] {
 			io_port_thread(io_port, i);
-		}));
+		});
 	}
 }
 
@@ -310,15 +493,14 @@ void winsock_state::destroy_completion_port() {
 	if (io_port == INVALID_HANDLE_VALUE) {
 		return;
 	}
-	// post a close event to all the threads.
 	winsock_io_close_data close_io;
-	for (auto& i : threads) {
+	for (auto& thread : threads) {
 		PostQueuedCompletionStatus(io_port, 0, 0, &close_io.overlapped);
 	}
 	// join all threads - each should receive their own close event
-	for (auto& i : threads) {
-		if (i.joinable()) {
-			i.join();
+	for (auto& thread : threads) {
+		if (thread.joinable()) {
+			thread.join();
 		}
 	}
 	threads.clear();
@@ -347,34 +529,23 @@ void winsock_state::print_error(int error, const std::string& funcsig, int line,
 DWORD io_port_thread(HANDLE io_port, int thread_num) {
 	thread_num++;
 	while (true) {
-		//MESSAGE_X(thread_num, "Getting queued completion status");
-
-		// how many bytes were transferred during this operation
-		DWORD transferred = 0;
-
-		// pointer to the winsock_socket that the operation was completed on
-		ULONG_PTR completion_key = 0;
-
-		// pointer to the overlapped structure inside the winsock_io_data structure
-		LPOVERLAPPED overlapped = nullptr;
+		DWORD transferred = 0; // bytes transferred during this operation
+		ULONG_PTR completion_key = 0; // pointer to winsock_socket the operation was completed on
+		LPOVERLAPPED overlapped = nullptr; // pointer to overlapped structure inside winsock_io_data
 
 		// associate this thread with the completion port as we get the queued completion status
 		BOOL status = GetQueuedCompletionStatus(io_port, &transferred, &completion_key, &overlapped, INFINITE);
-
-		//MESSAGE_X(thread_num, "Status: " << status << ". Key: " << completion_key  << ". Bytes transferred: " << transferred);
-
-		if (status == FALSE) {
+		if (!status) {
 			WARNING_X(thread_num, "An error occurred while reading the completion status.\nError: " << GetLastError());
 			if (!overlapped) {
 				continue;
 			}
-			// if overlapped is not a nullptr, it means we dequeued a completion status
-			// we may then use transferred, completion_key and overlapped for more information
-			// the socket has most likely disconnected if we get here
-			INFO_X(thread_num, "We have the overlapped structure. This means a status event was dequeued.\nA socket has likely disconnected.");
+			// if overlapped is not a nullptr, a completion status was dequeued
+			// this means transferred, completion_key, and overlapped are valid
+			// the socket probably disconnected, but that will be handled below
 		}
 
-		// retrieve the full I/O data structure
+		// retrieve the full i/o data structure
 		// reference for the macro: https://msdn.microsoft.com/en-us/library/aa447688.aspx
 		winsock_io_abstract_data* data = CONTAINING_RECORD(overlapped, winsock_io_abstract_data, overlapped);
 		if (data->operation() == io_completion_port_operation::close) {
@@ -385,51 +556,44 @@ DWORD io_port_thread(HANDLE io_port, int thread_num) {
 			WARNING_X(thread_num, "Invalid completion key for operation " << data->operation());
 			continue;
 		}
-		winsock_socket* ws_socket = (winsock_socket*)completion_key;
+		winsock_socket& ws_socket = *(winsock_socket*)completion_key;
 
-		// prevent multiple occurring receives, sends and accepts happening at once
-		std::lock_guard<std::mutex> lock(ws_socket->mutex);
+		// prevent multiple occurring receives, sends, and accepts from being processed simultaneously
+		std::lock_guard lock{ ws_socket.mutex };
 
 		if (data->operation() == io_completion_port_operation::send) {
 			winsock_io_send_data* send_data = (winsock_io_send_data*)data;
-			io_socket* socket = send_data->location.get();
+			io_socket* socket = send_data->location.find();
 			if (transferred == 0) {
-				MESSAGE_X(thread_num, "Socket disconnected.");
 				socket->sync.disconnect.emplace_and_push(socket_close_status::disconnected_gracefully);
 				continue;
 			}
-			io_socket::send_message send_message;
-			socket->sync.send.move_and_push(std::move(send_message));
-			ws_socket->io.send.destroy(send_data);
+			ws_socket.io.send.destroy(send_data);
 
 		} else if (data->operation() == io_completion_port_operation::receive) {
 			winsock_io_receive_data* receive_data = (winsock_io_receive_data*)data;
-			io_socket* socket = receive_data->location.get();
+			io_socket* socket = receive_data->location.find();
 			if (transferred == 0) {
-				MESSAGE_X(thread_num, "Socket disconnected.");
 				socket->sync.disconnect.emplace_and_push(socket_close_status::disconnected_gracefully);
 				continue;
 			}
-			size_t previous_write = ws_socket->receive_packetizer.write_index();
-			ws_socket->receive_packetizer.write(receive_data->buffer.buf, transferred);
+			size_t previous_write = ws_socket.receive_packetizer.write_index();
+			ws_socket.receive_packetizer.write(receive_data->buffer.buf, transferred);
 
 			// queue the stream events. we can use the packetizer's buffer
-			io_socket::receive_stream_message stream_message;
-			stream_message.packet = { ws_socket->receive_packetizer.data() + previous_write, transferred, io_stream::construct_by::shallow_copy };
-			socket->sync.receive_stream.move_and_push(std::move(stream_message));
+			char* stream_begin = ws_socket.receive_packetizer.data() + previous_write;
+			socket->sync.receive_stream.emplace_and_push(stream_begin, transferred, io_stream::construct_by::shallow_copy);
 
 			// parse the buffer and queue the packet events for every complete packet
 			while (true) {
-				io_stream packet = ws_socket->receive_packetizer.next();
+				io_stream packet = ws_socket.receive_packetizer.next();
 				if (packet.size() == 0) {
 					break;
 				}
-				io_socket::receive_packet_message packet_message;
-				packet_message.packet = { packet.data(), packet.size_left_to_read(), io_stream::construct_by::shallow_copy };
-				socket->sync.receive_packet.move_and_push(std::move(packet_message));
+				socket->sync.receive_packet.emplace_and_push(packet.data(), packet.size_left_to_read(), io_stream::construct_by::shallow_copy);
 			}
 
-			ws_socket->io.receive.destroy(receive_data);
+			ws_socket.io.receive.destroy(receive_data);
 
 			// queue another receive
 			socket->receive();
@@ -437,32 +601,21 @@ DWORD io_port_thread(HANDLE io_port, int thread_num) {
 		} else if (data->operation() == io_completion_port_operation::accept) {
 			winsock_io_accept_data* accept_data = (winsock_io_accept_data*)data;
 			listener_socket* listener = accept_data->listener;
+			ws_socket.get_accept_sockaddrs(*accept_data);
 
-			// get the sockaddrs if we have loaded the required extension
-			if (ws_socket->GetAcceptExSockaddrs) {
-				// todo: at the moment we aren't doing anything with the result here
-				DWORD addr_size = IO_ACCEPT_ADDR_SIZE_PADDED;
-				sockaddr* local = nullptr;
-				sockaddr* remote = nullptr;
-				int local_size = sizeof(local);
-				int remote_size = sizeof(remote);
-				ws_socket->GetAcceptExSockaddrs(accept_data->buffer.buf, 0, addr_size, addr_size, &local, &local_size, &remote, &remote_size);
-			}
-
-			winsock_socket* ws_accept = &winsock->sockets[accept_data->id];
-			SOCKET listen_socket = ws_socket->handle;
-			int opt_status = setsockopt(ws_accept->handle, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&listen_socket, sizeof(listen_socket));
-			if (opt_status != NO_ERROR) {
+			winsock_socket& ws_accept = winsock->sockets[accept_data->id];
+			int status = ws_accept.update_accept_context(ws_socket);
+			if (status != NO_ERROR) {
 				WARNING_X(thread_num, "Failed to update context for accepted socket " << accept_data->id << "(See below)");
 				WS_PRINT_LAST_ERROR();
 				// todo: should the socket be closed here?
 			}
 
-			listener_socket::accept_message accept;
+			listener_socket::accept_event accept;
 			accept.id = accept_data->id;
 			listener->sync.accept.move_and_push(std::move(accept));
 
-			ws_socket->io.accept.destroy(accept_data);
+			ws_socket.io.accept.destroy(accept_data);
 
 			// start accepting a new client
 			listener->accept();
@@ -471,116 +624,44 @@ DWORD io_port_thread(HANDLE io_port, int thread_num) {
 	return 0;
 }
 
-io_socket::io_socket() {
-	location.socket = this;
+int winsock_socket::update_accept_context(const winsock_socket& client) {
+	return setsockopt(handle, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&client.handle, sizeof(client.handle));
 }
 
-io_socket::io_socket(io_socket&& that) : events(std::move(that.events)), sync(std::move(that.sync)) {
-	id = that.id;
-	location = that.location;
-	location.socket = this;
+io_socket::io_socket() : location{ this } {
+
+}
+
+io_socket::io_socket(int id, const socket_location& location) : abstract_socket(id), location(location) {
+
+}
+
+io_socket::io_socket(io_socket&& that) : abstract_socket{ std::move(that) }, location{ this } {
+	std::swap(events, that.events);
+	std::swap(sync, that.sync);
 }
 
 io_socket& io_socket::operator=(io_socket&& that) {
-	id = that.id;
-	location = that.location;
-	location.socket = this;
-	events = std::move(that.events);
-	sync = std::move(that.sync);
+	abstract_socket::operator=(std::move(that));
+	std::swap(events, that.events);
+	std::swap(sync, that.sync);
 	return *this;
 }
 
-bool io_socket::send(const io_stream& packet) {
-	winsock_socket* ws_socket = &winsock->sockets[id];
-	winsock_io_send_data* data = ws_socket->io.send.create();
-	if (!data) {
-		return false; // none were available
-	}
-	// set the buffer to be sent
-	data->buffer.buf = packet.data();
-	data->buffer.len = packet.write_index();
-	// the completion event needs our pointer
-	data->location = location;
-
-	// unlike regular non-blocking send(), the WSASend() function will fully complete the operation asynchronously
-	//
-	// this might happen before the function returns
-	// we are informed with a completion port status event either way when it is done
-	// however, it must be noted that we never know when the client actually receives the data
-	// all we know is that the data has been transferred further down in the network stack, and no longer our business
-	//
-	/// note: the comments above assume the network is functioning, and that there are no resource limitations
-	///       in rare cases, partial sends may occur. we get an error message in the completion port event if so
-	int result = WSASend(ws_socket->handle, &data->buffer, 1, &data->bytes, 0, &data->overlapped, nullptr);
-	if (result == SOCKET_ERROR) {
-		int error = WSAGetLastError();
-		switch (error) {
-		case WSAECONNRESET:
-			sync.disconnect.emplace_and_push(socket_close_status::connection_reset);
-			return false;
-		case WSA_IO_PENDING:
-			return true; // normal error message if the data wasn't sent immediately
-		default:
-			WS_PRINT_ERROR(error);
-			return false;
-		}
-	}
-	return true; // successfully started to send data
-}
-
-bool io_socket::send_async(const io_stream& packet) {
-	if (begin_async()) {
-		bool result = send(packet);
-		end_async();
-		return result;
-	}
-	return false;
+void io_socket::send(io_stream&& packet) {
+	queued_packets.emplace_back(std::move(packet));
 }
 
 bool io_socket::receive() {
-	winsock_socket* ws_socket = &winsock->sockets[id];
-	winsock_io_receive_data* data = ws_socket->io.receive.create();
-	if (!data) {
-		return false; // none were available
-	}
-
-	// the completion event needs our pointer
-	data->location = location;
-
-	// unlike regular non-blocking recv(), the WSARecv() function will fully complete the operation asynchronously
-	// this might happen before the function returns
-	// we will be informed with a completion port status event either way when it is done
-	DWORD flags = 0;
-	int result = WSARecv(ws_socket->handle, &data->buffer, 1, &data->bytes, &flags, &data->overlapped, nullptr);
-	if (result == SOCKET_ERROR) {
-		int error = WSAGetLastError();
-		switch (error) {
-		case WSAECONNRESET:
-			sync.disconnect.emplace_and_push(socket_close_status::connection_reset);
-			return false;
-		case WSAENOTSOCK:
-			WS_PRINT_ERROR(error);
-			return false;
-		case WSA_IO_PENDING:
-			return true; // normal error message if the data wasn't received immediately
-		default:
-			WS_PRINT_ERROR(error);
-			return false;
-		}
-	}
-	return true; // successfully started to receive data
+	return winsock->sockets[id()].receive(*this);
 }
 
 bool io_socket::connect() {
-	if (id == -1) {
-		id = winsock->create_socket();
+	if (id() == -1) {
+		socket_id = winsock->create_socket();
 	}
-	winsock_socket* ws_socket = &winsock->sockets[id];
-	ws_socket->open();
-	int success = ::connect(ws_socket->handle, (SOCKADDR*)&ws_socket->addr, ws_socket->addr_size);
-	if (success != 0) {
-		WS_PRINT_LAST_ERROR();
-		ws_socket->close();
+	auto& socket = winsock->sockets[id()];
+	if (!socket.connect()) {
 		return false;
 	}
 	receive();
@@ -588,130 +669,121 @@ bool io_socket::connect() {
 }
 
 bool io_socket::connect(const std::string& address, int port) {
-	if (id == -1) {
-		id = winsock->create_socket();
+	if (id() == -1) {
+		socket_id = winsock->create_socket();
 	}
-	winsock_socket* ws_socket = &winsock->sockets[id];
-	addrinfo* result = nullptr;
-	int status = getaddrinfo(address.c_str(), CSTRING(port), &ws_socket->hints, &result);
-	if (status != 0) {
-		WARNING("Failed to get address info for " << address << ":" << port <<"\nStatus: " << status);
+	if (!winsock->sockets[id()].connect(address, port)) {
 		return false;
 	}
-	// todo: make ipv6 compatible
-	while (result) {
-		ws_socket->addr = *((SOCKADDR_IN*)result->ai_addr);
-		ws_socket->hints.ai_family = result->ai_family;
-		freeaddrinfo(result);
-		break; // result = result->ai_next;
-	}
-	return connect();
+	receive();
+	return true;
 }
 
 void io_socket::synchronise() {
-	winsock_socket* ws_socket = &winsock->sockets[id];
+	winsock_socket& ws_socket = winsock->sockets[id()];
 
 	// make sure the thread doesn't interrupt the packetizer. we need its buffer intact
-	std::lock_guard lock(ws_socket->mutex);
+	std::lock_guard lock{ ws_socket.mutex };
 
 	if (sync.disconnect.size() > 0) {
 		sync.disconnect.emit(events.disconnect);
-		ws_socket->close();
-		id = -1;
+		ws_socket.close();
+		socket_id = -1;
 		return;
 	}
 
+	for (auto& packet : queued_packets) {
+		send_synced(packet);
+	}
+	queued_packets.clear();
+
 	sync.receive_stream.emit(events.receive_stream);
 	sync.receive_packet.emit(events.receive_packet);
-	sync.send.emit(events.send);
 
-	ws_socket->receive_packetizer.clean();
+	ws_socket.receive_packetizer.clean();
+}
+
+bool io_socket::send_synced(const io_stream& packet) {
+	return winsock->sockets[id()].send(packet, *this);
+}
+
+listener_socket::listener_socket(listener_socket&& that) : abstract_socket{ std::move(that) } {
+	std::swap(events, that.events);
+	std::swap(sync, that.sync);
+}
+
+listener_socket& listener_socket::operator=(listener_socket&& that) {
+	abstract_socket::operator=(std::move(that));
+	std::swap(events, that.events);
+	std::swap(sync, that.sync);
+	return *this;
 }
 
 bool listener_socket::bind() {
-	if (id == -1) {
-		id = winsock->create_socket();
+	if (id() == -1) {
+		socket_id = winsock->create_socket();
 	}
-	winsock_socket* ws_socket = &winsock->sockets[id];
-	ws_socket->open();
-	int success = ::bind(ws_socket->handle, (SOCKADDR*)&ws_socket->addr, ws_socket->addr_size);
-	if (success != 0) {
-		WS_PRINT_LAST_ERROR();
-		return false;
-	}
-	return true;
+	return winsock->sockets[id()].bind();
 }
 
 bool listener_socket::bind(const std::string& address, int port) {
-	if (id == -1) {
-		id = winsock->create_socket();
+	if (id() == -1) {
+		socket_id = winsock->create_socket();
 	}
-	winsock_socket* ws_socket = &winsock->sockets[id];
-	addrinfo* result = nullptr;
-	int status = getaddrinfo(address.c_str(), CSTRING(port), &ws_socket->hints, &result);
-	if (status != 0) {
-		WARNING("Failed to get address info for " << address << ":" << port <<"\nStatus: " << status);
-		return false;
-	}
-	// todo: make ipv6 compatible
-	while (result) {
-		ws_socket->addr = *((SOCKADDR_IN*)result->ai_addr);
-		ws_socket->hints.ai_family = result->ai_family;
-		freeaddrinfo(result);
-		break; // result = result->ai_next;
-	}
-	return bind();
+	return winsock->sockets[id()].bind(address, port);
 }
 
 bool listener_socket::listen() {
-	return winsock->sockets[id].listen(this);
+	return winsock->sockets[id()].listen(this);
 }
 
 bool listener_socket::accept() {
-	return winsock->sockets[id].accept(this);
+	return winsock->sockets[id()].accept(this);
 }
 
 void listener_socket::synchronise() {
-	winsock_socket* ws_socket = &winsock->sockets[id];
-	std::lock_guard<std::mutex> lock(ws_socket->mutex);
+	winsock_socket* ws_socket = &winsock->sockets[id()];
+	std::lock_guard lock{ ws_socket->mutex };
 	sync.accept.emit(events.accept);
 }
 
-bool abstract_socket::set_protocol(ip_protocol protocol) {
-	return winsock->sockets[id].set_protocol(protocol);
+abstract_socket::abstract_socket(int id) : socket_id(id) {
+
 }
 
-bool abstract_socket::set_address_family(address_family family) {
-	return winsock->sockets[id].set_address_family(family);
+abstract_socket::abstract_socket(abstract_socket&& that) {
+	std::swap(socket_id, that.socket_id);
+}
+
+abstract_socket& abstract_socket::operator=(abstract_socket&& that) {
+	std::swap(socket_id, that.socket_id);
+	return *this;
 }
 
 bool abstract_socket::disconnect() {
-	if (id == -1) {
+	if (socket_id == -1) {
 		return false;
 	}
-	winsock_socket* ws_socket = &winsock->sockets[id];
-	bool success = winsock->destroy_socket(id);
+	winsock_socket* ws_socket = &winsock->sockets[socket_id];
+	bool success = winsock->destroy_socket(socket_id);
 	if (success) {
-		id = -1;
+		socket_id = -1;
 	} else {
-		WARNING("Failed to destroy WinSock socket " << id);
+		WARNING("Failed to destroy WinSock socket " << socket_id);
 	}
 	return true;
 }
 
-bool abstract_socket::begin_async() {
-	// We must check if we still are active, as it might not have been synchronised to the caller.
-	if (id == -1) {
-		return false;
-	}
-	// MUST FIX
-	// todo: there is technically still a possibility for id to become -1 here
-	winsock->sockets[id].mutex.lock();
-	return true;
+bool abstract_socket::set_protocol(ip_protocol protocol) {
+	return winsock->sockets[socket_id].set_protocol(protocol);
 }
 
-void abstract_socket::end_async() {
-	winsock->sockets[id].mutex.unlock();
+bool abstract_socket::set_address_family(address_family family) {
+	return winsock->sockets[socket_id].set_address_family(family);
+}
+
+int abstract_socket::id() const {
+	return socket_id;
 }
 
 }
@@ -724,7 +796,15 @@ std::ostream& operator<<(std::ostream& out, no::io_completion_port_operation ope
 	case no::io_completion_port_operation::accept: return out << "Accept";
 	case no::io_completion_port_operation::connect: return out << "Connect";
 	case no::io_completion_port_operation::close: return out << "Close";
-	default: return out << "Unknown";
+	default: return out << "Unknown (" << (int)operation << ")";
+	}
+}
+
+std::ostream& operator<<(std::ostream& out, no::ip_protocol protocol) {
+	switch (protocol) {
+	case no::ip_protocol::tcp: return out << "TCP";
+	case no::ip_protocol::udp: return out << "UDP";
+	default: return out << "Unknown (" << (int)protocol << ")";
 	}
 }
 

@@ -44,106 +44,89 @@ private:
 
 };
 
+template<typename P>
+io_stream packet_stream(const P& packet) {
+	io_stream stream;
+	packetizer::start(stream);
+	packet.write(stream);
+	packetizer::end(stream);
+	return stream;
+}
+
 class abstract_socket {
 public:
 
-	int id = -1;
+	abstract_socket() = default;
+	abstract_socket(int id);
+	abstract_socket(const abstract_socket&) = delete;
+	abstract_socket(abstract_socket&&);
+
+	virtual ~abstract_socket() = default;
+
+	abstract_socket& operator=(const abstract_socket&) = delete;
+	abstract_socket& operator=(abstract_socket&&);
 
 	bool disconnect();
-
 	bool set_protocol(ip_protocol protocol);
 	bool set_address_family(address_family family);
 
-	// if we want to call asynchronous functions when the mutex is not locked, 
-	// we must lock and unlock the mutex manually
-	//
-	// these functions must be used if you are trying to call another member function
-	// outside of an event in the same namespace as the current class you are using
-	//
-	// examples:
-	//
-	// if this socket is an io_socket: 
-	//     never call these when you handle an io_socket:: event
-	//
-	// if this socket is a listener_socket:
-	//     never call these when you handle a listener_socket::event
-	//
-	// for all cases:
-	//     always call these when you handle an event that is not in the socket's class
-	//
-	// usage: if (begin_async()) { ...; ...; end_async(); }
-	bool begin_async();
-	void end_async();
+	int id() const;
+
+protected:
+	
+	int socket_id = -1;
 
 };
 
 class socket_location {
 public:
 
-	// the index to access the socket through container
+	socket_location(io_socket* socket);
+	socket_location(size_t index, socket_container& container);
+
+	io_socket* find() const;
+
+private:
+
+	// index to access the socket through container
 	size_t index = 0;
 	socket_container* container = nullptr;
 
-	// if we have no container, we must store the socket's this pointer
+	// if we have no container, store the socket's this pointer
 	io_socket* socket = nullptr;
-
-	// quick way to get the most trustworthy pointer
-	io_socket* get();
 
 };
 
 class io_socket : public abstract_socket {
 public:
 
-	struct disconnect_message {
-		socket_close_status status = socket_close_status::unknown;
-	};
-
-	struct receive_stream_message {
-		io_stream packet;
-	};
-
-	struct receive_packet_message {
-		io_stream packet;
-	};
-
-	struct send_message {
-		int placeholder = 0;
-	};
-
-	socket_location location;
-
 	struct {
-		message_event<receive_stream_message> receive_stream;
-		message_event<receive_packet_message> receive_packet;
-		message_event<send_message> send;
-		message_event<disconnect_message> disconnect;
+		message_event<io_stream> receive_stream;
+		message_event<io_stream> receive_packet;
+		message_event<socket_close_status> disconnect;
 	} events;
 
 	struct {
-		event_message_queue<receive_stream_message> receive_stream;
-		event_message_queue<receive_packet_message> receive_packet;
-		event_message_queue<send_message> send;
-		event_message_queue<disconnect_message> disconnect;
+		event_message_queue<io_stream> receive_stream;
+		event_message_queue<io_stream> receive_packet;
+		event_message_queue<socket_close_status> disconnect;
 	} sync;
 
 	io_socket();
+	io_socket(int id, const socket_location& location);
 	io_socket(const io_socket&) = delete;
 	io_socket(io_socket&&);
 
 	io_socket& operator=(const io_socket&) = delete;
 	io_socket& operator=(io_socket&&);
 
-	// if the i/o limit has been reached, this function will return false
-	// if the send call itself failed, we also return false
-	bool send(const io_stream& packet);
-
-	// same as above, but wrapped around a begin_aync() and end_async()
-	bool send_async(const io_stream& packet);
-
-	// increment the number of asynchronous receive calls
-	// if the I/O limit has been reached, this function will return false
-	// if the receive call itself failed, we also return false
+	void send(io_stream&& packet);
+	
+	template<typename P>
+	void send(const P& packet) {
+		send(packet_stream(packet));
+	}
+	
 	bool receive();
 
 	bool connect();
@@ -151,19 +134,37 @@ public:
 
 	void synchronise();
 
+private:
+
+	bool send_synced(const io_stream& packet);
+
+	socket_location location;
+	std::vector<io_stream> queued_packets;
+
 };
 
 class listener_socket : public abstract_socket {
 public:
 
-	struct accept_message {
+	struct accept_event {
 		int error = 0;
 		int id = -1;
 	};
 
 	struct {
-		message_event<accept_message> accept;
+		message_event<accept_event> accept;
 	} events;
+
+	struct {
+		event_message_queue<accept_event> accept;
+	} sync;
+
+	listener_socket() = default;
+	listener_socket(const listener_socket&) = delete;
+	listener_socket(listener_socket&&);
+
+	listener_socket& operator=(const listener_socket&) = delete;
+	listener_socket& operator=(listener_socket&&);
 
 	bool bind(const std::string& address, int port);
 
@@ -178,10 +179,6 @@ public:
 	bool accept();
 
 	void synchronise();
-
-	struct {
-		event_message_queue<accept_message> accept;
-	} sync;
 
 };
 
@@ -276,10 +273,36 @@ private:
 class socket_container {
 public:
 
-	struct receive_packet_message {
-		size_t index;
-		io_stream packet;
-	};
+	void broadcast(io_stream&& stream);
+	void broadcast(io_stream&& stream, size_t except_index);
+
+	template<typename P>
+	void broadcast(const P& packet) {
+		broadcast(packet_stream(packet));
+	}
+
+	template<typename P>
+	void broadcast(const P& packet, size_t except_index) {
+		broadcast(packet_stream(packet), except_index);
+	}
+
+	io_socket& at(size_t index);
+	const io_socket& at(size_t index) const;
+
+	io_socket& operator[](size_t index);
+	const io_socket& operator[](size_t index) const;
+
+	// create a new active (not open) socket. returns index
+	size_t create(int id);
+
+	// destroy an active socket
+	void destroy(size_t index);
+
+	void synchronise();
+	
+private:
+
+	void destroy_queued();
 
 	// all the sockets contained. not guaranteed to be active
 	std::vector<io_socket> sockets;
@@ -290,67 +313,26 @@ public:
 	// which indices in the sockets vector are currently in use
 	std::vector<size_t> active_sockets;
 
-	template<bool Sync>
-	void broadcast(const io_stream& stream) {
-		if constexpr (Sync) {
-			for (size_t i : active_sockets) {
-				sockets[i].send(stream);
-			}
-		} else {
-			for (size_t i : active_sockets) {
-				sockets[i].send_async(stream);
-			}
-		}
-	}
+	// to keep memory alive
+	std::vector<io_stream> queued_packets;
 
-	template<bool Sync>
-	void broadcast(const io_stream& stream, size_t except_index) {
-		if constexpr (Sync) {
-			for (size_t i : active_sockets) {
-				if (i != except_index) {
-					sockets[i].send(stream);
-				}
-			}
-		} else {
-			for (size_t i : active_sockets) {
-				if (i != except_index) {
-					sockets[i].send_async(stream);
-				}
-			}
-		}
-	}
-
-	io_socket& operator[](size_t index) {
-		return sockets[index];
-	}
-
-	const io_socket& operator[](size_t index) const {
-		return sockets[index];
-	}
-
-	// create a new active (not open) socket, and get its index as a return value
-	size_t create();
-
-	// destroy an active socket
-	void destroy(size_t index);
-
-	void synchronise();
+	// indices of sockets to destroy in synchronise
+	std::vector<size_t> destroy_queue;
 
 };
 
 class connection_establisher {
 public:
 
-	struct established_message {
+	struct establish_event {
 		size_t index = 0;
 	};
 
-	listener_socket listener;
-	socket_container* container = nullptr;
-
 	struct {
-		message_event<established_message> established;
+		message_event<establish_event> establish;
 	} events;
+
+	connection_establisher(socket_container& container);
 
 	void listen(const std::string& host, int port);
 
@@ -358,20 +340,14 @@ public:
 
 private:
 
+	listener_socket listener;
+	socket_container& container;
+
 	struct {
-		event_message_queue<listener_socket::accept_message> accept;
+		event_message_queue<listener_socket::accept_event> accept;
 	} sync;
 
 };
-
-template<typename P>
-io_stream packet_stream(const P& packet) {
-	io_stream stream;
-	packetizer::start(stream);
-	packet.write(stream);
-	packetizer::end(stream);
-	return stream;
-}
 
 }
 
