@@ -14,7 +14,7 @@ lobby_state::lobby_state() :
 	camera.zoom = 2.0f;
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
 	color = no::get_shader_variable("uni_Color");
-	receive_packet_id = server().events.receive_packet.listen([this](const no::io_stream& packet) {
+	receive_packet_id = no::socket_event(server()).packet.listen([this](const no::io_stream& packet) {
 		no::io_stream stream{ packet.data(), packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
@@ -25,7 +25,7 @@ lobby_state::lobby_state() :
 				player_details.name = packet.name;
 				to_server::lobby::connect_to_world connect_packet;
 				connect_packet.world = 0;
-				server().send(connect_packet);
+				no::send_packet(server(), connect_packet);
 				change_state<game_state>();
 			}
 			break;
@@ -48,7 +48,7 @@ lobby_state::lobby_state() :
 		to_server::lobby::login_attempt packet;
 		packet.name = username.value();
 		packet.password = password.value();
-		server().send(packet);
+		no::send_packet(server(), packet);
 	});
 	login_button.color = color;
 	login_button.set_tex_coords(0.0f, 0.5f);
@@ -78,14 +78,14 @@ lobby_state::lobby_state() :
 lobby_state::~lobby_state() {
 	mouse().press.ignore(mouse_press_id);
 	keyboard().press.ignore(keyboard_press_id);
-	server().events.receive_packet.ignore(receive_packet_id);
+	no::socket_event(server()).packet.ignore(receive_packet_id);
 	no::delete_texture(button_texture);
 	no::delete_texture(input_background);
 	no::delete_shader(shader);
 }
 
 void lobby_state::update() {
-	server().synchronise();
+	no::synchronize_socket(server());
 	camera.transform.scale = window().size().to<float>();
 	login_label.transform.position = 128.0f;
 	username.transform.position = { 128.0f, 160.0f };

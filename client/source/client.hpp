@@ -16,6 +16,6 @@ protected:
 		std::string name;
 	} player_details;
 
-	no::io_socket& server();
+	int server();
 
 };

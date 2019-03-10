@@ -99,6 +99,7 @@ private:
 };
 
 signal_event& post_configure_event();
+signal_event& pre_exit_event();
 
 template<typename T>
 void create_state(const std::string& title, int width, int height, int samples, bool maximized) {

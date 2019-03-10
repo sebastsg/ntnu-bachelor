@@ -1,13 +1,13 @@
 #pragma once
 
-#include "network.hpp"
+#include <vector>
 
 constexpr int newest_client_version = 19030600; // yymmddxx
 
 class client_updater {
 public:
 
-	client_updater(no::io_socket& client);
+	client_updater(int client);
 	client_updater(const client_updater&) = delete;
 	client_updater(client_updater&&);
 
@@ -21,7 +21,7 @@ public:
 
 private:
 
-	no::io_socket& client;
+	int client = -1;
 	std::vector<std::string> paths;
 	bool done = false;
 	int total_files = 0;

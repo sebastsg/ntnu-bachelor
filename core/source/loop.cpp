@@ -67,11 +67,16 @@ static struct {
 	long redundant_bind_calls_this_frame = 0;
 
 	signal_event post_configure;
+	signal_event pre_exit;
 
 } loop;
 
 signal_event& post_configure_event() {
 	return loop.post_configure;
+}
+
+signal_event& pre_exit_event() {
+	return loop.pre_exit;
 }
 
 static int state_index(const window_state* state) {
@@ -246,6 +251,7 @@ void destroy_main_loop() {
 		loop.states_to_stop.push_back(state);
 	}
 	destroy_stopped_states();
+	loop.pre_exit.emit();
 	stop_network();
 	delete loop.audio;
 	loop.audio = nullptr;

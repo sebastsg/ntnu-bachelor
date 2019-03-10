@@ -34,7 +34,7 @@ game_state::game_state() :
 		if (tile.x != -1) {
 			to_server::game::move_to_tile packet;
 			packet.tile = tile;
-			server().send(packet);
+			no::send_packet(server(), packet);
 		}
 	});
 
@@ -55,10 +55,10 @@ game_state::game_state() :
 	chat.events.message.listen([this](const chat_view::message_event& event) {
 		to_server::game::chat_message packet;
 		packet.message = event.message;
-		server().send(packet);
+		no::send_packet(server(), packet);
 	});
 
-	receive_packet_id = server().events.receive_packet.listen([this](const no::io_stream& packet) {
+	receive_packet_id = no::socket_event(server()).packet.listen([this](const no::io_stream& packet) {
 		no::io_stream stream{ packet.data(), packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
@@ -142,13 +142,13 @@ game_state::~game_state() {
 	mouse().press.ignore(mouse_press_id);
 	mouse().scroll.ignore(mouse_scroll_id);
 	keyboard().press.ignore(keyboard_press_id);
-	server().events.receive_packet.ignore(receive_packet_id);
+	no::socket_event(server()).packet.ignore(receive_packet_id);
 }
 
 void game_state::update() {
 	renderer.camera.size = window().size().to<float>();
 	ui.camera.transform.scale = window().size().to<float>();
-	server().synchronise();
+	no::synchronize_socket(server());
 	if (world.my_player_id == -1) {
 		return;
 	}
@@ -211,12 +211,12 @@ void game_state::start_dialogue(int target_id) {
 	close_dialogue();
 	to_server::game::start_dialogue packet;
 	packet.target_instance_id = target_id;
-	server().send(no::packet_stream(packet));
+	no::send_packet(server(), packet);
 	dialogue = new dialogue_view(*this, ui.camera, target_id);
 	dialogue->events.choose.listen([this](const dialogue_view::choose_event& event) {
 		to_server::game::continue_dialogue packet;
 		packet.choice = event.choice;
-		server().send(packet);
+		no::send_packet(server(), packet);
 	});
 }
 
@@ -228,19 +228,19 @@ void game_state::close_dialogue() {
 void game_state::start_combat(int target_id) {
 	to_server::game::start_combat packet;
 	packet.target_id = target_id;
-	server().send(packet);
+	no::send_packet(server(), packet);
 	follow_character(target_id);
 }
 
 void game_state::follow_character(int target_id) {
 	to_server::game::follow_character packet;
 	packet.target_id = target_id;
-	server().send(packet);
+	no::send_packet(server(), packet);
 }
 
 void game_state::equip_from_inventory(no::vector2i slot) {
 	world.my_player()->equip_from_inventory(slot);
 	to_server::game::equip_from_inventory packet;
 	packet.slot = slot;
-	server().send(packet);
+	no::send_packet(server(), packet);
 }

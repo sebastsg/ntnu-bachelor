@@ -44,11 +44,11 @@ updater_state::updater_state() {
 	to_server::updates::update_query packet;
 	packet.version = client_version;
 	packet.needs_assets = !std::filesystem::is_directory(no::asset_path(""));
-	server().send(packet);
+	no::send_packet(server(), packet);
 
 	previous_packet.start();
 
-	server().events.receive_packet.listen([this](const no::io_stream& packet) {
+	receive_packet_id = no::socket_event(server()).packet.listen([this](const no::io_stream& packet) {
 		no::io_stream stream{ packet.data(), packet.size(), no::io_stream::construct_by::shallow_copy };
 		int16_t type = stream.read<int16_t>();
 		switch (type) {
@@ -89,11 +89,11 @@ updater_state::updater_state() {
 }
 
 updater_state::~updater_state() {
-	
+	no::socket_event(server()).packet.ignore(receive_packet_id);
 }
 
 void updater_state::update() {
-	server().synchronise();
+	no::synchronize_socket(server());
 	if (previous_packet.seconds() > 10) {
 		CRITICAL("Failed to update.");
 		stop();

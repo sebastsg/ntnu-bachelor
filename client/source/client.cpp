@@ -2,19 +2,13 @@
 #include "window.hpp"
 #include "platform.hpp"
 
-static no::io_socket server_socket;
-
+static int server_socket = -1;
 client_state::player_details_ client_state::player_details;
 
-static void connect_to_server() {
-	if (server_socket.id() == -1) {
-		// todo: config file
-		server_socket.connect("game.einheri.xyz", 7524);
-	}
-}
-
 client_state::client_state() {
-	connect_to_server();
+	if (server_socket == -1) {
+		server_socket = no::open_socket("game.einheri.xyz", 7524); // todo: config file
+	}
 	window().set_swap_interval(no::swap_interval::immediate);
 	set_synchronization(no::draw_synchronization::always);
 	// todo: maybe it's possible to avoid this check, and still use resource icon?
@@ -28,6 +22,6 @@ std::string client_state::player_name() const {
 	return player_details.name;
 }
 
-no::io_socket& client_state::server() {
+int client_state::server() {
 	return server_socket;
 }

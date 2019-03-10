@@ -1,10 +1,11 @@
 #include "updater.hpp"
 #include "assets.hpp"
 #include "packets.hpp"
+#include "network.hpp"
 
 #include <filesystem>
 
-client_updater::client_updater(no::io_socket& client) : client(client) {
+client_updater::client_updater(int client) : client{ client } {
 	paths = no::entries_in_directory(no::asset_path(""), no::entry_inclusion::only_files, true);
 	paths.push_back("Einheri.exe");
 	total_files = (int)paths.size();
@@ -50,7 +51,7 @@ void client_updater::update() {
 	packet.total_size = (int64_t)stream.write_index();
 	packet.data.resize(packet_size);
 	stream.read(packet.data.data(), packet_size);
-	client.send(packet);
+	no::send_packet(client, packet);
 	paths.pop_back();
 }
 

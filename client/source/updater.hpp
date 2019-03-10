@@ -42,5 +42,6 @@ private:
 	std::vector<file_transfer> transfers;
 	int completed_transfers = 0;
 	no::timer previous_packet;
+	int receive_packet_id = -1;
 
 };
