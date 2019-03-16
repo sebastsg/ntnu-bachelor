@@ -471,7 +471,7 @@ void socket_send(int id, io_stream&& stream) {
 void broadcast(io_stream&& stream) {
 	auto& packet = winsock.queued_packets.emplace_back(std::move(stream));
 	for (auto& socket : winsock.sockets) {
-		socket.queued_packets.emplace_back(packet.data(), packet.size(), io_stream::construct_by::shallow_copy);
+		socket.queued_packets.emplace_back(packet.data(), packet.write_index(), io_stream::construct_by::shallow_copy);
 	}
 }
 
@@ -479,7 +479,7 @@ void broadcast(io_stream&& stream, int except_id) {
 	auto& packet = winsock.queued_packets.emplace_back(std::move(stream));
 	for (int i = 0; i < (int)winsock.sockets.size(); i++) {
 		if (i != except_id) {
-			winsock.sockets[i].queued_packets.emplace_back(packet.data(), packet.size(), io_stream::construct_by::shallow_copy);
+			winsock.sockets[i].queued_packets.emplace_back(packet.data(), packet.write_index(), io_stream::construct_by::shallow_copy);
 		}
 	}
 }

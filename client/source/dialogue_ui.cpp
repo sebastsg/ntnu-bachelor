@@ -3,17 +3,13 @@
 
 dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera_, int id) 
 	: game(game_), camera(camera_), font(no::asset_path("fonts/leo.ttf"), 10), message_view(game, camera) {
-	auto player = game.world.my_player();
-	if (!player) {
-		WARNING("No player");
-		open = false;
-		return;
-	}
+	auto& player = game.world.my_player().character;
 	dialogue.quests = &game.quests;
 	dialogue.variables = &game.variables;
-	dialogue.player = player;
-	dialogue.inventory = &player->inventory;
-	dialogue.equipment = &player->equipment;
+	dialogue.player_object_id = player.object_id;
+	dialogue.inventory = &player.inventory;
+	dialogue.equipment = &player.equipment;
+	dialogue.world = &game.world;
 	dialogue.load(id);
 	if (dialogue.id == -1) {
 		open = false;

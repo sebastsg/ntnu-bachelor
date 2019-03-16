@@ -69,7 +69,7 @@ socket_events& socket_event(int id);
 
 template<typename P>
 void send_packet(int id, const P& packet) {
-	socket_send(id, std::move(packet_stream(packet)));
+	socket_send(id, packet_stream(packet));
 }
 
 template<typename P>

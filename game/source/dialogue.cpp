@@ -3,6 +3,7 @@
 #include "assets.hpp"
 #include "loop.hpp"
 #include "character.hpp"
+#include "world.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
@@ -370,14 +371,14 @@ int has_item_condition_node::process() {
 
 void has_item_condition_node::write(no::io_stream& stream) {
 	abstract_node::write(stream);
-	stream.write<int64_t>(item.definition_id);
+	stream.write<int32_t>(item.definition_id);
 	stream.write<int64_t>(item.stack);
 	stream.write<uint8_t>(check_equipment_too);
 }
 
 void has_item_condition_node::read(no::io_stream& stream) {
 	abstract_node::read(stream);
-	item.definition_id = stream.read<int64_t>();
+	item.definition_id = stream.read<int32_t>();
 	item.stack = stream.read<int64_t>();
 	check_equipment_too = (stream.read<uint8_t>() != 0);
 }
@@ -412,14 +413,14 @@ int inventory_effect_node::process() {
 
 void inventory_effect_node::write(no::io_stream& stream) {
 	abstract_node::write(stream);
-	stream.write<int64_t>(item.definition_id);
+	stream.write<int32_t>(item.definition_id);
 	stream.write<int64_t>(item.stack);
 	stream.write<uint8_t>(give ? 1 : 0);
 }
 
 void inventory_effect_node::read(no::io_stream& stream) {
 	abstract_node::read(stream);
-	item.definition_id = stream.read<int64_t>();
+	item.definition_id = stream.read<int32_t>();
 	item.stack = stream.read<int64_t>();
 	give = (stream.read<uint8_t>() != 0);
 }
@@ -444,8 +445,9 @@ void stat_effect_node::read(no::io_stream& stream) {
 }
 
 int warp_effect_node::process() {
-	tree->player->transform.position.x = tile.x;
-	tree->player->transform.position.z = tile.y;
+	auto& player = tree->world->objects.object(tree->player_object_id);
+	player.transform.position.x = tile.x;
+	player.transform.position.z = tile.y;
 	return 0;
 }
 

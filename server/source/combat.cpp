@@ -12,9 +12,9 @@ bool active_combat::can_hit()const {
 }
 
 bool active_combat::is_target_in_range() const {
-	auto attacker = (character_object*)world->objects.find(attacker_id);
-	auto target = (character_object*)world->objects.find(target_id);
-	no::vector2i distance = attacker->tile() - target->tile();
+	auto& attacker = world->objects.object(attacker_id);
+	auto& target = world->objects.object(target_id);
+	no::vector2i distance = attacker.tile() - target.tile();
 	if (std::abs(distance.x) > 2 || std::abs(distance.y) > 2) {
 		return false;
 	}
@@ -22,12 +22,11 @@ bool active_combat::is_target_in_range() const {
 }
 
 int active_combat::hit() {
-	auto attacker = (character_object*)world->objects.find(attacker_id);
-	auto target = (character_object*)world->objects.find(target_id);
+	auto attacker = world->objects.character(attacker_id);
+	auto target = world->objects.character(target_id);
 	last_hit.start();
 	int damage = std::rand() % 4;
 	target->stat(stat_type::health).add_effective(-damage);
-	next_turn();
 	return damage;
 }
 
@@ -36,8 +35,8 @@ void active_combat::next_turn() {
 }
 
 combat_system::combat_system(world_state& world_) : world(world_) {
-	object_remove_event = world.objects.events.remove.listen([this](const world_objects::remove_event& event) {
-		stop_all(event.object->id());
+	object_remove_event = world.objects.events.remove.listen([this](const game_object& object) {
+		stop_all(object.instance_id);
 	});
 }
 
@@ -50,9 +49,8 @@ void combat_system::update() {
 		if (combat.can_hit()) {
 			if (combat.is_target_in_range()) {
 				events.hit.emit(combat.attacker_id, combat.target_id, combat.hit());
-			} else {
-				combat.next_turn();
 			}
+			combat.next_turn();
 		}
 	}
 }

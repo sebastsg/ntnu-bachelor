@@ -2,9 +2,6 @@
 #include "world.hpp"
 #include "pathfinding.hpp"
 
-#include "assets.hpp"
-#include "surface.hpp"
-
 void character_stat::set_experience(long long experience) {
 	current_experience = 0;
 	real_level = 0;
@@ -62,52 +59,37 @@ void character_stat::read(no::io_stream& stream) {
 	effective_level = real_level;
 }
 
-void character_object::update() {
-	move_towards_target();
-	auto target = world->objects.find(follow_object_id);
-	if (target && (tiles_moved > 1 || target_path.empty())) {
-		no::vector2i target_tile = target->tile();
-		no::vector2i delta = tile() - target_tile;
-		if (delta.x > 1) {
-			target_tile.x++; // to west of target
-		} else if (delta.x < -1) {
-			target_tile.x--; // to east of target
-		}
-		if (delta.y > 1) {
-			target_tile.y++; // to south of target
-		} else if (delta.y < -1) {
-			target_tile.y--; // to north of target
-		}
-		no::vector2i new_delta = tile() - target_tile;
-		if (std::abs(new_delta.x) > follow_distance || std::abs(new_delta.y > follow_distance)) {
-			pathfinder pathfind{ world->terrain };
-			start_path_movement(pathfind.find_path(tile(), target_tile));
+void character_object::update(world_state& world, game_object& object) {
+	while (!target_path.empty() && target_path.back() < 0) {
+		target_path.pop_back();
+	}
+	int path_count = (int)target_path.size();
+	move_towards_target(object.transform, target_path);
+	if (path_count > (int)target_path.size()) {
+		tiles_moved++;
+	}
+	if (follow_object_id != -1 && (tiles_moved > 1 || target_path.empty())) {
+		auto& target = world.objects.object(follow_object_id);
+		no::vector2i target_tile = target_tile_at_distance(target, object, follow_distance);
+		bool new_path_x = std::abs(object.tile().x - target_tile.x) > follow_distance;
+		bool new_path_y = std::abs(object.tile().y - target_tile.y) > follow_distance;
+		if (new_path_x || new_path_y) {
+			start_path_movement(world.path_between(object.tile(), target_tile));
 		} else {
-			no::vector2i a = tile();
-			no::vector2i b = target->tile();
-			if (a.x > b.x && a.y > b.y) {
-				transform.rotation.y = directions::north_west;
-			} else if (a.x > b.x && a.y < b.y) {
-				transform.rotation.y = directions::south_west;
-			} else if (a.x < b.x && a.y > b.y) {
-				transform.rotation.y = directions::north_east;
-			} else if (a.x < b.x && a.y < b.y) {
-				transform.rotation.y = directions::south_east;
-			} else if (a.x > b.x) {
-				transform.rotation.y = directions::west;
-			} else if (a.x < b.x) {
-				transform.rotation.y = directions::east;
-			} else if (a.y > b.y) {
-				transform.rotation.y = directions::north;
-			} else if (a.y < b.y) {
-				transform.rotation.y = directions::south;
+			float new_angle = angle_to_goal(object.tile(), target_tile);
+			if (new_angle >= 0.0f) {
+				object.transform.rotation.y = new_angle;
 			}
 		}
 	}
 }
 
+void character_object::start_path_movement(const std::vector<no::vector2i>& path) {
+	target_path = path;
+	tiles_moved = 0;
+}
+
 void character_object::write(no::io_stream& stream) const {
-	game_object::write(stream);
 	inventory.write(stream);
 	equipment.write(stream);
 	stream.write((int32_t)stat_type::total);
@@ -117,7 +99,6 @@ void character_object::write(no::io_stream& stream) const {
 }
 
 void character_object::read(no::io_stream& stream) {
-	game_object::read(stream);
 	inventory.read(stream);
 	equipment.read(stream);
 	int count = stream.read<int32_t>();
@@ -148,80 +129,9 @@ void character_object::equip(item_instance item) {
 }
 
 bool character_object::is_moving() const {
-	return moving;
-}
-
-void character_object::start_path_movement(const std::vector<no::vector2i>& path) {
-	target_path = path;
-	tiles_moved = 0;
+	return target_path.size() > 0;
 }
 
 character_stat& character_object::stat(stat_type stat) {
 	return stats[(size_t)stat];
-}
-
-void character_object::move_towards_target() {
-	while (!target_path.empty() && target_path.back() < 0) {
-		target_path.pop_back();
-	}
-	if (target_path.empty()) {
-		return;
-	}
-	float speed = 0.05f;
-	no::vector2i current_target = target_path.back();
-	no::vector3f target_position = world->tile_index_to_world_position(current_target.x, current_target.y);
-	float x_difference = target_position.x - transform.position.x + 0.5f;
-	float z_difference = target_position.z - transform.position.z + 0.5f;
-	moving = false;
-	if (std::abs(x_difference) >= speed) {
-		transform.position.x += (x_difference > 0.0f ? speed : -speed);
-		moving = true;
-	}
-	if (std::abs(z_difference) >= speed) {
-		transform.position.z += (z_difference > 0.0f ? speed : -speed);
-		moving = true;
-	}
-	if (!moving) {
-		target_path.pop_back();
-		tiles_moved++;
-		if (!target_path.empty()) {
-			move_towards_target();
-		}
-		return;
-	}
-	no::vector2i from = tile();
-	no::vector2i to = current_target;
-	bool left = false;
-	bool up = false;
-	bool right = false;
-	bool down = false;
-	right = to.x > from.x;
-	left = from.x > to.x;
-	down = to.y > from.y;
-	up = from.y > to.y;
-	if (right == left) {
-		right = false;
-		left = false;
-	}
-	if (up == down) {
-		up = false;
-		down = false;
-	}
-	if (left && up) {
-		transform.rotation.y = directions::north_west;
-	} else if (right && up) {
-		transform.rotation.y = directions::north_east;
-	} else if (left && down) {
-		transform.rotation.y = directions::south_west;
-	} else if (right && down) {
-		transform.rotation.y = directions::south_east;
-	} else if (left) {
-		transform.rotation.y = directions::west;
-	} else if (right) {
-		transform.rotation.y = directions::east;
-	} else if (down) {
-		transform.rotation.y = directions::south;
-	} else if (up) {
-		transform.rotation.y = directions::north;
-	}
 }

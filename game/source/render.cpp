@@ -3,7 +3,7 @@
 #include "surface.hpp"
 
 character_renderer::character_renderer(world_view& world) : world(world) {
-	player_texture = no::create_texture(no::surface(no::asset_path("textures/character.png")), no::scale_option::nearest_neighbour, true);
+	player_texture = no::create_texture({ no::asset_path("textures/character.png") }, no::scale_option::nearest_neighbour, true);
 	model.load<no::animated_mesh_vertex>(no::asset_path("models/character.nom"));
 	idle = model.index_of_animation("idle");
 	run = model.index_of_animation("run");
@@ -23,47 +23,48 @@ character_renderer::~character_renderer() {
 	no::delete_texture(player_texture);
 }
 
-void character_renderer::add(character_object* object) {
+void character_renderer::add(character_object& object) {
 	int i = (int)characters.size();
-	auto& character = characters.emplace_back(object, model);
-	character.equip_event = character.object->events.equip.listen([i, this](const character_object::equip_event& event) {
-		on_equip(characters[i], event.item);
+	auto& character = characters.emplace_back(object.object_id, model);
+	character.equip_event = object.events.equip.listen([i, this](const item_instance& item) {
+		on_equip(characters[i], item);
 	});
-	character.unequip_event = character.object->events.unequip.listen([i, this](const character_object::unequip_event& event) {
-		on_unequip(characters[i], event.slot);
+	character.unequip_event = object.events.unequip.listen([i, this](const equipment_slot& slot) {
+		on_unequip(characters[i], slot);
 	});
-	character.attack_event = character.object->events.attack.listen([i, this] {
+	character.attack_event = object.events.attack.listen([i, this] {
 		characters[i].next_state.animation = attack;
 	});
-	character.defend_event = character.object->events.defend.listen([i, this] {
+	character.defend_event = object.events.defend.listen([i, this] {
 		characters[i].next_state.animation = defend;
 	});
-	object->equipment.for_each([&](no::vector2i slot, const item_instance& item) {
+	object.equipment.for_each([&](no::vector2i slot, const item_instance& item) {
 		on_equip(characters[i], item);
 	});
 }
 
-void character_renderer::remove(character_object* object) {
+void character_renderer::remove(character_object& object) {
 	for (size_t i = 0; i < characters.size(); i++) {
-		if (characters[i].object == object) {
-			object->events.equip.ignore(characters[i].equip_event);
-			object->events.unequip.ignore(characters[i].unequip_event);
-			object->events.attack.ignore(characters[i].attack_event);
-			object->events.defend.ignore(characters[i].defend_event);
+		if (characters[i].object_id == object.object_id) {
+			object.events.equip.ignore(characters[i].equip_event);
+			object.events.unequip.ignore(characters[i].unequip_event);
+			object.events.attack.ignore(characters[i].attack_event);
+			object.events.defend.ignore(characters[i].defend_event);
 			characters.erase(characters.begin() + i);
 			break;
 		}
 	}
 }
 
-void character_renderer::draw() {
+void character_renderer::draw(const world_objects& objects) {
 	no::bind_texture(player_texture);
 	for (auto& character : characters) {
+		auto& object = objects.object(character.object_id);
 		if (character.next_state.animation == -1) {
 			bool will_reset = character.model.will_be_reset();
 			bool one_time_animation = (character.model.current_animation() == attack || character.model.current_animation() == defend);
 			if ((will_reset && one_time_animation) || !one_time_animation) {
-				if (character.object->is_moving()) {
+				if (objects.character(character.object_id)->is_moving()) {
 					character.model.start_animation(run);
 				} else {
 					character.model.start_animation(idle);
@@ -74,7 +75,7 @@ void character_renderer::draw() {
 			character.next_state = {};
 		}
 		character.model.animate();
-		no::set_shader_model(character.object->transform);
+		no::set_shader_model(object.transform);
 		character.model.draw();
 	}
 }
@@ -115,19 +116,19 @@ decoration_renderer::~decoration_renderer() {
 	}
 }
 
-void decoration_renderer::add(decoration_object* object) {
+void decoration_renderer::add(const game_object& object) {
 	for (auto& group : groups) {
-		if (group.definition_id == object->definition().id) {
-			group.objects.push_back(object);
+		if (group.definition_id == object.definition_id) {
+			group.objects.push_back(object.instance_id);
 			break;
 		}
 	}
 }
 
-void decoration_renderer::remove(decoration_object* object) {
+void decoration_renderer::remove(const game_object& object) {
 	for (auto& group : groups) {
 		for (size_t i = 0; i < group.objects.size(); i++) {
-			if (group.objects[i] == object) {
+			if (group.objects[i] == object.instance_id) {
 				group.objects.erase(group.objects.begin() + i);
 				return;
 			}
@@ -135,12 +136,12 @@ void decoration_renderer::remove(decoration_object* object) {
 	}
 }
 
-void decoration_renderer::draw() {
+void decoration_renderer::draw(const world_objects& objects) {
 	for (auto& group : groups) {
 		no::bind_texture(group.texture);
 		group.model.bind();
-		for (auto& object : group.objects) {
-			no::set_shader_model(object->transform);
+		for (int object_id : group.objects) {
+			no::set_shader_model(objects.object(object_id).transform);
 			group.model.draw();
 		}
 	}
@@ -156,33 +157,34 @@ object_pick_renderer::~object_pick_renderer() {
 
 }
 
-void object_pick_renderer::draw() {
+void object_pick_renderer::draw(const world_objects& objects) {
 	if (!box.is_drawable()) {
 		return;
 	}
 	box.bind();
-	for (auto object : objects) {
-		no::transform3 bbox = object->definition().bounding_box;
+	for (int object_id : object_ids) {
+		const auto& object = objects.object(object_id);
+		no::transform3 bbox = object.definition().bounding_box;
 		no::transform3 transform;
-		transform.position = object->transform.position + object->transform.scale * bbox.position;
-		transform.scale = object->transform.scale * bbox.scale;
+		transform.position = object.transform.position + object.transform.scale * bbox.position;
+		transform.scale = object.transform.scale * bbox.scale;
 		transform.rotation.x = 270.0f;
-		transform.rotation.z = object->transform.rotation.y;
-		no::vector2f tile = (object->tile() + 1).to<float>();
+		transform.rotation.z = object.transform.rotation.y;
+		no::vector2f tile = (object.tile() + 1).to<float>();
 		var_pick_color.set(no::vector3f{ tile.x / 255.0f, tile.y / 255.0f, 0.0f });
 		no::set_shader_model(transform.to_matrix4_origin());
 		box.draw();
 	}
 }
 
-void object_pick_renderer::add(game_object* object) {
-	objects.push_back(object);
+void object_pick_renderer::add(const game_object& object) {
+	object_ids.push_back(object.instance_id);
 }
 
-void object_pick_renderer::remove(game_object* object) {
-	for (int i = 0; i < (int)objects.size(); i++) {
-		if (objects[i] == object) {
-			objects.erase(objects.begin() + i);
+void object_pick_renderer::remove(const game_object& object) {
+	for (int i = 0; i < (int)object_ids.size(); i++) {
+		if (object_ids[i] == object.instance_id) {
+			object_ids.erase(object_ids.begin() + i);
 			break;
 		}
 	}
@@ -246,14 +248,14 @@ world_view::world_view(world_state& world) : world(world), characters(*this) {
 
 	refresh_terrain();
 
-	add_object_id = world.objects.events.add.listen([this](const world_objects::add_event& event) {
-		add(event.object);
+	add_object_id = world.objects.events.add.listen([this](const game_object& object) {
+		add(object);
 	});
-	remove_object_id = world.objects.events.remove.listen([this](const world_objects::remove_event& event) {
-		remove(event.object);
+	remove_object_id = world.objects.events.remove.listen([this](const game_object& object) {
+		remove(object);
 	});
 	world.objects.for_each([this](game_object* object) {
-		add(object);
+		add(*object);
 	});
 }
 
@@ -267,17 +269,14 @@ world_view::~world_view() {
 	no::delete_texture(tileset.texture);
 }
 
-void world_view::add(game_object* object) {
-	if (!object) {
-		return;
-	}
+void world_view::add(const game_object& object) {
 	pick_objects.add(object);
-	switch (object->definition().type) {
+	switch (object.definition().type) {
 	case game_object_type::decoration:
-		decorations.add((decoration_object*)object);
+		decorations.add(object);
 		break;
 	case game_object_type::character:
-		characters.add((character_object*)object);
+		characters.add(*world.objects.character(object.instance_id));
 		break;
 	case game_object_type::item_spawn:
 		break;
@@ -288,17 +287,14 @@ void world_view::add(game_object* object) {
 	}
 }
 
-void world_view::remove(game_object* object) {
-	if (!object) {
-		return;
-	}
+void world_view::remove(const game_object& object) {
 	pick_objects.remove(object);
-	switch (object->definition().type) {
+	switch (object.definition().type) {
 	case game_object_type::decoration:
-		decorations.remove((decoration_object*)object);
+		decorations.remove(object);
 		break;
 	case game_object_type::character:
-		characters.remove((character_object*)object);
+		characters.remove(*world.objects.character(object.instance_id));
 		break;
 	case game_object_type::item_spawn:
 		break;
@@ -312,12 +308,12 @@ void world_view::remove(game_object* object) {
 void world_view::draw() {
 	light.position = camera.transform.position + camera.offset();
 	draw_terrain();
-	decorations.draw();
+	decorations.draw(world.objects);
 	no::bind_shader(animate_diffuse_shader);
 	no::set_shader_view_projection(camera);
 	light.var_position_animate.set(light.position);
 	light.var_color_animate.set(light.color);
-	characters.draw();
+	characters.draw(world.objects);
 }
 
 void world_view::draw_terrain() {
@@ -348,7 +344,7 @@ void world_view::draw_for_picking() {
 	transform.position.x = (float)world.terrain.offset().x;
 	transform.position.z = (float)world.terrain.offset().y;
 	no::draw_shape(height_map_pick, transform);
-	pick_objects.draw();
+	pick_objects.draw(world.objects);
 }
 
 void world_view::draw_tile_highlights(const std::vector<no::vector2i>& tiles, const no::vector4f& color) {

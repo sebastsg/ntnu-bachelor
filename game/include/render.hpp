@@ -3,7 +3,7 @@
 #include "world.hpp"
 #include "draw.hpp"
 #include "character.hpp"
-#include "decoration.hpp"
+#include "world_objects.hpp"
 
 class world_view;
 
@@ -26,15 +26,14 @@ public:
 	character_renderer& operator=(const character_renderer&) = delete;
 	character_renderer& operator=(character_renderer&&) = delete;
 
-	void draw();
-
-	void add(character_object* object);
-	void remove(character_object* object);
+	void draw(const world_objects& objects);
+	void add(character_object& object);
+	void remove(character_object& object);
 
 private:
 
 	struct object_data {
-		character_object* object = nullptr;
+		int object_id = -1;
 		no::model_instance model;
 		int equip_event = -1;
 		int unequip_event = -1;
@@ -47,14 +46,14 @@ private:
 		} next_state;
 
 		object_data() = default;
-		object_data(character_object* object, no::model& model) : object(object), model(model) {}
+		object_data(int object_id, no::model& model) : object_id(object_id), model(model) {}
 	};
 
 	void on_equip(object_data& object, const item_instance& item);
 	void on_unequip(object_data& object, equipment_slot slot);
 
 	no::model model;
-	std::unordered_map<long long, no::model*> equipments;
+	std::unordered_map<int, no::model*> equipments;
 
 	int player_texture = -1;
 
@@ -81,10 +80,9 @@ public:
 	decoration_renderer& operator=(const decoration_renderer&) = delete;
 	decoration_renderer& operator=(decoration_renderer&&) = delete;
 
-	void draw();
-
-	void add(decoration_object* object);
-	void remove(decoration_object* object);
+	void draw(const world_objects& objects);
+	void add(const game_object& object);
+	void remove(const game_object& object);
 
 private:
 
@@ -92,7 +90,7 @@ private:
 		int definition_id = -1;
 		int texture = -1;
 		no::model model;
-		std::vector<decoration_object*> objects;
+		std::vector<int> objects;
 	};
 
 	std::vector<object_group> groups;
@@ -113,14 +111,13 @@ public:
 	object_pick_renderer& operator=(const object_pick_renderer&) = delete;
 	object_pick_renderer& operator=(object_pick_renderer&&) = delete;
 
-	void draw();
-
-	void add(game_object* object);
-	void remove(game_object* object);
+	void draw(const world_objects& objects);
+	void add(const game_object& object);
+	void remove(const game_object& object);
 
 private:
 
-	std::vector<game_object*> objects;
+	std::vector<int> object_ids;
 	no::model box;
 
 };
@@ -166,11 +163,11 @@ public:
 
 	void refresh_terrain();
 
-	void add(game_object* object);
-	void remove(game_object* object);
-
 private:
-	
+
+	void add(const game_object& object);
+	void remove(const game_object& object);
+
 	struct {
 		int grid = 52;
 		int border = 24;

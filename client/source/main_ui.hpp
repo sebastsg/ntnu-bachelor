@@ -96,7 +96,7 @@ public:
 	inventory_view& operator=(const inventory_view&) = delete;
 	inventory_view& operator=(inventory_view&&) = delete;
 
-	void listen(character_object* player);
+	void listen(int object_id);
 	void ignore();
 
 	no::transform2 body_transform() const;
@@ -114,7 +114,7 @@ private:
 	world_state& world;
 	game_state& game;
 
-	character_object* player = nullptr;
+	int object_id = -1;
 
 	struct inventory_slot {
 		no::rectangle rectangle;
@@ -178,7 +178,7 @@ public:
 	bool is_tab_hovered(int index) const;
 	bool is_mouse_over_any() const;
 
-	void listen(character_object* player);
+	void listen(int object_id);
 	void ignore();
 
 	void update();
@@ -212,7 +212,7 @@ private:
 	} tabs;
 
 	int shader = -1;
-	character_object* player = nullptr;
+	int object_id = -1;
 	int equipment_event = -1;
 
 	no::shader_variable color;

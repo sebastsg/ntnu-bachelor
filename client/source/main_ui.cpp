@@ -92,9 +92,9 @@ void hit_splat::update(const no::ortho_camera& camera) {
 		fade_out += 0.03f;
 		alpha = 1.0f - fade_out;
 	}
-	auto target = game->world.objects.find(target_id);
-	if (target) {
-		no::vector3f position = target->transform.position;
+	if (target_id != -1) {
+		auto& target = game->world.objects.object(target_id);
+		no::vector3f position = target.transform.position;
 		position.y += 2.0f; // todo: height of model
 		transform.position = game->world_camera().world_to_screen(position) / camera.zoom;
 		transform.position.y -= (fade_in * 0.5f + fade_out) * 32.0f;
@@ -247,8 +247,9 @@ void inventory_view::on_item_removed(const item_container::remove_event& event) 
 	}
 }
 
-void inventory_view::listen(character_object* player_) {
-	player = player_;
+void inventory_view::listen(int object_id_) {
+	object_id = object_id_;
+	auto player = world.objects.character(object_id);
 	add_item_event = player->inventory.events.add.listen([this](const item_container::add_event& event) {
 		on_item_added(event);
 	});
@@ -261,9 +262,10 @@ void inventory_view::listen(character_object* player_) {
 }
 
 void inventory_view::ignore() {
-	if (!player) {
+	if (object_id == -1) {
 		return;
 	}
+	auto player = world.objects.character(object_id);
 	player->inventory.events.add.ignore(add_item_event);
 	player->inventory.events.remove.ignore(remove_item_event);
 	add_item_event = -1;
@@ -425,10 +427,10 @@ bool user_interface_view::is_mouse_over_any() const {
 	return is_mouse_over() || is_mouse_over_context();
 }
 
-void user_interface_view::listen(character_object* player_) {
-	ASSERT(player_);
-	player = player_;
-	equipment_event = player->events.equip.listen([this](const character_object::equip_event& event) {
+void user_interface_view::listen(int object_id_) {
+	object_id = object_id_;
+	auto player = world.objects.character(object_id);
+	equipment_event = player->events.equip.listen([this](const item_instance& event) {
 		
 	});
 	press_event_id = game.mouse().press.listen([this](const no::mouse::press_message& event) {
@@ -455,13 +457,14 @@ void user_interface_view::listen(character_object* player_) {
 			create_context();
 		}
 	});
-	inventory.listen(player);
+	inventory.listen(object_id);
 }
 
 void user_interface_view::ignore() {
-	if (!player) {
+	if (object_id == -1) {
 		return;
 	}
+	auto player = world.objects.character(object_id);
 	inventory.ignore();
 	player->events.equip.ignore(equipment_event);
 	equipment_event = -1;
@@ -472,7 +475,7 @@ void user_interface_view::ignore() {
 
 void user_interface_view::update() {
 	hud.set_fps(((const game_state&)game).frame_counter().current_fps());
-	hud.set_debug(STRING("Tile: " << game.world.my_player()->tile()));
+	hud.set_debug(STRING("Tile: " << game.world.my_player().object.tile()));
 	hud.update(camera);
 }
 
@@ -499,7 +502,7 @@ void user_interface_view::draw() const {
 		break;
 	}
 	draw_tabs();
-	hud.draw(color, ui_texture, player);
+	hud.draw(color, ui_texture, world.objects.character(object_id));
 	if (context) {
 		context->draw();
 	}
@@ -541,6 +544,7 @@ void user_interface_view::create_context() {
 	context = new context_menu(camera, camera.mouse_position(game.mouse()), font, game.mouse());
 	if (is_mouse_over_inventory()) {
 		no::vector2i slot = inventory.hovered_slot();
+		auto player = world.objects.character(object_id);
 		if (slot.x != -1) {
 			auto item = player->inventory.at(slot);
 			if (item.definition_id != -1) {
@@ -553,7 +557,7 @@ void user_interface_view::create_context() {
 						game.equip_from_inventory(slot);
 					});
 				}
-				context->add_option("Drop", [this, item, slot] {
+				context->add_option("Drop", [this, item, slot, player] {
 					item_instance ground_item;
 					ground_item.definition_id = item.definition_id;
 					player->inventory.remove_to(item.stack, ground_item);
@@ -570,9 +574,9 @@ void user_interface_view::create_context() {
 			}
 			auto& definition = object->definition();
 			if (definition.type == game_object_type::character) {
-				auto character = (character_object*)object;
+				auto character = world.objects.character(object->instance_id);
 				if (character->stat(stat_type::health).real() > 0) {
-					int target_id = object->id(); // objects array can be resized
+					int target_id = object->instance_id; // objects array can be resized
 					context->add_option("Attack " + definition.name, [this, target_id] {
 						game.start_combat(target_id);
 					});

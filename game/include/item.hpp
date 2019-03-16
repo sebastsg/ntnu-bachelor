@@ -28,7 +28,7 @@ enum class equipment_slot {
 };
 
 struct item_definition {
-	long long id = -1;
+	int id = -1;
 	long long max_stack = 1;
 	item_type type = item_type::other;
 	equipment_slot slot = equipment_slot::none;
@@ -38,7 +38,7 @@ struct item_definition {
 };
 
 struct item_instance {
-	long long definition_id = -1;
+	int definition_id = -1;
 	long long stack = 0;
 };
 
@@ -50,7 +50,7 @@ public:
 	void save(const std::string& path) const;
 	void load(const std::string& path);
 
-	item_definition& get(long long id);
+	item_definition& get(int id);
 	std::vector<item_definition> of_type(item_type type) const;
 	int count() const;
 
@@ -86,15 +86,15 @@ public:
 
 	item_instance at(no::vector2i slot) const;
 	item_instance& at(no::vector2i slot);
-	void for_each(const std::function<void(no::vector2i, const item_instance&)>& handler);
+	void for_each(const std::function<void(no::vector2i, const item_instance&)>& handler) const;
 
 	void resize(no::vector2i size);
 	void add_from(item_instance& item);
 	void remove_to(long long stack, item_instance& item);
-	long long take_all(long long id);
+	long long take_all(int id);
 	void clear();
 
-	long long can_hold_more(long long id) const;
+	long long can_hold_more(int id) const;
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);

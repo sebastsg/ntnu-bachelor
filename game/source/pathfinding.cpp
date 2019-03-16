@@ -101,3 +101,97 @@ std::vector<no::vector2i> pathfinder::traverse_path(int index) const {
 	}
 	return result;
 }
+
+float angle_to_goal(no::vector2i from, no::vector2i to) {
+	bool left = from.x > to.x;
+	bool right = to.x > from.x;
+	if (right == left) {
+		right = false;
+		left = false;
+	}
+	bool up = from.y > to.y;
+	bool down = to.y > from.y;
+	if (up == down) {
+		up = false;
+		down = false;
+	}
+	if (left && up) {
+		return directions::north_west;
+	} else if (right && up) {
+		return directions::north_east;
+	} else if (left && down) {
+		return directions::south_west;
+	} else if (right && down) {
+		return directions::south_east;
+	} else if (left) {
+		return directions::west;
+	} else if (right) {
+		return directions::east;
+	} else if (down) {
+		return directions::south;
+	} else if (up) {
+		return directions::north;
+	}
+	return -1.0f;
+}
+
+no::vector2f distance_to_goal(const no::vector3f& current, const no::vector3f& goal) {
+	const float speed = 0.05f;
+	float x = goal.x - current.x;
+	float z = goal.z - current.z;
+	no::vector2f distance;
+	if (std::abs(x) >= speed) {
+		distance.x = (x > 0.0f ? speed : -speed);
+	}
+	if (std::abs(z) >= speed) {
+		distance.y = (z > 0.0f ? speed : -speed);
+	}
+	return distance;
+}
+
+bool move_towards_target(no::transform3& transform, std::vector<no::vector2i>& path) {
+	if (path.empty()) {
+		return false;
+	}
+	float speed = 0.05f;
+	no::vector2i current_target = path.back();
+	no::vector3f target_position = tile_index_to_world_position(current_target);
+	no::vector2f distance = distance_to_goal(transform.position, target_position);
+	bool moving = (std::abs(distance.x) > 0.0f || std::abs(distance.y) > 0.0f);
+	if (!moving) {
+		path.pop_back();
+		if (!path.empty()) {
+			move_towards_target(transform, path);
+		}
+		return false;
+	}
+	transform.position.x += distance.x;
+	transform.position.z += distance.y;
+	float new_angle = angle_to_goal(world_position_to_tile_index(transform.position), current_target);
+	if (new_angle >= 0.0f) {
+		transform.rotation.y = new_angle;
+	}
+	return true;
+}
+
+no::vector2i target_tile_at_distance(const game_object& target, const game_object& follower, int distance) {
+	no::vector2i target_tile = target.tile();
+	no::vector2i delta = follower.tile() - target_tile;
+	for (int i = 0; i < distance; i++) {
+		if (delta.x > 1) {
+			target_tile.x++; // to west of target
+			delta.x--;
+		} else if (delta.x < -1) {
+			target_tile.x--; // to east of target
+			delta.x++;
+		}
+		if (delta.y > 1) {
+			target_tile.y++; // to south of target
+			delta.y--;
+		} else if (delta.y < -1) {
+			target_tile.y--; // to north of target
+			delta.y++;
+		}
+	}
+	return target_tile;
+}

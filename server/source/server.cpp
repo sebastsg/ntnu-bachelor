@@ -59,20 +59,21 @@ void server_state::draw() {
 }
 
 character_object* server_state::load_player(int client_index) {
-	auto player = (character_object*)world.objects.add(1);
-	player->change_id(world.objects.next_dynamic_id());
+	auto& client = clients[client_index];
+	client.object.player_instance_id = world.objects.add(1);
+	auto player = world.objects.character(client.object.player_instance_id);
 	player->inventory.resize({ 4, 6 });
 	player->equipment.resize({ 4, 4 });
-	auto& client = clients[client_index];
 	no::vector2i tile = persister.load_player_tile(client.player.id);
 	client.player.variables = persister.load_player_variables(client.player.id);
 	client.player.quests = persister.load_player_quests(client.player.id);
-	client.object.player_instance_id = player->id();
+	client.object.player_instance_id = player->object_id;
 	persister.load_player_items(client.player.id, 0, player->inventory);
 	persister.load_player_items(client.player.id, 1, player->equipment);
-	player->transform.position.x = (float)tile.x;
-	player->transform.position.z = (float)tile.y;
-	player->transform.scale = 0.5f;
+	auto& object = world.objects.object(client.object.player_instance_id);
+	object.transform.position.x = (float)tile.x;
+	object.transform.position.z = (float)tile.y;
+	object.transform.scale = 0.5f;
 	player->stat(stat_type::health).add_experience(player->stat(stat_type::health).experience_for_level(20));
 	return player;
 }
@@ -82,12 +83,13 @@ void server_state::save_player(int client_index) {
 	if (!client.is_connected()) {
 		return;
 	}
-	character_object* player = (character_object*)world.objects.find(client.object.player_instance_id);
+	auto player = world.objects.character(client.object.player_instance_id);
 	if (!player) {
 		WARNING("Failed to save player");
 		return;
 	}
-	persister.save_player_tile(client.player.id, player->tile());
+	auto& object = world.objects.object(client.object.player_instance_id);
+	persister.save_player_tile(client.player.id, object.tile());
 	persister.save_player_variables(client.player.id, client.player.variables);
 	persister.save_player_quests(client.player.id, client.player.quests);
 	persister.save_player_items(client.player.id, inventory_container_type, player->inventory);
@@ -169,11 +171,12 @@ void server_state::on_move_to_tile(int client_index, const to_server::game::move
 	to_client::game::move_to_tile new_packet;
 	new_packet.tile = packet.tile;
 	new_packet.player_instance_id = client.object.player_instance_id;
-	auto player = world.objects.find(new_packet.player_instance_id);
+	auto player = world.objects.character(new_packet.player_instance_id);
 	if (player) {
 		// todo: pathfinding
-		player->transform.position.x = (float)packet.tile.x;
-		player->transform.position.z = (float)packet.tile.y;
+		auto& object = world.objects.object(player->object_id);
+		object.transform.position.x = (float)packet.tile.x;
+		object.transform.position.z = (float)packet.tile.y;
 	}
 	no::broadcast(new_packet, client_index);
 	no::send_packet(client_index, new_packet);
@@ -192,12 +195,12 @@ void server_state::on_start_dialogue(int client_index, const to_server::game::st
 		WARNING("Player is already in a dialogue");
 		return;
 	}
-	auto target = world.objects.find(packet.target_instance_id);
+	auto target = world.objects.character(packet.target_instance_id);
 	if (!target) {
 		WARNING("Target " << packet.target_instance_id << " not found.");
 		return;
 	}
-	auto player = world.objects.find(client.object.player_instance_id);
+	auto player = world.objects.character(client.object.player_instance_id);
 	if (!player) {
 		WARNING("Player not found");
 		return;
@@ -206,9 +209,10 @@ void server_state::on_start_dialogue(int client_index, const to_server::game::st
 	client.dialogue = new dialogue_tree();
 	client.dialogue->quests = &client.player.quests;
 	client.dialogue->variables = &client.player.variables;
-	client.dialogue->player = (character_object*)player;
-	client.dialogue->inventory = &client.dialogue->player->inventory;
-	client.dialogue->equipment = &client.dialogue->player->equipment;
+	client.dialogue->player_object_id = client.object.player_instance_id;
+	client.dialogue->inventory = &player->inventory;
+	client.dialogue->equipment = &player->equipment;
+	client.dialogue->world = &world;
 	client.dialogue->load(dialogue_id);
 	client.dialogue->process_entry_point();
 }
@@ -235,7 +239,7 @@ void server_state::on_start_combat(int client_index, const to_server::game::star
 
 void server_state::on_equip_from_inventory(int client_index, const to_server::game::equip_from_inventory& packet) {
 	auto& client = clients[client_index];
-	auto character = (character_object*)world.objects.find(client.object.player_instance_id);
+	auto character = world.objects.character(client.object.player_instance_id);
 	auto item = character->inventory.at(packet.slot);
 	character->equip_from_inventory(packet.slot);
 	to_client::game::character_equips client_packet;
@@ -247,11 +251,11 @@ void server_state::on_equip_from_inventory(int client_index, const to_server::ga
 
 void server_state::on_follow_character(int client_index, const to_server::game::follow_character& packet) {
 	auto& client = clients[client_index];
-	auto follower = (character_object*)world.objects.find(client.object.player_instance_id);
+	auto follower = world.objects.character(client.object.player_instance_id);
 	if (follower) {
 		follower->follow_object_id = packet.target_id;
 		to_client::game::character_follows client_packet;
-		client_packet.follower_id = follower->id();
+		client_packet.follower_id = follower->object_id;
 		client_packet.target_id = packet.target_id;
 		no::broadcast(client_packet, client_index);
 		no::send_packet(client_index, client_packet);
@@ -279,13 +283,14 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 
 	to_client::game::my_player_info my_info;
 	my_info.player = *player;
+	my_info.object = world.objects.object(player->object_id);
 	my_info.variables = clients[client_index].player.variables;
 	my_info.quests = clients[client_index].player.quests;
 	no::send_packet(client_index, my_info);
 
 	for (int j = 0; j < max_clients; j++) {
 		if (clients[j].is_connected() && client_index != j) {
-			auto existing_player = world.objects.find(clients[j].object.player_instance_id);
+			auto existing_player = world.objects.character(clients[j].object.player_instance_id);
 			if (!existing_player) {
 				WARNING("Player not found");
 				continue;
@@ -297,7 +302,8 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 	}
 
 	to_client::game::other_player_joined other_info;
-	other_info.player = *(character_object*)world.objects.find(clients[client_index].object.player_instance_id);
+	other_info.player = *world.objects.character(clients[client_index].object.player_instance_id);
+	other_info.object = world.objects.object(other_info.player.object_id);
 	no::broadcast(other_info, client_index);
 }
 

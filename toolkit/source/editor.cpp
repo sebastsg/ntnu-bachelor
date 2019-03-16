@@ -156,8 +156,7 @@ object_tool::object_tool(world_editor_state& editor) : world_editor_tool(editor)
 
 object_tool::~object_tool() {
 	disable();
-	editor.renderer.remove(object);
-	delete object;
+	//editor.renderer.remove(object);
 	no::delete_texture(ui_texture);
 }
 
@@ -169,15 +168,11 @@ void object_tool::enable() {
 		if (!editor.keyboard().is_key_down(no::key::space)) {
 			return;
 		}
-		auto object = editor.world.objects.add(object_definition_id);
-		if (!object) {
-			WARNING("Failed to add object: " << object_definition_id);
-			return;
-		}
-		object->change_id(editor.world.objects.next_static_id());
-		object->transform.position = editor.world_position_for_tile(editor.selected_tile);
-		object->transform.position.x += 0.5f;
-		object->transform.position.z += 0.5f;
+		int object_id = editor.world.objects.add(object_definition_id);
+		auto& object = editor.world.objects.object(object_id);
+		object.transform.position = editor.world_position_for_tile(editor.selected_tile);
+		object.transform.position.x += 0.5f;
+		object.transform.position.z += 0.5f;
 	});
 }
 
@@ -187,12 +182,12 @@ void object_tool::disable() {
 }
 
 void object_tool::update() {
-	if (!object || editor.is_mouse_over_ui() || editor.world.terrain.is_out_of_bounds(editor.hovered_tile)) {
+	if (editor.is_mouse_over_ui() || editor.world.terrain.is_out_of_bounds(editor.hovered_tile)) {
 		return;
 	}
-	object->transform.position = editor.world_position_for_tile(editor.hovered_tile);
-	object->transform.position.x += 0.5f;
-	object->transform.position.z += 0.5f;
+	object.transform.position = editor.world_position_for_tile(editor.hovered_tile);
+	object.transform.position.x += 0.5f;
+	object.transform.position.z += 0.5f;
 }
 
 void object_tool::update_imgui() {
@@ -206,10 +201,10 @@ void object_tool::update_imgui() {
 	}, nullptr, object_definitions().count(), 20);
 	if (object_id != object_definition_id) {
 		object_definition_id = object_id;
-		editor.renderer.remove(object);
-		delete object;
-		object = object_definitions().construct(object_definition_id);
-		editor.renderer.add(object);
+		//editor.renderer.remove(object);
+		object = {};
+		object.definition_id = object_definition_id;
+		//editor.renderer.add(object);
 	}
 
 	if (ImGui::IsMouseClicked(1) && !editor.is_mouse_over_ui()) { // right click in world
@@ -223,57 +218,58 @@ void object_tool::update_imgui() {
 				return;
 			}
 			auto& definition = object->definition();
-			if (ImGui::MenuItem(CSTRING(definition.name << " (" << object->id() << ")"))) {
-				selected_object_instance_id = object->id();
+			if (ImGui::MenuItem(CSTRING(definition.name << " (" << object->instance_id << ")"))) {
+				selected_object_instance_id = object->instance_id;
 			}
 		});
 		ImGui::EndPopup();
 	}
 	ImGui::PopStyleVar();
 
-	auto object = editor.world.objects.find(selected_object_instance_id);
-	if (object) {
-		ImGui::Separator();
-		ImGui::PushID(CSTRING("SelectedObject"));
-		ImGui::Text(CSTRING("Selected object: " << object->definition().name << " (" << object->id() << ")"));
-		ImGui::Text("Transform");
-		ImGui::InputFloat3("Position", &object->transform.position.x);
-		ImGui::InputFloat3("Scale", &object->transform.scale.x);
-		ImGui::InputFloat3("Rotation", &object->transform.rotation.x);
-		
-		if (object->definition().type == game_object_type::character) {
-			auto character = (character_object*)object;
-			auto& health = character->stat(stat_type::health);
-			int health_level = health.real();
-			ImGui::InputInt("Health", &health_level);
-			if (health_level != health.real()) {
-				health.set_experience(health.experience_for_level(health_level));
-			}
-			ImGui::Text("Equipment");
-			auto& equipment = character->equipment;
-			bool dirty = false;
-			if (equipment.columns() == 0) {
-				equipment.resize(4);
-			}
-			for (int x = 0; x < equipment.columns(); x++) {
-				for (int y = 0; y < equipment.rows(); y++) {
-					auto& item = equipment.at({ x, y });
-					auto& definition = item_definitions().get(item.definition_id);
-					auto uv = definition.uv;
-					ImGui::Text(CSTRING((equipment_slot)definition.slot << ":"));
-					ImGui::SameLine();
-					ImGui::ImageButton((ImTextureID)ui_texture, { 32.0f }, item_uv1(uv, ui_texture), item_uv2(uv, ui_texture), 1);
-					item_popup_context(CSTRING("##Equip" << x << y << character), &item, ui_texture, dirty);
-				}
-			}
-		}
-
-		if (ImGui::Button("Delete")) {
-			editor.world.objects.remove(selected_object_instance_id);
-			selected_object_instance_id = -1;
-		}
-		ImGui::PopID();
+	if (selected_object_instance_id == -1) {
+		return;
 	}
+	auto& object = editor.world.objects.object(selected_object_instance_id);
+	ImGui::Separator();
+	ImGui::PushID(CSTRING("SelectedObject"));
+	ImGui::Text(CSTRING("Selected object: " << object.definition().name << " (" << object.instance_id << ")"));
+	ImGui::Text("Transform");
+	ImGui::InputFloat3("Position", &object.transform.position.x);
+	ImGui::InputFloat3("Scale", &object.transform.scale.x);
+	ImGui::InputFloat3("Rotation", &object.transform.rotation.x);
+
+	if (object.definition().type == game_object_type::character) {
+		auto character = editor.world.objects.character(object.instance_id);
+		auto& health = character->stat(stat_type::health);
+		int health_level = health.real();
+		ImGui::InputInt("Health", &health_level);
+		if (health_level != health.real()) {
+			health.set_experience(health.experience_for_level(health_level));
+		}
+		ImGui::Text("Equipment");
+		auto& equipment = character->equipment;
+		bool dirty = false;
+		if (equipment.columns() == 0) {
+			equipment.resize(4);
+		}
+		for (int x = 0; x < equipment.columns(); x++) {
+			for (int y = 0; y < equipment.rows(); y++) {
+				auto& item = equipment.at({ x, y });
+				auto& definition = item_definitions().get(item.definition_id);
+				auto uv = definition.uv;
+				ImGui::Text(CSTRING((equipment_slot)definition.slot << ":"));
+				ImGui::SameLine();
+				ImGui::ImageButton((ImTextureID)ui_texture, { 32.0f }, item_uv1(uv, ui_texture), item_uv2(uv, ui_texture), 1);
+				item_popup_context(CSTRING("##Equip" << x << y << character), &item, ui_texture, dirty);
+			}
+		}
+	}
+
+	if (ImGui::Button("Delete")) {
+		editor.world.objects.remove(selected_object_instance_id);
+		selected_object_instance_id = -1;
+	}
+	ImGui::PopID();
 }
 
 void object_tool::draw() {

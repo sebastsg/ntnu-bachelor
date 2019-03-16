@@ -11,9 +11,9 @@
 #include "quest.hpp"
 #include "combat.hpp"
 
-constexpr int inventory_container_type = 0;
-constexpr int equipment_container_type = 1;
-constexpr int warehouse_container_type = 2;
+const int inventory_container_type = 0;
+const int equipment_container_type = 1;
+const int warehouse_container_type = 2;
 
 class client_state {
 public:
@@ -70,10 +70,10 @@ public:
 class server_state : public no::window_state {
 public:
 
+	static const int max_clients = 100;
+
 	database_connection database;
 	game_persister persister;
-
-	static constexpr int max_clients = 100;
 
 	server_state();
 	~server_state() override;

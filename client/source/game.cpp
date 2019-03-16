@@ -13,8 +13,11 @@ game_world::game_world() {
 	load(no::asset_path("worlds/main.ew"));
 }
 
-character_object* game_world::my_player() {
-	return (character_object*)objects.find(my_player_id);
+player_data game_world::my_player() {
+	return player_data{
+		*objects.character(my_player_id),
+		objects.object(my_player_id)
+	};
 }
 
 game_state::game_state() : 
@@ -65,10 +68,10 @@ game_state::game_state() :
 		case to_client::game::move_to_tile::type:
 		{
 			to_client::game::move_to_tile packet{ stream };
-			auto player = (character_object*)world.objects.find(packet.player_instance_id);
+			auto player = world.objects.character(packet.player_instance_id);
 			if (player) {
-				pathfinder pathfind{ world.terrain };
-				player->start_path_movement(pathfind.find_path(player->tile(), packet.tile));
+				auto& object = world.objects.object(packet.player_instance_id);
+				player->start_path_movement(world.path_between(object.tile(), packet.tile));
 			} else {
 				WARNING("player not found: " << packet.player_instance_id);
 			}
@@ -77,9 +80,12 @@ game_state::game_state() :
 		case to_client::game::my_player_info::type:
 		{
 			to_client::game::my_player_info packet{ stream };
-			auto player = (character_object*)world.objects.add(packet.player.serialized());
-			world.my_player_id = packet.player.id();
-			ui.listen(world.my_player());
+			no::io_stream objstream;
+			packet.object.write(objstream);
+			packet.player.write(objstream);
+			world.objects.add(objstream);
+			world.my_player_id = packet.object.instance_id;
+			ui.listen(world.my_player_id);
 			variables = packet.variables;
 			quests = packet.quests;
 			break;
@@ -87,7 +93,10 @@ game_state::game_state() :
 		case to_client::game::other_player_joined::type:
 		{
 			to_client::game::other_player_joined packet{ stream };
-			world.objects.add(packet.player.serialized());
+			no::io_stream objstream;
+			packet.object.write(objstream);
+			packet.player.write(objstream);
+			world.objects.add(objstream);
 			break;
 		}
 		case to_client::game::chat_message::type:
@@ -100,13 +109,13 @@ game_state::game_state() :
 		{
 			to_client::game::combat_hit packet{ stream };
 			ui.hud.hit_splats.emplace_back(*this, packet.target_id, packet.damage);
-			auto attacker = (character_object*)world.objects.find(packet.attacker_id);
-			auto target = (character_object*)world.objects.find(packet.target_id);
+			auto attacker = world.objects.character(packet.attacker_id);
+			auto target = world.objects.character(packet.target_id);
 			target->stat(stat_type::health).add_effective(-packet.damage);
 			attacker->events.attack.emit();
 			target->events.defend.emit();
-			attacker->follow_object_id = target->id();
-			target->follow_object_id = attacker->id();
+			attacker->follow_object_id = target->object_id;
+			target->follow_object_id = attacker->object_id;
 			attacker->follow_distance = 1;
 			target->follow_distance = 2;
 			break;
@@ -114,7 +123,7 @@ game_state::game_state() :
 		case to_client::game::character_equips::type:
 		{
 			to_client::game::character_equips packet{ stream };
-			auto character = (character_object*)world.objects.find(packet.instance_id);
+			auto character = world.objects.character(packet.instance_id);
 			if (character) {
 				character->equip({ packet.item_id, packet.stack });
 			}
@@ -123,7 +132,7 @@ game_state::game_state() :
 		case to_client::game::character_follows::type:
 		{
 			to_client::game::character_follows packet{ stream };
-			auto follower = (character_object*)world.objects.find(packet.follower_id);
+			auto follower = world.objects.character(packet.follower_id);
 			if (follower) {
 				follower->follow_object_id = packet.target_id;
 			}
@@ -146,13 +155,13 @@ game_state::~game_state() {
 }
 
 void game_state::update() {
+	no::synchronize_socket(server());
 	renderer.camera.size = window().size().to<float>();
 	ui.camera.transform.scale = window().size().to<float>();
-	no::synchronize_socket(server());
 	if (world.my_player_id == -1) {
 		return;
 	}
-	follower.update(renderer.camera, world.my_player()->transform);
+	follower.update(renderer.camera, world.my_player().object.transform);
 	dragger.update(renderer.camera);
 	rotater.update(renderer.camera, keyboard());
 	world.update();
@@ -182,8 +191,7 @@ void game_state::draw() {
 		if (hovered_pixel.x != -1) {
 			renderer.draw_tile_highlights({ hovered_pixel.xy }, { 0.3f, 0.4f, 0.8f, 0.4f });
 			if (keyboard().is_key_down(no::key::num_8)) {
-				pathfinder p{ world.terrain };
-				path_found = p.find_path(world.my_player()->tile(), hovered_pixel.xy);
+				path_found = world.path_between(world.my_player().object.tile(), hovered_pixel.xy);
 			}
 			renderer.draw_tile_highlights(path_found, { 1.0f, 1.0f, 0.2f, 0.8f });
 		}
@@ -239,7 +247,7 @@ void game_state::follow_character(int target_id) {
 }
 
 void game_state::equip_from_inventory(no::vector2i slot) {
-	world.my_player()->equip_from_inventory(slot);
+	world.my_player().character.equip_from_inventory(slot);
 	to_server::game::equip_from_inventory packet;
 	packet.slot = slot;
 	no::send_packet(server(), packet);

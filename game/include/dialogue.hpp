@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 class character_object;
+class world_state;
 
 enum class node_type {
 	message,
@@ -136,10 +137,11 @@ public:
 
 	// what nodes check and modify:
 	game_variable_map* variables = nullptr;
-	character_object* player = nullptr;
+	int player_object_id = -1;
 	item_container* inventory = nullptr;
 	item_container* equipment = nullptr;
 	quest_instance_list* quests = nullptr;
+	world_state* world = nullptr;
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);

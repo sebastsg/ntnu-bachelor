@@ -1,5 +1,6 @@
 #include "world.hpp"
 #include "assets.hpp"
+#include "pathfinding.hpp"
 
 void world_tile::set(uint8_t type) {
 	set_corner(0, type);
@@ -245,14 +246,6 @@ void world_state::update() {
 	objects.update();
 }
 
-no::vector2i world_state::world_position_to_tile_index(float x, float z) const {
-	return { (int)std::floor(x), (int)std::floor(z) };
-}
-
-no::vector3f world_state::tile_index_to_world_position(int x, int z) const {
-	return { (float)x, 0.0f, (float)z };
-}
-
 void world_state::load(const std::string& path) {
 	terrain.load(path + "t");
 	objects.load(path + "o");
@@ -261,4 +254,24 @@ void world_state::load(const std::string& path) {
 void world_state::save(const std::string& path) const {
 	terrain.save(path + "t");
 	objects.save(path + "o");
+}
+
+std::vector<no::vector2i> world_state::path_between(no::vector2i from, no::vector2i to) const {
+	return pathfinder{ terrain }.find_path(from, to);
+}
+
+no::vector2i world_position_to_tile_index(float x, float z) {
+	return { (int)std::floor(x), (int)std::floor(z) };
+}
+
+no::vector2i world_position_to_tile_index(const no::vector3f& position) {
+	return { (int)std::floor(position.x), (int)std::floor(position.z) };
+}
+
+no::vector3f tile_index_to_world_position(int x, int z) {
+	return { (float)x + 0.5f, 0.0f, (float)z + 0.5f };
+}
+
+no::vector3f tile_index_to_world_position(no::vector2i tile) {
+	return { (float)tile.x + 0.5f, 0.0f, (float)tile.y + 0.5f };
 }

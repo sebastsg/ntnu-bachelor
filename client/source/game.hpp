@@ -13,6 +13,11 @@
 #include "assets.hpp"
 #include "font.hpp"
 
+struct player_data {
+	character_object& character;
+	game_object& object;
+};
+
 class game_world : public world_state {
 public:
 	
@@ -20,7 +25,7 @@ public:
 
 	game_world();
 
-	character_object* my_player();
+	player_data my_player();
 
 private:
 

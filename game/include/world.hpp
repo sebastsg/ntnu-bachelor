@@ -1,6 +1,7 @@
 #pragma once
 
 #include "object.hpp"
+#include "world_objects.hpp"
 
 #include "math.hpp"
 #include "camera.hpp"
@@ -125,10 +126,14 @@ public:
 
 	virtual void update();
 
-	no::vector2i world_position_to_tile_index(float x, float z) const;
-	no::vector3f tile_index_to_world_position(int x, int z) const;
-
 	void load(const std::string& path);
 	void save(const std::string& path) const;
 
+	std::vector<no::vector2i> path_between(no::vector2i from, no::vector2i to) const;
+
 };
+
+no::vector2i world_position_to_tile_index(float x, float z);
+no::vector2i world_position_to_tile_index(const no::vector3f& position);
+no::vector3f tile_index_to_world_position(int x, int z);
+no::vector3f tile_index_to_world_position(no::vector2i tile);

@@ -8,18 +8,22 @@ namespace to_client::game {
 
 Write(my_player_info)
 	player.write(stream);
+	object.write(stream);
 	variables.write(stream);
 	quests.write(stream);
 Read(my_player_info)
 	player.read(stream);
+	object.read(stream);
 	variables.read(stream);
 	quests.read(stream);
 End
 
 Write(other_player_joined)
 	player.write(stream);
+	object.write(stream);
 Read(other_player_joined)
 	player.read(stream);
+	object.read(stream);
 End
 
 Write(player_disconnected)

@@ -25,7 +25,7 @@ void item_definition_list::save(const std::string& path) const {
 		stream.write((int32_t)definition.type);
 		stream.write((int32_t)definition.slot);
 		stream.write((int64_t)definition.max_stack);
-		stream.write((int64_t)definition.id);
+		stream.write((int32_t)definition.id);
 		stream.write(definition.uv);
 		stream.write(definition.name);
 		stream.write(definition.model);
@@ -46,7 +46,7 @@ void item_definition_list::load(const std::string& path) {
 		definition.type = (item_type)stream.read<int32_t>();
 		definition.slot = (equipment_slot)stream.read<int32_t>();
 		definition.max_stack = stream.read<int64_t>();
-		definition.id = stream.read<int64_t>();
+		definition.id = stream.read<int32_t>();
 		definition.uv = stream.read<no::vector2f>();
 		definition.name = stream.read<std::string>();
 		definition.model = stream.read<std::string>();
@@ -54,8 +54,8 @@ void item_definition_list::load(const std::string& path) {
 	}
 }
 
-item_definition& item_definition_list::get(long long id) {
-	if (id >= definitions.size() || id < 0) {
+item_definition& item_definition_list::get(int id) {
+	if (id >= (int)definitions.size() || id < 0) {
 		return invalid;
 	}
 	return definitions[(size_t)id];
@@ -111,7 +111,7 @@ item_instance& item_container::at(no::vector2i slot) {
 	return items[index];
 }
 
-void item_container::for_each(const std::function<void(no::vector2i, const item_instance&)>& handler) {
+void item_container::for_each(const std::function<void(no::vector2i, const item_instance&)>& handler) const {
 	no::vector2i slot;
 	for (auto& item : items) {
 		if (item.definition_id != -1) {
@@ -191,7 +191,7 @@ void item_container::remove_to(long long stack, item_instance& other_item) {
 	}
 }
 
-long long item_container::take_all(long long id) {
+long long item_container::take_all(int id) {
 	long long total = 0;
 	no::vector2i slot;
 	for (auto& item : items) {
@@ -218,7 +218,7 @@ void item_container::clear() {
 	}
 }
 
-long long item_container::can_hold_more(long long id) const {
+long long item_container::can_hold_more(int id) const {
 	long long can_hold = 0;
 	for (auto& item : items) {
 		if (item.definition_id == -1) {

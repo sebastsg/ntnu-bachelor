@@ -109,7 +109,7 @@ public:
 private:
 
 	int object_definition_id = 0;
-	game_object* object = nullptr;
+	game_object object;
 
 	int mouse_press_id = -1;
 	no::vector2i context_menu_tile;
