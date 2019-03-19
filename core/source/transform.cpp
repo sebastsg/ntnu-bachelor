@@ -60,10 +60,10 @@ bool transform2::collides_with(const vector2f& b_position, const vector2f& b_sca
 }
 
 bool transform2::collides_with(const vector2f& b_position) const {
-	if (b_position.x < position.x || b_position.x > position.x + scale.x) {
+	if (b_position.x < position.x || b_position.x >= position.x + scale.x) {
 		return false;
 	}
-	if (b_position.y < position.y || b_position.y > position.y + scale.y) {
+	if (b_position.y < position.y || b_position.y >= position.y + scale.y) {
 		return false;
 	}
 	return true;

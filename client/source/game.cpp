@@ -175,6 +175,29 @@ void game_state::update() {
 			close_dialogue();
 		}
 	}
+	// shift terrain to center player
+	no::vector2i player_tile = world.my_player().object.tile();
+	no::vector2i world_offset = world.terrain.offset();
+	no::vector2i world_size = world.terrain.size();
+	no::vector2i goal_offset = player_tile - world_size / 2;
+	goal_offset.x = std::max(0, goal_offset.x);
+	goal_offset.y = std::max(0, goal_offset.y);
+	while (world_offset.x > goal_offset.x) {
+		world_offset.x--;
+		world.terrain.shift_left();
+	}
+	while (world_offset.x < goal_offset.x) {
+		world_offset.x++;
+		world.terrain.shift_right();
+	}
+	while (world_offset.y > goal_offset.y) {
+		world_offset.y--;
+		world.terrain.shift_up();
+	}
+	while (world_offset.y < goal_offset.y) {
+		world_offset.y++;
+		world.terrain.shift_down();
+	}
 }
 
 void game_state::draw() {
@@ -185,10 +208,11 @@ void game_state::draw() {
 	hovered_pixel = no::read_pixel_at({ mouse().x(), window().height() - mouse().y() });
 	hovered_pixel.x--;
 	hovered_pixel.y--;
+	hovered_pixel.xy += world.terrain.offset();
 	window().clear();
 	renderer.draw();
 	if (world.my_player_id != -1) {
-		if (hovered_pixel.x != -1) {
+		if (hovered_pixel.x != -1 && !ui.is_context_open()) {
 			renderer.draw_tile_highlights({ hovered_pixel.xy }, { 0.3f, 0.4f, 0.8f, 0.4f });
 			if (keyboard().is_key_down(no::key::num_8)) {
 				path_found = world.path_between(world.my_player().object.tile(), hovered_pixel.xy);

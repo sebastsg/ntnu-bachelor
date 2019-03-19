@@ -51,17 +51,47 @@ public:
 	context_menu& operator=(const context_menu&) = delete;
 	context_menu& operator=(context_menu&&) = delete;
 
-	void trigger(int index);
-	bool is_mouse_over(int index) const;
-	int count() const;
 	void add_option(const std::string& text, const std::function<void()>& action);
-	void draw() const;
+	void trigger(int index);
 
+	bool is_mouse_over(int index) const;
+	void draw(int ui_texture) const;
+	int count() const;
+
+	float calculate_max_offset_x() const;
 	no::transform2 menu_transform() const;
+	no::transform2 option_transform(int index) const;
 
 private:
 
-	no::transform2 option_transform(int index) const;
+	void draw_border(int uv, no::vector2f offset) const;
+	void draw_top_border() const;
+	void draw_background() const;
+	void draw_side_borders() const;
+	void draw_bottom_border() const;
+	void draw_options(int ui_texture) const;
+	void draw_option(int option, int ui_texture) const;
+	void draw_highlighted_option(int option, int ui_texture) const;
+
+	static const int top_begin = 0;
+	static const int top_tile_1 = 1;
+	static const int top_tile_2 = 2;
+	static const int top_tile_3 = 3;
+	static const int top_end = 4;
+	static const int highlight_begin = 5;
+	static const int highlight_tile = 6;
+	static const int highlight_end = 7;
+	static const int item_tile = 8;
+	static const int left_1 = 9;
+	static const int left_2 = 10;
+	static const int right_1 = 11;
+	static const int right_2 = 12;
+	static const int bottom_begin = 13;
+	static const int bottom_tile_1 = 14;
+	static const int bottom_tile_2 = 15;
+	static const int bottom_tile_3 = 16;
+	static const int bottom_end = 17;
+	static const int total_tiles = 18;
 
 	struct menu_option {
 		std::string text;
@@ -75,10 +105,8 @@ private:
 	const no::font& font;
 	const no::ortho_camera& camera;
 	no::mouse& mouse;
+	std::vector<no::rectangle> rectangles;
 	no::rectangle full;
-	no::rectangle top;
-	no::rectangle row;
-	no::rectangle bottom;
 
 	mutable no::shader_variable color;
 
@@ -150,7 +178,8 @@ private:
 	long long fps = 0;
 
 	no::rectangle hud_left;
-	no::rectangle hud_tile;
+	no::rectangle hud_tile_1;
+	no::rectangle hud_tile_2;
 	no::rectangle hud_right;
 	no::rectangle health_background;
 	no::rectangle health_foreground;
@@ -177,6 +206,7 @@ public:
 	bool is_mouse_over_inventory() const;
 	bool is_tab_hovered(int index) const;
 	bool is_mouse_over_any() const;
+	bool is_context_open() const;
 
 	void listen(int object_id);
 	void ignore();

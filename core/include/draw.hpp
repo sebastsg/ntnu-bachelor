@@ -298,6 +298,8 @@ struct model_animation_instance {
 class model_instance {
 public:
 
+	int texture = -1;
+
 	model_instance() = default;
 	model_instance(model& source);
 	model_instance(const model_instance&) = delete;
@@ -317,7 +319,7 @@ public:
 
 	void draw() const;
 
-	int attach(model& attachment, model_attachment_mapping_list& mappings);
+	int attach(model& attachment, int texture, model_attachment_mapping_list& mappings);
 	void detach(int id);
 	void set_attachment_bone(int id, const vector3f& position, const glm::quat& rotation);
 	void update_attachment_bone(int id, const model_attachment_mapping_list& mappings);

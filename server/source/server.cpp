@@ -160,6 +160,7 @@ void server_state::on_receive_packet(int client_index, int16_t type, no::io_stre
 
 void server_state::on_disconnect(int client_index) {
 	save_player(client_index);
+	world.objects.remove(clients[client_index].object.player_instance_id);
 	clients[client_index] = { false };
 	to_client::game::player_disconnected disconnection;
 	disconnection.player_instance_id = clients[client_index].object.player_instance_id;

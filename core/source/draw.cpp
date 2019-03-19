@@ -288,6 +288,9 @@ int model_instance::current_animation() const {
 }
 
 void model_instance::draw() const {
+	if (texture != -1) {
+		bind_texture(texture);
+	}
 	get_shader_variable("uni_Bones").set(bones);
 	source->bind();
 	source->draw();
@@ -299,10 +302,11 @@ void model_instance::draw() const {
 	}
 }
 
-int model_instance::attach(model& attachment_model, model_attachment_mapping_list& mappings) {
+int model_instance::attach(model& attachment_model, int texture, model_attachment_mapping_list& mappings) {
 	attachment_id_counter++;
 	for (int i = 0; i < (int)animations.size(); i++) {
 		auto attachment = new model_attachment();
+		attachment->attachment.texture = texture;
 		bool found = mappings.update(*source, source->animations[i], attachment_model, *attachment);
 		if (!found) {
 			delete attachment;

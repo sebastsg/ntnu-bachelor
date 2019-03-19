@@ -14,12 +14,10 @@ const no::vector2f tab_equipment_uv = { 224.0f, 24.0f };
 const no::vector2f tab_quests_uv = { 192.0f, 24.0f };
 const no::vector2f tab_size = 24.0f;
 
-const no::vector2f hud_left_uv = { 8.0f, 128.0f };
-const no::vector2f hud_left_size = { 64.0f, 68.0f };
-const no::vector2f hud_tile_uv = { 72.0f, 128.0f };
-const no::vector2f hud_tile_size = { 16.0f, 68.0f };
-const no::vector2f hud_right_uv = { 88.0f, 128.0f };
-const no::vector2f hud_right_size = { 16.0f, 68.0f };
+const no::vector4f hud_left_uv = { 8.0f, 528.0f, 40.0f, 68.0f };
+const no::vector4f hud_tile_1_uv = { 56.0f, 528.0f, 16.0f, 68.0f };
+const no::vector4f hud_tile_2_uv = { 80.0f, 528.0f, 16.0f, 68.0f };
+const no::vector4f hud_right_uv = { 104.0f, 528.0f, 16.0f, 68.0f };
 const no::vector2f hud_health_background = { 104.0f, 152.0f };
 const no::vector2f hud_health_foreground = { 112.0f, 152.0f };
 const no::vector2f hud_health_size = { 8.0f, 12.0f };
@@ -27,9 +25,26 @@ const no::vector2f hud_health_size = { 8.0f, 12.0f };
 const no::vector4f inventory_uv = { 200.0f, 128.0f, 138.0f, 205.0f };
 const no::vector2f inventory_offset = { 23.0f, 130.0f };
 
-const no::vector4f context_uv_top = { 121.0f, 58.0f, 191.0f - 121.0f, 67.0f - 58.0f };
-const no::vector4f context_uv_row = { 121.0f, 68.0f, 191.0f - 121.0f, 79.0f - 68.0f };
-const no::vector4f context_uv_bottom = { 121.0f, 111.0f, 191.0f - 121.0f, 116.0f - 111.0f };
+const no::vector4f context_uv[] = {
+	{ 60.0f, 57.0f, 12.0f, 15.0f }, // top begin
+	{ 80.0f, 57.0f, 16.0f, 9.0f }, // top tile 1
+	{ 104.0f, 57.0f, 24.0f, 9.0f }, // top tile 2
+	{ 136.0f, 57.0f, 8.0f, 9.0f }, // top tile 3
+	{ 152.0f, 57.0f, 8.0f, 15.0f }, // top end
+	{ 88.0f, 96.0f, 10.0f, 16.0f }, // highlight begin
+	{ 104.0f, 96.0f, 8.0f, 16.0f }, // highlight tile
+	{ 120.0f, 96.0f, 10.0f, 16.0f }, // highlight end
+	{ 104.0f, 80.0f, 8.0f, 16.0f }, // item tile
+	{ 60.0f, 80.0f, 4.0f, 16.0f }, // left 1
+	{ 60.0f, 104.0f, 4.0f, 16.0f }, // left 2
+	{ 152.0f, 80.0f, 8.0f, 16.0f }, // right 1
+	{ 152.0f, 104.0f, 8.0f, 16.0f }, // right 2
+	{ 60.0f, 128.0f, 12.0f, 11.0f }, // bottom begin
+	{ 80.0f, 128.0f, 16.0f, 10.0f }, // bottom tile 1
+	{ 104.0f, 128.0f, 24.0f, 10.0f }, // bottom tile 2
+	{ 136.0f, 128.0f, 8.0f, 10.0f }, // bottom tile 3
+	{ 152.0f, 128.0f, 8.0f, 11.0f }, // bottom end
+};
 
 static void set_ui_uv(no::rectangle& rectangle, no::vector2f uv, no::vector2f uv_size) {
 	rectangle.set_tex_coords(uv.x / ui_size.x, uv.y / ui_size.y, uv_size.x / ui_size.x, uv_size.y / ui_size.y);
@@ -124,15 +139,24 @@ bool hit_splat::is_visible() const {
 
 context_menu::context_menu(const no::ortho_camera& camera_, no::vector2f position_, const no::font& font, no::mouse& mouse_)
 	: camera(camera_), mouse(mouse_), position(position_), font(font) {
-	set_ui_uv(top, context_uv_top);
-	set_ui_uv(row, context_uv_row);
-	set_ui_uv(bottom, context_uv_bottom);
+	position.floor();
+	for (int i = 0; i < total_tiles; i++) {
+		set_ui_uv(rectangles.emplace_back(), context_uv[i]);
+	}
 }
 
 context_menu::~context_menu() {
 	for (auto& option : options) {
 		no::delete_texture(option.texture);
 	}
+}
+
+void context_menu::add_option(const std::string& text, const std::function<void()>& action) {
+	auto& option = options.emplace_back();
+	option.text = text;
+	option.action = action;
+	option.texture = no::create_texture(font.render(text));
+	max_width = std::max(max_width, (float)no::texture_size(option.texture).x + context_uv[top_begin].z);
 }
 
 void context_menu::trigger(int index) {
@@ -145,71 +169,150 @@ bool context_menu::is_mouse_over(int index) const {
 	return option_transform(index).collides_with(camera.mouse_position(mouse));
 }
 
+void context_menu::draw(int ui_texture) const {
+	if (!color.exists()) {
+		color = no::get_shader_variable("uni_Color");
+	}
+	draw_background();
+	draw_top_border();
+	draw_options(ui_texture);
+	draw_side_borders();
+	draw_bottom_border();
+}
+
 int context_menu::count() const {
 	return (int)options.size();
 }
 
-void context_menu::add_option(const std::string& text, const std::function<void()>& action) {
-	auto& option = options.emplace_back();
-	option.text = text;
-	option.action = action;
-	option.texture = no::create_texture(font.render(text));
-	max_width = context_uv_top.z;
-}
-
-void context_menu::draw() const {
-	if (!color.exists()) {
-		color = no::get_shader_variable("uni_Color");
-	}
-	no::transform2 transform;
-	// top
-	transform.position = position;
-	transform.scale = context_uv_top.zw;
-	no::draw_shape(top, transform);
-
-	// rows
-	transform.position.y += context_uv_top.w;
-	transform.scale = context_uv_row.zw;
-	no::vector2f mouse_position = camera.mouse_position(mouse);
-	for (auto& option : options) {
-		no::draw_shape(row, transform);
-		transform.position.y += transform.scale.y;
-	}
-
-	// bottom
-	transform.scale = context_uv_bottom.zw;
-	no::draw_shape(bottom, transform);
-
-	// text
-	transform.position.x += 16.0f;
-	transform.position.y = position.y + context_uv_top.w;
-	for (auto& option : options) {
-		transform.scale = context_uv_row.zw;
-		if (transform.collides_with(no::vector2f{ mouse_position.x + 16.0f, mouse_position.y })) {
-			color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
+float context_menu::calculate_max_offset_x() const {
+	float x = context_uv[top_begin].z;
+	while (max_width > x) {
+		x += context_uv[top_tile_1].z;
+		if (max_width > x) {
+			x += context_uv[top_tile_3].z;
 		}
-		transform.scale = no::texture_size(option.texture).to<float>();
-		no::bind_texture(option.texture);
-		no::draw_shape(full, transform);
-		transform.position.y += context_uv_row.w;
-		color.set({ 1.0f, 1.0f, 1.0f, 1.0f });
 	}
-}
-
-no::transform2 context_menu::option_transform(int index) const {
-	no::transform2 transform;
-	transform.scale = context_uv_row.zw;
-	transform.position = position;
-	transform.position.y += context_uv_top.w + transform.scale.y * (float)index;
-	return transform;
+	x += context_uv[top_tile_2].z;
+	return x;
 }
 
 no::transform2 context_menu::menu_transform() const {
 	no::transform2 transform;
 	transform.position = position;
-	transform.scale.x = max_width;
-	transform.scale.y = context_uv_top.w + context_uv_row.w * (float)options.size() + context_uv_bottom.w;
+	transform.scale = {
+		calculate_max_offset_x(),
+		context_uv[top_begin].w + context_uv[item_tile].w * (float)options.size() + context_uv[bottom_begin].w
+	};
 	return transform;
+}
+
+no::transform2 context_menu::option_transform(int index) const {
+	no::transform2 transform;
+	transform.position = position;
+	transform.position.x += context_uv[left_1].z;
+	transform.position.y += context_uv[top_begin].w - 8.0f + (float)index * context_uv[item_tile].w;
+	transform.scale = { calculate_max_offset_x(), context_uv[item_tile].w };
+	return transform;
+}
+
+void context_menu::draw_border(int uv, no::vector2f offset) const {
+	no::draw_shape(rectangles[uv], no::transform2{ { position + offset }, context_uv[uv].zw });
+}
+
+void context_menu::draw_top_border() const {
+	no::vector2f offset;
+	draw_border(top_begin, offset);
+	offset.x += context_uv[top_begin].z;
+	while (max_width > offset.x) {
+		draw_border(top_tile_1, offset);
+		offset.x += context_uv[top_tile_1].z;
+		if (max_width > offset.x) {
+			draw_border(top_tile_3, offset);
+			offset.x += context_uv[top_tile_3].z;
+		}
+	}
+	draw_border(top_tile_2, offset);
+	offset.x += context_uv[top_tile_2].z;
+	draw_border(top_end, offset);
+}
+
+void context_menu::draw_background() const {
+	no::transform2 transform;
+	transform.position = position + no::vector2f{ context_uv[left_1].z, context_uv[top_tile_1].w };
+	float height = context_uv[top_begin].w + (float)(options.size() - 1) * context_uv[item_tile].w;
+	transform.scale = { calculate_max_offset_x(), height };
+	no::draw_shape(rectangles[item_tile], transform);
+}
+
+void context_menu::draw_side_borders() const {
+	no::vector2f offset;
+	offset.y = context_uv[top_begin].w;
+	float top_before_end_x = calculate_max_offset_x();
+	for (int i = 0; i < (int)options.size() - 1; i++) {
+		offset.x = 0.0f;
+		draw_border(left_1 + i % 1, offset);
+		draw_border(right_1 + i % 1, { top_before_end_x, offset.y });
+		offset.y += context_uv[right_1].z;
+	}
+}
+
+void context_menu::draw_bottom_border() const {
+	no::vector2f offset;
+	offset.y = context_uv[top_begin].w + (float)(options.size() - 1) * context_uv[item_tile].w;
+	draw_border(bottom_begin, offset);
+	offset.x = context_uv[bottom_begin].z;
+	while (max_width > offset.x) {
+		draw_border(bottom_tile_1, offset);
+		offset.x += context_uv[bottom_tile_1].z;
+		if (max_width > offset.x) {
+			draw_border(bottom_tile_3, offset);
+			offset.x += context_uv[bottom_tile_3].z;
+		}
+	}
+	draw_border(bottom_tile_2, offset);
+	offset.x += context_uv[bottom_tile_2].z;
+	draw_border(bottom_end, offset);
+}
+
+void context_menu::draw_options(int ui_texture) const {
+	for (int i = 0; i < (int)options.size(); i++) {
+		draw_option(i, ui_texture);
+	}
+	no::bind_texture(ui_texture);
+}
+
+void context_menu::draw_option(int option_index, int ui_texture) const {
+	no::vector2f offset;
+	offset.x = context_uv[left_1].z;
+	offset.y = context_uv[top_tile_1].w - 2.0f; // two padding pixels
+	auto& option = options[option_index];
+	if (is_mouse_over(option_index)) {
+		draw_highlighted_option(option_index, ui_texture);
+	}
+	no::transform2 transform;
+	transform.position = position + context_uv[top_tile_1].zw;
+	transform.position.y += (float)option_index * context_uv[item_tile].w + 2.0f;
+	transform.scale = no::texture_size(option.texture).to<float>();
+	no::bind_texture(option.texture);
+	no::draw_shape(full, transform);
+	offset.y += context_uv[item_tile].w;
+	color.set(no::vector4f{ 1.0f });
+}
+
+void context_menu::draw_highlighted_option(int option, int ui_texture) const {
+	no::vector2f offset;
+	offset.x = context_uv[left_1].z;
+	offset.y = context_uv[top_tile_1].w + (float)option * context_uv[item_tile].w - 2.0f;
+	no::bind_texture(ui_texture);
+	draw_border(highlight_begin, offset);
+	offset.x += context_uv[highlight_begin].z;
+	float max_offset_x = calculate_max_offset_x();
+	while (max_offset_x > offset.x + 8.0f) {
+		draw_border(highlight_tile, offset);
+		offset.x += context_uv[highlight_tile].z;
+	}
+	draw_border(highlight_end, offset);
+	color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
 }
 
 inventory_view::inventory_view(const no::ortho_camera& camera, game_state& game, world_state& world) 
@@ -308,9 +411,10 @@ no::vector2i inventory_view::hovered_slot() const {
 hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
 	fps_texture = no::create_texture();
 	debug_texture = no::create_texture();
-	set_ui_uv(hud_left, hud_left_uv, hud_left_size);
-	set_ui_uv(hud_tile, hud_tile_uv, hud_tile_size);
-	set_ui_uv(hud_right, hud_right_uv, hud_right_size);
+	set_ui_uv(hud_left, hud_left_uv);
+	set_ui_uv(hud_tile_1, hud_tile_1_uv);
+	set_ui_uv(hud_tile_2, hud_tile_2_uv);
+	set_ui_uv(hud_right, hud_right_uv);
 	set_ui_uv(health_background, hud_health_background, hud_health_size);
 	set_ui_uv(health_foreground, hud_health_foreground, hud_health_size);
 }
@@ -348,15 +452,15 @@ void hud_view::draw(no::shader_variable color, int ui_texture, character_object*
 	// background
 	no::bind_texture(ui_texture);
 	transform.position = 8.0f;
-	transform.scale = hud_left_size;
+	transform.scale = hud_left_uv.zw;
 	no::draw_shape(hud_left, transform);
 	transform.position.x += transform.scale.x;
-	transform.scale = hud_tile_size;
+	transform.scale = hud_tile_1_uv.zw;
 	for (int i = 0; i <= player->stat(stat_type::health).real() / 2; i++) {
-		no::draw_shape(hud_tile, transform);
+		no::draw_shape(hud_tile_1, transform);
 		transform.position.x += transform.scale.x;
 	}
-	transform.scale = hud_right_size;
+	transform.scale = hud_right_uv.zw;
 	no::draw_shape(hud_right, transform);
 
 	// health
@@ -425,6 +529,10 @@ bool user_interface_view::is_tab_hovered(int index) const {
 
 bool user_interface_view::is_mouse_over_any() const {
 	return is_mouse_over() || is_mouse_over_context();
+}
+
+bool user_interface_view::is_context_open() const {
+	return context != nullptr;
 }
 
 void user_interface_view::listen(int object_id_) {
@@ -504,7 +612,7 @@ void user_interface_view::draw() const {
 	draw_tabs();
 	hud.draw(color, ui_texture, world.objects.character(object_id));
 	if (context) {
-		context->draw();
+		context->draw(ui_texture);
 	}
 }
 

@@ -239,9 +239,15 @@ void attachments_tool::update() {
 	ImGui::Text("Attachments");
 
 	if (!root_model.is_drawable()) {
+		std::string path;
 		if (ImGui::Button("Import main NOM model")) {
-			std::string browsed_path = no::platform::open_file_browse_window();
-			root_model.load<no::animated_mesh_vertex>(browsed_path);
+			path = no::platform::open_file_browse_window();
+		}
+		if (ImGui::Button("Import character")) {
+			path = no::asset_path("models/character.nom");
+		}
+		if (!path.empty()) {
+			root_model.load<no::animated_mesh_vertex>(path);
 			instance = { root_model };
 			no::delete_texture(texture);
 			texture = no::create_texture(no::surface(no::asset_path("textures/" + root_model.texture_name() + ".png")), no::scale_option::nearest_neighbour, true);
@@ -462,7 +468,7 @@ void attachments_tool::update() {
 				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
 			}
 			if (ImGui::Button(CSTRING("Attach##AttachToModel" << i))) {
-				attachment.id = instance.attach(*attachment.model, mappings);
+				attachment.id = instance.attach(*attachment.model, -1, mappings);
 			}
 			if (!exists) {
 				ImGui::PopStyleVar();
@@ -496,10 +502,31 @@ void attachments_tool::update() {
 
 	ImGui::Separator();
 
-	if (root_model.is_drawable() && ImGui::Button("Load attachment")) {
-		std::string browsed_path = no::platform::open_file_browse_window();
-		auto& attachment = active_attachments.emplace_back();
-		attachment.model->load<no::animated_mesh_vertex>(browsed_path);
+	if (root_model.is_drawable()) {
+		std::string path;
+		if (ImGui::Button("Load attachment")) {
+			path = no::platform::open_file_browse_window();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("[Shield]")) {
+			path = no::asset_path("models/shield.nom");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("[Sword]")) {
+			path = no::asset_path("models/sword.nom");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("[Axe]")) {
+			path = no::asset_path("models/axe.nom");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("[Spear]")) {
+			path = no::asset_path("models/spear.nom");
+		}
+		if (!path.empty()) {
+			auto& attachment = active_attachments.emplace_back();
+			attachment.model->load<no::animated_mesh_vertex>(path);
+		}
 	}
 
 	ImGui::Separator();
