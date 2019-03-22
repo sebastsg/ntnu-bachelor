@@ -216,10 +216,14 @@ void converter_tool::draw() {
 attachments_tool::attachments_tool() : animator{ root_model } {
 	animator.add();
 	mappings.load(no::asset_path("models/attachments.noma"));
+	active_attachments.reserve(100); // todo: make this unnecessary. it isn't critical either way
 }
 
 attachments_tool::~attachments_tool() {
 	no::delete_texture(texture);
+	for (auto& attachment : active_attachments) {
+		no::delete_texture(attachment.texture);
+	}
 }
 
 void attachments_tool::update() {
@@ -434,17 +438,21 @@ void attachments_tool::update() {
 			continue;
 		}
 		bool exists = false;
-		mappings.for_each([&](no::bone_attachment_mapping& mapping) {
-			if (mapping.attached_model == attachment.model.name()) {
-				for (int i = 0; i < root_model.total_animations(); i++) {
-					if (root_model.animation(i).name == mapping.root_animation) {
-						exists = true;
-						break;
+		if (attachment.model.index_of_animation("default") != -1) {
+			mappings.for_each([&](no::bone_attachment_mapping& mapping) {
+				if (mapping.attached_model == attachment.model.name()) {
+					for (int i = 0; i < root_model.total_animations(); i++) {
+						if (root_model.animation(i).name == mapping.root_animation) {
+							exists = true;
+							break;
+						}
 					}
 				}
-			}
-			return !exists;
-		});
+				return !exists;
+			});
+		} else {
+			exists = true;
+		}
 		if (attachment.animator.count() == 0) {
 			if (!exists) {
 				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
@@ -464,12 +472,12 @@ void attachments_tool::update() {
 				attachment.animator.play(0, "default", -1);
 				attachment_animation.is_attachment = true;
 				mappings.update(root_model, animation, attachment.model.name(), attachment_animation.attachment);
-				attachment_animation.root_transform = attachment_animation.transforms[attachment_animation.attachment.parent];
+				attachment_animation.root_transform = animator.get(0).transforms[attachment_animation.attachment.parent];
 			} else {
 				attachment.animator.play(0, animation, -1);
 			}
 			if (ImGui::Button(CSTRING("Detach##DetachFromModel" << i))) {
-				animator.erase(0);
+				attachment.animator.erase(0);
 			}
 			ImGui::SameLine();
 		}
@@ -522,6 +530,8 @@ void attachments_tool::update() {
 				if (!attachment.alive) {
 					attachment.animator.erase(0);
 					attachment.model.load<no::animated_mesh_vertex>(path);
+					no::delete_texture(attachment.texture);
+					attachment.texture = no::create_texture({ no::asset_path("textures/" + attachment.model.texture_name() + ".png") });
 					attachment.alive = true;
 					found = true;
 					break;
@@ -530,6 +540,7 @@ void attachments_tool::update() {
 			if (!found) {
 				auto& attachment = active_attachments.emplace_back();
 				attachment.model.load<no::animated_mesh_vertex>(path);
+				attachment.texture = no::create_texture({ no::asset_path("textures/" + attachment.model.texture_name() + ".png") });
 			}
 		}
 	}
@@ -557,6 +568,10 @@ void attachments_tool::draw() {
 	animator.draw();
 	for (auto& attachment : active_attachments) {
 		if (attachment.alive && attachment.animator.can_animate(0)) {
+			if (attachment.texture != -1) {
+				no::bind_texture(attachment.texture);
+			}
+			attachment.animator.shader.bones = no::get_shader_variable("uni_Bones");
 			attachment.animator.animate();
 			attachment.animator.draw();
 		}

@@ -92,7 +92,8 @@ private:
 		bool alive = true;
 		no::model model;
 		no::skeletal_animator animator;
-		active_attachment_data() : animator{ model } {}
+		int texture = -1;
+		active_attachment_data() : animator { model } {}
 	};
 
 	std::vector<active_attachment_data> active_attachments;

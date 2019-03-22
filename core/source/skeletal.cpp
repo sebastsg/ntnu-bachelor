@@ -82,6 +82,9 @@ bool skeletal_animator::will_be_reset(int id) const {
 void skeletal_animator::draw() const {
 	skeleton.bind();
 	for (auto& animation : animations) {
+		if (!animation.active) {
+			continue;
+		}
 		no::set_shader_model(animation.transform);
 		shader.bones.set(animation.bones, animation.bone_count);
 		skeleton.draw();
