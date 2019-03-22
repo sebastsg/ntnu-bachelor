@@ -8,7 +8,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
 
-object_editor::object_editor() : dragger(mouse()) {
+object_editor::object_editor() : dragger(mouse()), animator{ model } {
 	window().set_clear_color({ 0.3f });
 	no::imgui::create(window());
 	box.load(no::create_box_model_data<no::static_mesh_vertex>([](const no::vector3f& vertex) {
@@ -26,6 +26,7 @@ object_editor::object_editor() : dragger(mouse()) {
 			factor = 4.0f;
 		}
 	});
+	animator.add();
 	camera.transform.position.y = 1.0f;
 	camera.rotation_offset_factor = 12.0f;
 	animate_shader = no::create_shader(no::asset_path("shaders/animatediffuse"));
@@ -90,10 +91,9 @@ void object_editor::ui_select_object() {
 	if (previous_object != current_object) {
 		if (selected.type == game_object_type::character) {
 			model.load<no::animated_mesh_vertex>(no::asset_path("models/" + selected.model + ".nom"));
-			instance = { model };
 			if (selected.model == "character") {
 				// todo: select animation list, like in model manager
-				instance.start_animation(model.index_of_animation("idle"));
+				animator.play(0, model.index_of_animation("idle"), -1);
 			}
 		} else {
 			model.load<no::static_mesh_vertex>(no::asset_path("models/" + selected.model + ".nom"));
@@ -168,10 +168,10 @@ void object_editor::draw() {
 	if (model_texture != -1) {
 		no::bind_texture(model_texture);
 	}
-	if (selected.type == game_object_type::character && instance.can_animate()) {
+	if (selected.type == game_object_type::character && animator.can_animate(0)) {
 		no::set_shader_model(no::transform3{ {}, { 0.0f, rotation, 0.0f }, { 1.0f } });
-		instance.animate();
-		instance.draw();
+		animator.animate();
+		animator.draw();
 	} else if (model.is_drawable()) {
 		no::draw_shape(model, no::transform3{});
 	}

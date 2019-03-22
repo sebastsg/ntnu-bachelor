@@ -61,17 +61,17 @@ void game_object_definition_list::load(const std::string& path) {
 }
 
 game_object_definition& game_object_definition_list::get(int id) {
-	if (id >= definitions.size() || id < 0) {
+	if (id >= (int)definitions.size() || id < 0) {
 		return invalid;
 	}
-	return definitions[(size_t)id];
+	return definitions[id];
 }
 
 const game_object_definition& game_object_definition_list::get(int id) const {
-	if (id >= definitions.size() || id < 0) {
+	if (id >= (int)definitions.size() || id < 0) {
 		return invalid;
 	}
-	return definitions[(size_t)id];
+	return definitions[id];
 }
 
 int game_object_definition_list::count() const {

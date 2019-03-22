@@ -105,19 +105,44 @@ struct vertex_array_data {
 
 };
 
-struct model_animation_channel {
+struct animation_channel {
+
 	using key_time = float;
-	std::vector<std::pair<key_time, vector3f>> positions;
-	std::vector<std::pair<key_time, glm::quat>> rotations;
-	std::vector<std::pair<key_time, vector3f>> scales;
+
+	struct position_frame {
+		key_time time = 0.0f;
+		vector3f position;
+		position_frame() = default;
+		position_frame(key_time time, vector3f position);
+	};
+
+	struct rotation_frame {
+		key_time time = 0.0f;
+		glm::quat rotation;
+		rotation_frame() = default;
+		rotation_frame(key_time time, glm::quat rotation);
+	};
+
+	struct scale_frame {
+		key_time time = 0.0f;
+		vector3f scale;
+		scale_frame() = default;
+		scale_frame(key_time time, vector3f scale);
+	};
+
+	std::vector<position_frame> positions;
+	std::vector<rotation_frame> rotations;
+	std::vector<scale_frame> scales;
+
 	int bone = -1;
+
 };
 
 struct model_animation {
 	std::string name;
 	float duration = 0.0f;
 	float ticks_per_second = 0.0f;
-	std::vector<model_animation_channel> channels;
+	std::vector<animation_channel> channels;
 	std::vector<int> transitions;
 };
 
@@ -235,18 +260,18 @@ void export_model(const std::string& path, const model_data<V>& model) {
 			stream.write((int16_t)node.bone);
 			stream.write((int16_t)node.positions.size());
 			for (auto& position : node.positions) {
-				stream.write(position.first);
-				stream.write(position.second);
+				stream.write(position.time);
+				stream.write(position.position);
 			}
 			stream.write((int16_t)node.rotations.size());
 			for (auto& rotation : node.rotations) {
-				stream.write(rotation.first);
-				stream.write(rotation.second);
+				stream.write(rotation.time);
+				stream.write(rotation.rotation);
 			}
 			stream.write((int16_t)node.scales.size());
 			for (auto& scale : node.scales) {
-				stream.write(scale.first);
-				stream.write(scale.second);
+				stream.write(scale.time);
+				stream.write(scale.scale);
 			}
 		}
 		stream.write_array<int16_t, int>(animation.transitions);
@@ -296,20 +321,20 @@ void import_model(const std::string& path, model_data<V>& model) {
 			int16_t position_count = stream.read<int16_t>();
 			for (int16_t p = 0; p < position_count; p++) {
 				auto& position = node.positions.emplace_back();
-				position.first = stream.read<float>();
-				position.second = stream.read<vector3f>();
+				position.time = stream.read<float>();
+				position.position = stream.read<vector3f>();
 			}
 			int16_t rotation_count = stream.read<int16_t>();
 			for (int16_t r = 0; r < rotation_count; r++) {
 				auto& rotation = node.rotations.emplace_back();
-				rotation.first = stream.read<float>();
-				rotation.second = stream.read<glm::quat>();
+				rotation.time = stream.read<float>();
+				rotation.rotation = stream.read<glm::quat>();
 			}
 			int16_t scale_count = stream.read<int16_t>();
 			for (int16_t s = 0; s < scale_count; s++) {
 				auto& scale = node.scales.emplace_back();
-				scale.first = stream.read<float>();
-				scale.second = stream.read<vector3f>();
+				scale.time = stream.read<float>();
+				scale.scale = stream.read<vector3f>();
 			}
 		}
 		animation.transitions = stream.read_array<int, int16_t>();

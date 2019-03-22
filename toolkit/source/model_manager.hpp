@@ -2,7 +2,7 @@
 
 #include "menu.hpp"
 #include "camera.hpp"
-#include "draw.hpp"
+#include "skeletal.hpp"
 
 class converter_tool;
 
@@ -14,23 +14,26 @@ public:
 	static constexpr int animated = 0;
 	static constexpr int static_object = 1;
 
-	loaded_model() = default;
-	loaded_model(const std::string& name, int vertex_type, const no::model_data<no::animated_mesh_vertex>& data);
+	loaded_model() : animator{ model } {}
+	loaded_model(const loaded_model&) = delete;
+	loaded_model(loaded_model&&) = delete;
 
-	loaded_model& operator=(loaded_model&&);
+	loaded_model& operator=(const loaded_model&) = delete;
+	loaded_model& operator=(loaded_model&&) = delete;
 
 	void draw();
 	int type() const;
 	void scale_vertices(no::vector3f scale);
 	void load_texture();
+	void load(const std::string& name, int vertex_type, const no::model_data<no::animated_mesh_vertex>& data);
 
 private:
 
 	std::string name;
 	no::model_data<no::animated_mesh_vertex> data;
 	no::model model;
-	no::model_instance instance;
-	int animation = 0;
+	no::skeletal_animator animator;
+	int animation_index = 0;
 	int vertex_type = 0;
 	int texture = -1;
 
@@ -73,41 +76,28 @@ private:
 
 	no::model root_model;
 
-	no::model_attachment_mapping_list mappings;
-	no::model_attachment_mapping* current_mapping = nullptr;
+	no::bone_attachment_mapping_list mappings;
+	no::bone_attachment_mapping* current_mapping = nullptr;
 
 	struct {
 		char model[100] = {};
 		char animation[100] = { "default" };
 		int channel = -1;
 	} temp_mapping;
+
 	bool reuse_default_mapping = false;
 	bool apply_changes_to_other_animations = false;
 
 	struct active_attachment_data {
-		int id = -1;
-		no::model* model = nullptr;
-		active_attachment_data() {
-			model = new no::model();
-		}
-		active_attachment_data(const active_attachment_data&) = delete;
-		active_attachment_data(active_attachment_data&& that) {
-			std::swap(id, that.id);
-			std::swap(model, that.model);
-		}
-		~active_attachment_data() {
-			delete model;
-		}
-		active_attachment_data& operator=(const active_attachment_data&) = delete;
-		active_attachment_data& operator=(active_attachment_data&& that) {
-			std::swap(id, that.id);
-			std::swap(model, that.model);
-			return *this;
-		}
+		bool alive = true;
+		no::model model;
+		no::skeletal_animator animator;
+		active_attachment_data() : animator{ model } {}
 	};
 
 	std::vector<active_attachment_data> active_attachments;
-	no::model_instance instance;
+	no::skeletal_animator animator;
+	
 	int animation = 0;
 	int texture = -1;
 	bool freeze_animation = false;

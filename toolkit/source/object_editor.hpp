@@ -2,7 +2,7 @@
 
 #include "menu.hpp"
 #include "object.hpp"
-#include "draw.hpp"
+#include "skeletal.hpp"
 #include "camera.hpp"
 
 class object_editor : public menu_bar_state {
@@ -33,7 +33,7 @@ private:
 	int model_texture = -1;
 	int blank_texture = -1;
 	no::model box;
-	no::model_instance instance;
+	no::skeletal_animator animator;
 
 	int mouse_scroll_id = -1;
 	int animate_shader = -1;

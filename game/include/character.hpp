@@ -43,6 +43,7 @@ public:
 		no::message_event<equipment_slot> unequip;
 		no::signal_event attack;
 		no::signal_event defend;
+		no::message_event<bool> run;
 	} events;
 
 	item_container inventory;
@@ -68,6 +69,7 @@ private:
 
 	std::vector<no::vector2i> target_path;
 	int tiles_moved = 0;
+	bool moved_last_frame = false;
 	character_stat stats[(size_t)stat_type::total];
 
 };

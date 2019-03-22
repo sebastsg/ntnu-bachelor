@@ -160,10 +160,7 @@ bool move_towards_target(no::transform3& transform, std::vector<no::vector2i>& p
 	bool moving = (std::abs(distance.x) > 0.0f || std::abs(distance.y) > 0.0f);
 	if (!moving) {
 		path.pop_back();
-		if (!path.empty()) {
-			move_towards_target(transform, path);
-		}
-		return false;
+		return path.empty() ? false : move_towards_target(transform, path);
 	}
 	transform.position.x += distance.x;
 	transform.position.z += distance.y;

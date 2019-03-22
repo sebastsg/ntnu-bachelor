@@ -75,6 +75,7 @@ public:
 	void set(const transform3& transform) const;
 	void set(vector2f* vector, size_t count) const;
 	void set(const std::vector<glm::mat4>& matrices) const;
+	void set(const glm::mat4* matrices, size_t count) const;
 
 	bool exists() const;
 
@@ -160,40 +161,22 @@ public:
 
 	generic_vertex_array() = default;
 	generic_vertex_array(const generic_vertex_array&) = delete;
-	generic_vertex_array(generic_vertex_array&& that) {
-		std::swap(id, that.id);
-	}
+	generic_vertex_array(generic_vertex_array&&);
 
 	template<typename V>
 	generic_vertex_array(vertex_array<V>&& that) {
 		std::swap(id, that.id);
 	}
 
-	~generic_vertex_array() {
-		delete_vertex_array(id);
-	}
+	~generic_vertex_array();
 
 	generic_vertex_array& operator=(const generic_vertex_array&) = delete;
-	generic_vertex_array& operator=(generic_vertex_array&& that) {
-		std::swap(id, that.id);
-		return *this;
-	}
+	generic_vertex_array& operator=(generic_vertex_array&&);
 
-	void bind() const {
-		bind_vertex_array(id);
-	}
-
-	void draw() const {
-		draw_vertex_array(id);
-	}
-
-	void draw(size_t offset, size_t count) const {
-		draw_vertex_array(id, offset, count);
-	}
-
-	bool exists() const {
-		return id != -1;
-	}
+	void bind() const;
+	void draw() const;
+	void draw(size_t offset, size_t count) const;
+	bool exists() const;
 
 private:
 
@@ -201,12 +184,11 @@ private:
 
 };
 
-class model_attachment_mapping_list;
-
 class model {
 public:
 
 	friend class model_instance;
+	friend class skeletal_animator;
 
 	model() = default;
 	model(const model&) = delete;
@@ -217,9 +199,10 @@ public:
 	model& operator=(const model&) = delete;
 	model& operator=(model&&);
 
-	int index_of_animation(const std::string& name);
+	int index_of_animation(const std::string& name) const;
 	int total_animations() const;
 	model_animation& animation(int index);
+	const model_animation& animation(int index) const;
 	model_node& node(int index);
 	int total_nodes() const;
 	glm::mat4 bone(int index) const;
@@ -279,129 +262,6 @@ private:
 	bool drawable = false;
 	std::string texture;
 	std::string model_name;
-
-};
-
-struct model_attachment;
-
-struct model_animation_channel_state {
-	int last_position_key = 0;
-	int last_rotation_key = 0;
-	int last_scale_key = 0;
-	std::vector<model_attachment*> attachments;
-};
-
-struct model_animation_instance {
-	std::vector<model_animation_channel_state> channels;
-};
-
-class model_instance {
-public:
-
-	int texture = -1;
-
-	model_instance() = default;
-	model_instance(model& source);
-	model_instance(const model_instance&) = delete;
-	model_instance(model_instance&&);
-
-	model_instance& operator=(const model_instance&) = delete;
-	model_instance& operator=(model_instance&&);
-
-	void set_source(model& source);
-
-	void animate();
-	void start_animation(int index);
-	bool can_animate() const;
-	void reset_animation();
-	bool will_be_reset() const;
-	int current_animation() const;
-
-	void draw() const;
-
-	int attach(model& attachment, int texture, model_attachment_mapping_list& mappings);
-	void detach(int id);
-	void set_attachment_bone(int id, const vector3f& position, const glm::quat& rotation);
-	void update_attachment_bone(int id, const model_attachment_mapping_list& mappings);
-
-private:
-
-	glm::mat4 next_interpolated_position(int node, float time);
-	glm::mat4 next_interpolated_rotation(int node, float time);
-	glm::mat4 next_interpolated_scale(int node, float time);
-	void animate_node(int node, float time, const glm::mat4& transform);
-	void animate(const glm::mat4& transform);
-
-	model* source = nullptr;
-	std::vector<glm::mat4> bones;
-	std::vector<model_animation_instance> animations;
-
-	std::vector<size_t> attachments;
-	int attachment_id_counter = 0;
-
-	// used to reset the animation nodes' last key indices
-	bool is_new_loop = false;
-	bool is_new_animation = false;
-	// does not interpolate to the new animation yet. it skips to the frame immediately
-	int new_animation_transition_frame = 0;
-
-	int animation_index = 0;
-	timer animation_timer;
-
-	// todo: eh, refactor tbh
-	model_attachment* my_attachment = nullptr;
-
-};
-
-struct model_attachment {
-
-	model_instance attachment;
-	glm::mat4 parent_bone;
-	vector3f position;
-	glm::quat rotation;
-	glm::mat4 attachment_bone;
-	int parent = -1;
-	int id = 0;
-
-	model_attachment() = default;
-	model_attachment(model& attachment, glm::mat4 parent_bone, vector3f position, glm::quat rotation, int parent, int id);
-
-	void update_bone();
-
-};
-
-struct model_attachment_mapping {
-	std::string root_model;
-	std::string root_animation;
-	std::string attached_model;
-	std::string attached_animation;
-	int attached_to_channel = -1;
-	vector3f position;
-	glm::quat rotation;
-
-	bool is_same_mapping(const model_attachment_mapping& that) const;
-	std::string mapping_string() const;
-
-};
-
-class model_attachment_mapping_list {
-public:
-
-	void save(const std::string& path);
-	void load(const std::string& path);
-
-	void for_each(const std::function<bool(model_attachment_mapping&)>& handler);
-	void remove_if(const std::function<bool(model_attachment_mapping&)>& compare);
-
-	bool exists(const model_attachment_mapping& mapping);
-	void add(const model_attachment_mapping& mapping);
-	bool update(model& root, model_animation& animation, model& attachment_model, model_attachment& attachment) const;
-	
-	std::string find_root_animation(const std::string& root_model, const std::string& attached_model, const std::string& attached_animation) const;
-
-private:
-
-	std::vector<model_attachment_mapping> mappings;
 
 };
 

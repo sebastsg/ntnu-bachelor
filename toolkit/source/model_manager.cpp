@@ -12,8 +12,10 @@
 
 #include <filesystem>
 
-loaded_model::loaded_model(const std::string& name, int vertex_type, const no::model_data<no::animated_mesh_vertex>& data) 
-	: vertex_type(vertex_type), data(data), name(name) {
+void loaded_model::load(const std::string& name, int vertex_type, const no::model_data<no::animated_mesh_vertex>& data) {
+	this->name = name;
+	this->vertex_type = vertex_type;
+	this->data = data;
 	load_texture();
 	if (vertex_type == animated) {
 		model.load(data);
@@ -22,25 +24,10 @@ loaded_model::loaded_model(const std::string& name, int vertex_type, const no::m
 			return static_object_vertex{ vertex.position, vertex.normal, vertex.tex_coords };
 		}));
 	}
-	instance = { model };
+	animator.add();
 	if (vertex_type == 0 && model.total_animations() > 0) {
-		instance.start_animation(0);
+		animator.play(0, 0, -1);
 	}
-	this->data.texture.reserve(100);
-	this->name.reserve(100);
-}
-
-loaded_model& loaded_model::operator=(loaded_model&& that) {
-	std::swap(name, that.name);
-	std::swap(model, that.model);
-	std::swap(data, that.data);
-	std::swap(vertex_type, that.vertex_type);
-	std::swap(texture, that.texture);
-	instance = { model };
-	if (vertex_type == animated && model.total_animations() > 0) {
-		instance.start_animation(0);
-	}
-	return *this;
 }
 
 void loaded_model::load_texture() {
@@ -56,14 +43,15 @@ void loaded_model::load_texture() {
 
 void loaded_model::draw() {
 	if (model.is_drawable() && model.total_animations() > 0) {
-		instance.animate();
+		animator.animate();
 	}
 	if (texture != -1) {
 		no::bind_texture(texture);
 	}
 	if (model.is_drawable()) {
 		if (model.total_animations() > 0) {
-			instance.draw();
+			animator.shader.bones = no::get_shader_variable("uni_Bones");
+			animator.draw();
 		} else {
 			model.bind();
 			model.draw();
@@ -117,12 +105,12 @@ void converter_tool::update() {
 			}
 			auto merged_model = no::merge_model_animations<no::animated_mesh_vertex>(models);
 			merged_model.name = std::filesystem::path(browsed_path).parent_path().stem().string();
-			model = { merged_model.name, import_options.vertex_type, merged_model };
+			model.load(merged_model.name, import_options.vertex_type, merged_model);
 		} else if (import_options.vertex_type == loaded_model::static_object) {
 			no::convert_model(browsed_path, model.name, options);
 			if (!models.empty()) {
 				models[0].texture = model.data.texture;
-				model = { models[0].name, import_options.vertex_type, models[0] };
+				model.load(models[0].name, import_options.vertex_type, models[0]);
 			}
 		}
 	}
@@ -139,10 +127,9 @@ void converter_tool::update() {
 	}
 	ImGui::Text("Texture");
 	ImGui::SameLine();
-	ImGui::InputText("##TextureName", model.data.texture.data(), model.data.texture.capacity());
+	imgui_input_text<128>("##TextureName", model.data.texture);
 	ImGui::SameLine();
 	if (ImGui::Button("Apply##ApplyTexture")) {
-		model.data.texture = model.data.texture.data();
 		model.load_texture();
 	}
 
@@ -184,8 +171,8 @@ void converter_tool::update() {
 
 	ImGui::Separator();
 
-	int old_animation = model.animation;
-	ImGui::ListBox("##SelectAnimation", &model.animation, [](void* data, int i, const char** out) -> bool {
+	int old_animation = model.animation_index;
+	ImGui::ListBox("##SelectAnimation", &model.animation_index, [](void* data, int i, const char** out) -> bool {
 		auto& model = *(no::model*)data;
 		if (i < 0 || i >= model.total_animations()) {
 			return false;
@@ -193,17 +180,16 @@ void converter_tool::update() {
 		*out = model.animation(i).name.c_str();
 		return true;
 	}, &model.model, model.model.total_animations(), 10);
-	if (old_animation != model.animation) {
-		model.instance.start_animation(model.animation);
+	if (old_animation != model.animation_index) {
+		model.animator.play(0, model.animation_index, -1);
 	}
 
 	ImGui::Separator();
 
 	ImGui::Text("Export as ");
 	ImGui::SameLine();
-	ImGui::InputText("##ExportModelName", model.name.data(), model.name.capacity());
+	imgui_input_text<128>("##ExportModelName", model.name);
 	if (ImGui::Button("Export NOM model")) {
-		model.name = model.name.data();
 		std::string path = no::asset_path("models/" + model.name + ".nom");
 		if (!overwrite_export) {
 			while (std::filesystem::exists(path)) {
@@ -227,7 +213,8 @@ void converter_tool::draw() {
 	model.draw();
 }
 
-attachments_tool::attachments_tool() {
+attachments_tool::attachments_tool() : animator{ root_model } {
+	animator.add();
 	mappings.load(no::asset_path("models/attachments.noma"));
 }
 
@@ -237,7 +224,6 @@ attachments_tool::~attachments_tool() {
 
 void attachments_tool::update() {
 	ImGui::Text("Attachments");
-
 	if (!root_model.is_drawable()) {
 		std::string path;
 		if (ImGui::Button("Import main NOM model")) {
@@ -248,19 +234,15 @@ void attachments_tool::update() {
 		}
 		if (!path.empty()) {
 			root_model.load<no::animated_mesh_vertex>(path);
-			instance = { root_model };
 			no::delete_texture(texture);
-			texture = no::create_texture(no::surface(no::asset_path("textures/" + root_model.texture_name() + ".png")), no::scale_option::nearest_neighbour, true);
+			texture = no::create_texture({ no::asset_path("textures/" + root_model.texture_name() + ".png") });
 		}
 		return;
 	} else {
 		ImGui::Text(CSTRING("Managing attachments for: " << root_model.name()));
 	}
-
 	ImGui::Separator();
-
 	ImGui::Checkbox("Freeze animation", &freeze_animation);
-
 	ImGui::Text("View animation");
 	int old_animation = animation;
 	ImGui::ListBox("##ViewAnimationList", &animation, [](void* data, int i, const char** out) -> bool {
@@ -271,9 +253,7 @@ void attachments_tool::update() {
 		*out = model.animation(i).name.data();
 		return true;
 	}, &root_model, root_model.total_animations(), 15);
-	if (old_animation != animation) {
-		instance.start_animation(animation);
-	}
+	animator.play(0, animation, -1);
 
 	ImGui::Separator();
 
@@ -300,7 +280,7 @@ void attachments_tool::update() {
 				ImGui::EndCombo();
 			}
 		}
-		no::model_attachment_mapping new_mapping;
+		no::bone_attachment_mapping new_mapping;
 		new_mapping.root_model = root_model.name();
 		new_mapping.root_animation = root_model.animation(animation).name;
 		new_mapping.attached_model = temp_mapping.model;
@@ -311,7 +291,7 @@ void attachments_tool::update() {
 		}
 		if (!already_exists && ImGui::Button("Save##SaveNewMapping")) {
 			if (reuse_default_mapping) {
-				mappings.for_each([&](no::model_attachment_mapping& mapping) {
+				mappings.for_each([&](no::bone_attachment_mapping& mapping) {
 					if (mapping.is_same_mapping(new_mapping)) {
 						new_mapping.attached_to_channel = mapping.attached_to_channel;
 						new_mapping.position = mapping.position;
@@ -333,7 +313,7 @@ void attachments_tool::update() {
 	ImGui::Text("Existing mappings");
 	if (ImGui::BeginCombo("Selected mapping", current_mapping ? current_mapping->mapping_string().c_str() : "None")) {
 		if (root_model.total_animations() > animation) {
-			mappings.for_each([&](no::model_attachment_mapping& mapping) {
+			mappings.for_each([&](no::bone_attachment_mapping& mapping) {
 				if (mapping.root_animation != root_model.animation(animation).name) {
 					return true;
 				}
@@ -435,7 +415,7 @@ void attachments_tool::update() {
 
 		ImGui::Checkbox("Apply changes to other animations", &apply_changes_to_other_animations);
 		if (apply_changes_to_other_animations) {
-			mappings.for_each([&](no::model_attachment_mapping& mapping) {
+			mappings.for_each([&](no::bone_attachment_mapping& mapping) {
 				if (mapping.is_same_mapping(*current_mapping)) {
 					mapping.position = current_mapping->position;
 					mapping.rotation = current_mapping->rotation;
@@ -450,9 +430,12 @@ void attachments_tool::update() {
 	ImGui::Text("Loaded attachments");
 	for (int i = 0; i < (int)active_attachments.size(); i++) {
 		auto& attachment = active_attachments[i];
+		if (!attachment.alive) {
+			continue;
+		}
 		bool exists = false;
-		mappings.for_each([&](no::model_attachment_mapping& mapping) {
-			if (mapping.attached_model == attachment.model->name()) {
+		mappings.for_each([&](no::bone_attachment_mapping& mapping) {
+			if (mapping.attached_model == attachment.model.name()) {
 				for (int i = 0; i < root_model.total_animations(); i++) {
 					if (root_model.animation(i).name == mapping.root_animation) {
 						exists = true;
@@ -462,13 +445,13 @@ void attachments_tool::update() {
 			}
 			return !exists;
 		});
-		if (attachment.id == -1) {
+		if (attachment.animator.count() == 0) {
 			if (!exists) {
 				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
 			}
 			if (ImGui::Button(CSTRING("Attach##AttachToModel" << i))) {
-				attachment.id = instance.attach(*attachment.model, -1, mappings);
+				attachment.animator.add();
 			}
 			if (!exists) {
 				ImGui::PopStyleVar();
@@ -476,28 +459,34 @@ void attachments_tool::update() {
 			}
 			ImGui::SameLine();
 		} else if (exists) {
-			instance.update_attachment_bone(attachment.id, mappings);
+			if (attachment.model.index_of_animation("default") != -1) {
+				auto& attachment_animation = attachment.animator.get(0);
+				attachment.animator.play(0, "default", -1);
+				attachment_animation.is_attachment = true;
+				mappings.update(root_model, animation, attachment.model.name(), attachment_animation.attachment);
+				attachment_animation.root_transform = attachment_animation.transforms[attachment_animation.attachment.parent];
+			} else {
+				attachment.animator.play(0, animation, -1);
+			}
 			if (ImGui::Button(CSTRING("Detach##DetachFromModel" << i))) {
-				instance.detach(attachment.id);
-				attachment.id = -1;
+				animator.erase(0);
 			}
 			ImGui::SameLine();
 		}
-		if (attachment.id != -1) {
+		if (attachment.animator.count() > 0) {
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
 		}
 		if (ImGui::Button(CSTRING("Remove##RemoveAttachmentModel" << i))) {
-			active_attachments.erase(active_attachments.begin() + i);
-			i--;
+			active_attachments[i].alive = false;
 			continue;
 		}
-		if (attachment.id != -1) {
+		if (attachment.animator.count() > 0) {
 			ImGui::PopStyleVar();
 			ImGui::PopItemFlag();
 		}
 		ImGui::SameLine();
-		ImGui::Text(attachment.model->name().c_str());
+		ImGui::Text(attachment.model.name().c_str());
 	}
 
 	ImGui::Separator();
@@ -523,9 +512,25 @@ void attachments_tool::update() {
 		if (ImGui::Button("[Spear]")) {
 			path = no::asset_path("models/spear.nom");
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("[Pants]")) {
+			path = no::asset_path("models/pants.nom");
+		}
 		if (!path.empty()) {
-			auto& attachment = active_attachments.emplace_back();
-			attachment.model->load<no::animated_mesh_vertex>(path);
+			bool found = false;
+			for (auto& attachment : active_attachments) {
+				if (!attachment.alive) {
+					attachment.animator.erase(0);
+					attachment.model.load<no::animated_mesh_vertex>(path);
+					attachment.alive = true;
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				auto& attachment = active_attachments.emplace_back();
+				attachment.model.load<no::animated_mesh_vertex>(path);
+			}
 		}
 	}
 
@@ -537,18 +542,25 @@ void attachments_tool::update() {
 }
 
 void attachments_tool::draw() {
-	if (!instance.can_animate()) {
+	if (!animator.can_animate(0)) {
 		return;
 	}
 	no::set_shader_model(no::transform3{});
 	if (freeze_animation) {
-		instance.reset_animation();
+		animator.reset(0);
 	}
-	instance.animate();
+	animator.animate();
 	if (texture != -1) {
 		no::bind_texture(texture);
 	}
-	instance.draw();
+	animator.shader.bones = no::get_shader_variable("uni_Bones");
+	animator.draw();
+	for (auto& attachment : active_attachments) {
+		if (attachment.alive && attachment.animator.can_animate(0)) {
+			attachment.animator.animate();
+			attachment.animator.draw();
+		}
+	}
 }
 
 model_manager_state::model_manager_state() : dragger(mouse()) {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "world.hpp"
-#include "draw.hpp"
+#include "skeletal.hpp"
 #include "character.hpp"
 #include "world_objects.hpp"
 
@@ -17,7 +17,11 @@ struct static_object_vertex {
 class character_renderer {
 public:
 
-	character_renderer(world_view& world);
+	struct {
+		no::shader_variable bones;
+	} shader;
+
+	character_renderer();
 	character_renderer(const character_renderer&) = delete;
 	character_renderer(character_renderer&&) = delete;
 
@@ -25,47 +29,54 @@ public:
 
 	character_renderer& operator=(const character_renderer&) = delete;
 	character_renderer& operator=(character_renderer&&) = delete;
-
-	void draw(const world_objects& objects);
+	
+	void update(const no::bone_attachment_mapping_list& mappings, const world_objects& objects);
+	void draw();
 	void add(character_object& object);
 	void remove(character_object& object);
 
 private:
 
-	struct object_data {
-		int object_id = -1;
-		no::model_instance model;
-		int equip_event = -1;
-		int unequip_event = -1;
-		int attack_event = -1;
-		int defend_event = -1;
-		std::unordered_map<equipment_slot, int> attachments;
-
-		struct {
-			int animation = -1;
-		} next_state;
-
-		object_data() = default;
-		object_data(int object_id, no::model& model) : object_id(object_id), model(model) {}
+	struct character_events {
+		int equip = -1;
+		int unequip = -1;
+		int attack = -1;
+		int defend = -1;
+		int run = -1;
 	};
 
-	void on_equip(object_data& object, const item_instance& item);
-	void on_unequip(object_data& object, equipment_slot slot);
+	struct character_equipment {
+		int animation_id = -1;
+		int item_id = -1;
+	};
 
-	no::model model;
-	std::unordered_map<int, no::model*> equipments;
+	struct character_animation {
+		int object_id = -1;
+		int animation_id = -1;
+		std::string animation;
+		character_events events;
+		std::vector<character_equipment> equipments;
+	};
 
-	int player_texture = -1;
-	std::unordered_map<int, int> equipment_textures;
+	struct equipment_model {
+		no::model model;
+		int texture = -1;
+	};
 
-	int idle = 0;
-	int run = 0;
-	int attack = 0;
-	int defend = 0;
+	void on_equip(character_animation& object, const item_instance& item);
+	void on_unequip(character_animation& object, equipment_slot slot);
 
-	std::vector<object_data> characters;
+	no::skeletal_animator character_animator;
+	no::model character_model;
+	int character_texture = -1;
+	std::vector<character_animation> characters;
 
-	world_view& world;
+	std::unordered_map<int, no::skeletal_animator> equipment_animators;
+	std::unordered_map<int, equipment_model> equipments;
+
+	//no::model model_legs;
+	//no::model model_body;
+	//no::model model_legs_and_body;
 
 };
 
@@ -146,7 +157,7 @@ public:
 	no::shader_variable var_pick_color;
 
 	no::perspective_camera camera;
-	no::model_attachment_mapping_list mappings;
+	no::bone_attachment_mapping_list mappings;
 
 	world_view(world_state& world);
 	world_view(const world_view&) = delete;

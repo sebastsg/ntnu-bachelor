@@ -483,6 +483,10 @@ void shader_variable::set(const std::vector<glm::mat4>& matrices) const {
 	CHECK_GL_ERROR(glUniformMatrix4fv(location, matrices.size(), GL_FALSE, glm::value_ptr(matrices[0])));
 }
 
+void shader_variable::set(const glm::mat4* matrices, size_t count) const {
+	CHECK_GL_ERROR(glUniformMatrix4fv(location, count, GL_FALSE, glm::value_ptr(matrices[0])));
+}
+
 bool shader_variable::exists() const {
 	return location != -1;
 }

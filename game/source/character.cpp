@@ -64,7 +64,11 @@ void character_object::update(world_state& world, game_object& object) {
 		target_path.pop_back();
 	}
 	int path_count = (int)target_path.size();
-	move_towards_target(object.transform, target_path);
+	bool moved = move_towards_target(object.transform, target_path);
+	if (moved != moved_last_frame) {
+		events.run.emit(moved);
+	}
+	moved_last_frame = moved;
 	if (path_count > (int)target_path.size()) {
 		tiles_moved++;
 	}

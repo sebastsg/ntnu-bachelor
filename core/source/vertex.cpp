@@ -125,7 +125,7 @@ void assimp_importer::load_animations() {
 		animation.channels.insert(animation.channels.begin(), model.nodes.size(), {});
 		for (unsigned int c = 0; c < scene->mAnimations[a]->mNumChannels; c++) {
 			std::string animation_node_name = scene->mAnimations[a]->mChannels[c]->mNodeName.C_Str();
-			model_animation_channel node;
+			animation_channel node;
 			for (int bone_index = 0; bone_index < (int)model.bone_names.size(); bone_index++) {
 				if (model.bone_names[bone_index] == animation_node_name) {
 					node.bone = bone_index;
@@ -320,6 +320,18 @@ transform3 load_model_bounding_box(const std::string& path) {
 	transform.position = stream.read<vector3f>();
 	transform.scale = stream.read<vector3f>();
 	return transform;
+}
+
+animation_channel::position_frame::position_frame(key_time time, vector3f position) : time(time), position(position) {
+
+}
+
+animation_channel::rotation_frame::rotation_frame(key_time time, glm::quat rotation) : time(time), rotation(rotation) {
+
+}
+
+animation_channel::scale_frame::scale_frame(key_time time, vector3f scale) : time(time), scale(scale) {
+
 }
 
 }

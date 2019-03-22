@@ -15,7 +15,6 @@ in vec2 in_WeightsExtra;
 in ivec4 in_Bones;
 in ivec2 in_BonesExtra;
 
-out vec4 ex_Color;
 out vec2 ex_TexCoords;
 out vec3 ex_Normal;
 out vec3 ex_ModelPosition;
@@ -30,7 +29,6 @@ void main() {
 	vec4 animatedPosition = bone * vec4(in_Position, 1.0f);
 	vec4 animatedNormal = bone * vec4(in_Normal, 0.0f);
 	gl_Position = uni_ModelViewProjection * animatedPosition;
-	ex_Color = in_Color;
 	ex_TexCoords = in_TexCoords;
 	ex_Normal = vec3(uni_Model * animatedNormal);
 	ex_ModelPosition = vec3(uni_Model * animatedPosition);
