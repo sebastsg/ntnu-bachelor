@@ -87,7 +87,13 @@ void world_objects::remove(int instance_id) {
 }
 
 void world_objects::for_each(const std::function<void(game_object*)>& handler) {
-	for (auto object : objects) {
+	for (auto& object : objects) {
+		handler(&object);
+	}
+}
+
+void world_objects::for_each(const std::function<void(const game_object*)>& handler) const {
+	for (const auto object : objects) {
 		handler(&object);
 	}
 }

@@ -17,6 +17,10 @@ uint8_t world_tile::corner(int index) const {
 	return corners[index] & tile_bits;
 }
 
+int world_tile::corners_of_type(uint8_t type) const {
+	return (int)(corner(0) == type) + (int)(corner(1) == type) + (int)(corner(2) == type) + (int)(corner(3) == type);
+}
+
 bool world_tile::is_solid() const {
 	return flag(solid_flag);
 }

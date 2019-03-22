@@ -5,6 +5,7 @@
 #include "font.hpp"
 #include "character.hpp"
 #include "ui.hpp"
+#include "minimap.hpp"
 
 class game_state;
 
@@ -190,6 +191,7 @@ class user_interface_view {
 public:
 
 	hud_view hud;
+	world_minimap minimap;
 	no::ortho_camera camera;
 
 	user_interface_view(game_state& game, world_state& world);

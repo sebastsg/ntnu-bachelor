@@ -489,8 +489,12 @@ void hud_view::set_debug(const std::string& debug) {
 	no::load_texture(debug_texture, font.render(debug));
 }
 
-user_interface_view::user_interface_view(game_state& game, world_state& world) 
-	: game(game), world(world), inventory(camera, game, world), font(no::asset_path("fonts/leo.ttf"), 9) {
+user_interface_view::user_interface_view(game_state& game, world_state& world) : 
+	game(game), 
+	world(world), 
+	inventory(camera, game, world), 
+	font(no::asset_path("fonts/leo.ttf"), 9),
+	minimap{ world } {
 	camera.zoom = 2.0f;
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
 	color = no::get_shader_variable("uni_Color");
@@ -585,6 +589,11 @@ void user_interface_view::update() {
 	hud.set_fps(((const game_state&)game).frame_counter().current_fps());
 	hud.set_debug(STRING("Tile: " << game.world.my_player().object.tile()));
 	hud.update(camera);
+	minimap.transform.position = { 104.0f, 8.0f };
+	minimap.transform.position.x += camera.width() - background_uv.z - 2.0f;
+	minimap.transform.scale = 64.0f;
+	minimap.transform.rotation = game.world_camera().transform.rotation.y;
+	minimap.update(game.world.my_player().object.tile());
 }
 
 void user_interface_view::draw() const {
@@ -614,6 +623,7 @@ void user_interface_view::draw() const {
 	if (context) {
 		context->draw(ui_texture);
 	}
+	minimap.draw();
 }
 
 void user_interface_view::draw_tabs() const {

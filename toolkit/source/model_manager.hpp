@@ -93,7 +93,7 @@ private:
 		no::model model;
 		no::skeletal_animator animator;
 		int texture = -1;
-		active_attachment_data() : animator { model } {}
+		active_attachment_data() : animator{ model } {}
 	};
 
 	std::vector<active_attachment_data> active_attachments;
