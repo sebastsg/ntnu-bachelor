@@ -85,6 +85,7 @@ game_state::game_state() :
 			packet.player.write(objstream);
 			world.objects.add(objstream);
 			world.my_player_id = packet.object.instance_id;
+			world.my_player().object.pickable = false;
 			ui.listen(world.my_player_id);
 			variables = packet.variables;
 			quests = packet.quests;

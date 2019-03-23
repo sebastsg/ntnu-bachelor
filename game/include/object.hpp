@@ -45,6 +45,7 @@ struct game_object {
 	no::transform3 transform;
 	int definition_id = -1;
 	int instance_id = -1;
+	bool pickable = true;
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);

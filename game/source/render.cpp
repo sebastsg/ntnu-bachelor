@@ -230,6 +230,9 @@ void object_pick_renderer::draw(const world_objects& objects) {
 	box.bind();
 	for (int object_id : object_ids) {
 		const auto& object = objects.object(object_id);
+		if (!object.pickable) {
+			continue;
+		}
 		no::transform3 bbox = object.definition().bounding_box;
 		no::transform3 transform;
 		transform.position = object.transform.position + object.transform.scale * bbox.position;

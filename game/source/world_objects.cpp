@@ -76,6 +76,9 @@ const character_object* world_objects::character(int instance_id) const {
 }
 
 void world_objects::remove(int instance_id) {
+	if (instance_id < 0 || instance_id >= (int)objects.size()) {
+		return;
+	}
 	events.remove.emit(objects[instance_id]);
 	objects[instance_id] = {};
 	for (int i = 0; i < (int)characters.size(); i++) {
