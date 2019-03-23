@@ -41,6 +41,9 @@ bool mouse::is_button_down(button button) const {
 	}
 }
 
+void mouse::set_icon(cursor icon) {
+	parent_window->set_cursor(icon);
+}
 
 keyboard::keyboard() {
 	std::fill(std::begin(keys), std::end(keys), false);

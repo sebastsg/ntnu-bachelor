@@ -25,6 +25,8 @@ const no::vector2f hud_health_size = { 8.0f, 12.0f };
 const no::vector4f inventory_uv = { 200.0f, 128.0f, 138.0f, 205.0f };
 const no::vector2f inventory_offset = { 23.0f, 130.0f };
 
+const no::vector4f equipment_uv = { 199.0f, 336.0f, 138.0f, 205.0f };
+
 const no::vector4f context_uv[] = {
 	{ 60.0f, 57.0f, 12.0f, 15.0f }, // top begin
 	{ 80.0f, 57.0f, 16.0f, 9.0f }, // top tile 1
@@ -399,6 +401,33 @@ void inventory_view::draw() const {
 	}
 }
 
+void inventory_view::add_context_options(context_menu& context) {
+	if (!body_transform().collides_with(camera.mouse_position(game.mouse()))) {
+		return;
+	}
+	no::vector2i slot = hovered_slot();
+	if (slot.x == -1) {
+		return;
+	}
+	auto player = world.objects.character(object_id);
+	auto item = player->inventory.at(slot);
+	if (item.definition_id == -1) {
+		return;
+	}
+	auto definition = item_definitions().get(item.definition_id);
+	if (definition.type == item_type::equipment) {
+		context.add_option("Equip", [this, slot] {
+			game.equip_from_inventory(slot);
+		});
+	}
+	context.add_option("Drop", [this, item, slot, player] {
+		item_instance ground_item;
+		ground_item.definition_id = item.definition_id;
+		player->inventory.remove_to(item.stack, ground_item);
+		// todo: drop on ground
+	});
+}
+
 no::vector2i inventory_view::hovered_slot() const {
 	for (auto& slot : slots) {
 		if (slot_transform(slot.first).collides_with(camera.mouse_position(game.mouse()))) {
@@ -406,6 +435,131 @@ no::vector2i inventory_view::hovered_slot() const {
 		}
 	}
 	return -1;
+}
+
+equipment_view::equipment_view(const no::ortho_camera& camera, game_state& game, world_state& world)
+	: camera(camera), game(game), world(world) {
+	set_ui_uv(background, equipment_uv);
+}
+
+equipment_view::~equipment_view() {
+	ignore();
+}
+
+void equipment_view::on_item_added(const item_container::add_event& event) {
+	equipment_slot slot = item_definitions().get(event.item.definition_id).slot;
+	if (slots.find(slot) == slots.end()) {
+		slots[slot] = {};
+		slots[slot].item = event.item;
+		set_item_uv(slots[slot].rectangle, item_definitions().get(event.item.definition_id).uv);
+	} else {
+		// todo: update stack text
+	}
+}
+
+void equipment_view::on_item_removed(const item_container::remove_event& event) {
+	equipment_slot slot = item_definitions().get(event.item.definition_id).slot;
+	if (slots.find(slot) != slots.end()) {
+		ASSERT(slots[slot].item.definition_id == event.item.definition_id);
+		slots[slot].item.stack -= event.item.stack;
+		if (slots[slot].item.stack <= 0) {
+			slots.erase(slot);
+		} else {
+			// todo: update stack text
+		}
+	}
+}
+
+void equipment_view::listen(int object_id_) {
+	object_id = object_id_;
+	auto player = world.objects.character(object_id);
+	add_item_event = player->equipment.events.add.listen([this](const item_container::add_event& event) {
+		on_item_added(event);
+	});
+	remove_item_event = player->equipment.events.remove.listen([this](const item_container::remove_event& event) {
+		on_item_removed(event);
+	});
+	player->equipment.for_each([this](no::vector2i slot, const item_instance& item) {
+		on_item_added({ item, slot });
+	});
+}
+
+void equipment_view::ignore() {
+	if (object_id == -1) {
+		return;
+	}
+	auto player = world.objects.character(object_id);
+	player->equipment.events.add.ignore(add_item_event);
+	player->equipment.events.remove.ignore(remove_item_event);
+	add_item_event = -1;
+	remove_item_event = -1;
+	player = nullptr;
+}
+
+no::transform2 equipment_view::body_transform() const {
+	no::transform2 transform;
+	transform.scale = inventory_uv.zw;
+	transform.position.x = camera.width() - background_uv.z - 2.0f + inventory_offset.x;
+	transform.position.y = inventory_offset.y;
+	return transform;
+}
+
+no::transform2 equipment_view::slot_transform(equipment_slot slot) const {
+	no::transform2 transform;
+	transform.scale = item_size;
+	transform.position.x = camera.width() - background_uv.z + 26.0f;
+	transform.position.y = 141.0f;
+	switch (slot) {
+	case equipment_slot::left_hand:
+		transform.position.x += 2.0f * (item_grid.x + 14.0f);
+		transform.position.y += 1.0f * (item_grid.y + 14.0f);
+		break;
+	case equipment_slot::right_hand:
+		transform.position.y += 1.0f * (item_grid.y + 14.0f);
+		break;
+	case equipment_slot::legs:
+		transform.position.x += 1.0f * (item_grid.x + 14.0f);
+		transform.position.y += 2.0f * (item_grid.y + 14.0f);
+		break;
+	default:
+		break;
+	}
+	return transform;
+}
+
+void equipment_view::draw() const {
+	no::draw_shape(background, body_transform());
+	for (auto& slot : slots) {
+		no::draw_shape(slot.second.rectangle, slot_transform(slot.first));
+	}
+}
+
+void equipment_view::add_context_options(context_menu& context) {
+	if (!body_transform().collides_with(camera.mouse_position(game.mouse()))) {
+		return;
+	}
+	equipment_slot slot = hovered_slot();
+	if (slot == equipment_slot::none) {
+		return;
+	}
+	auto player = world.objects.character(object_id);
+	auto item = slots[slot].item;
+	if (item.definition_id == -1) {
+		return;
+	}
+	auto definition = item_definitions().get(item.definition_id);
+	context.add_option("Unequip", [this, slot] {
+		//game.unequip_to_inventory(slot);
+	});
+}
+
+equipment_slot equipment_view::hovered_slot() const {
+	for (auto& slot : slots) {
+		if (slot_transform(slot.first).collides_with(camera.mouse_position(game.mouse()))) {
+			return slot.first;
+		}
+	}
+	return equipment_slot::none;
 }
 
 hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
@@ -492,7 +646,8 @@ void hud_view::set_debug(const std::string& debug) {
 user_interface_view::user_interface_view(game_state& game, world_state& world) : 
 	game(game), 
 	world(world), 
-	inventory(camera, game, world), 
+	inventory{ camera, game, world },
+	equipment{ camera, game, world },
 	font(no::asset_path("fonts/leo.ttf"), 9),
 	minimap{ world } {
 	camera.zoom = 2.0f;
@@ -569,7 +724,31 @@ void user_interface_view::listen(int object_id_) {
 			create_context();
 		}
 	});
+	cursor_icon_id = game.mouse().icon.listen([this] {
+		switch (tabs.active) {
+		case 0:
+			if (inventory.hovered_slot().x != -1) {
+				game.mouse().set_icon(no::mouse::cursor::pointer);
+				return;
+			}
+			break;
+		case 1:
+			if (equipment.hovered_slot() != equipment_slot::none) {
+				game.mouse().set_icon(no::mouse::cursor::pointer);
+				return;
+			}
+			break;
+		}
+		for (int i = 0; i < 4; i++) {
+			if (is_tab_hovered(i)) {
+				game.mouse().set_icon(no::mouse::cursor::pointer);
+				return;
+			}
+		}
+		game.mouse().set_icon(no::mouse::cursor::arrow);
+	});
 	inventory.listen(object_id);
+	equipment.listen(object_id);
 }
 
 void user_interface_view::ignore() {
@@ -578,9 +757,11 @@ void user_interface_view::ignore() {
 	}
 	auto player = world.objects.character(object_id);
 	inventory.ignore();
+	equipment.ignore();
 	player->events.equip.ignore(equipment_event);
 	equipment_event = -1;
 	game.mouse().press.ignore(press_event_id);
+	game.mouse().icon.ignore(cursor_icon_id);
 	press_event_id = -1;
 	player = nullptr;
 }
@@ -612,6 +793,7 @@ void user_interface_view::draw() const {
 		inventory.draw();
 		break;
 	case 1:
+		equipment.draw();
 		break;
 	case 2:
 		break;
@@ -660,30 +842,11 @@ no::transform2 user_interface_view::tab_transform(int index) const {
 void user_interface_view::create_context() {
 	delete context;
 	context = new context_menu(camera, camera.mouse_position(game.mouse()), font, game.mouse());
-	if (is_mouse_over_inventory()) {
-		no::vector2i slot = inventory.hovered_slot();
-		auto player = world.objects.character(object_id);
-		if (slot.x != -1) {
-			auto item = player->inventory.at(slot);
-			if (item.definition_id != -1) {
-				auto definition = item_definitions().get(item.definition_id);
-				context->add_option("Use", [] {
-
-				});
-				if (definition.type == item_type::equipment) {
-					context->add_option("Equip", [this, slot] {
-						game.equip_from_inventory(slot);
-					});
-				}
-				context->add_option("Drop", [this, item, slot, player] {
-					item_instance ground_item;
-					ground_item.definition_id = item.definition_id;
-					player->inventory.remove_to(item.stack, ground_item);
-					// todo: drop on ground
-				});
-			}
-		}
-	} else {
+	switch (tabs.active) {
+	case 0: inventory.add_context_options(*context); break;
+	case 1: equipment.add_context_options(*context); break;
+	}
+	if (!is_mouse_over_inventory()) {
 		no::vector2i tile = game.hovered_tile();
 		auto& objects = game.world.objects;
 		objects.for_each([this, tile](game_object* object) {

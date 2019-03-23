@@ -6,6 +6,7 @@
 
 #include "windows_platform.hpp"
 #include "math.hpp"
+#include "input.hpp"
 
 #if ENABLE_WINDOWS_GL
 #include "windows_gl.hpp"
@@ -42,6 +43,7 @@ public:
 	void set_size(const vector2i& size);
 	void set_title(const std::string& title);
 	void set_icon_from_resource(int resource_id);
+	void set_cursor(mouse::cursor icon);
 	void set_viewport(int x, int y, int width, int height);
 	void set_scissor(int x, int y, int width, int height);
 	void set_clear_color(const vector3f& color);

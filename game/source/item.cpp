@@ -175,6 +175,7 @@ void item_container::remove_to(long long stack, item_instance& other_item) {
 				events.remove.emit(item, slot);
 				break;
 			} else {
+				other_item.stack += item.stack;
 				remaining -= item.stack;
 				remove_event event;
 				event.item = item;

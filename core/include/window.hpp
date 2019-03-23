@@ -41,6 +41,7 @@ public:
 
 	void set_title(const std::string& title);
 	void set_icon_from_resource(int resource_id);
+	void set_cursor(mouse::cursor icon);
 	void set_width(int width);
 	void set_height(int height);
 	void set_size(const vector2i& size);

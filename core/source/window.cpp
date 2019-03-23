@@ -53,6 +53,10 @@ void window::set_icon_from_resource(int resource_id) {
 	platform->set_icon_from_resource(resource_id);
 }
 
+void window::set_cursor(mouse::cursor icon) {
+	platform->set_cursor(icon);
+}
+
 void window::set_width(int width) {
 	set_size({ width, height() });
 }

@@ -89,11 +89,11 @@ LRESULT WINAPI process_window_messages(HWND window_handle, UINT message, WPARAM 
 		active_window->resize.emit({ { LOWORD(l_param), HIWORD(l_param) } });
 		return 0;
 	case WM_SETCURSOR:
-		if (LOWORD(l_param) == HTCLIENT) {
-			mouse.cursor.emit();
+		if (LOWORD(l_param) == HTCLIENT && mouse.icon.listeners() > 0) {
+			mouse.icon.emit();
 			return 1;
 		}
-		return 0;
+		return DefWindowProc(window_handle, message, w_param, l_param);
 	case WM_ERASEBKGND:
 		return 1;
 	case WM_CLOSE:
@@ -255,6 +255,10 @@ void windows_window::set_icon_from_resource(int resource_id) {
 	SendMessage(window_handle, WM_SETICON, ICON_SMALL, (LPARAM)icon);
 	SendMessage(window_handle, WM_SETICON, ICON_BIG, (LPARAM)icon);
 	// note: no need to destroy icon, since it's shared
+}
+
+void windows_window::set_cursor(mouse::cursor icon) {
+	SetCursor(LoadCursor(NULL, icon == mouse::cursor::arrow ? IDC_ARROW : IDC_HAND));
 }
 
 void windows_window::set_viewport(int x, int y, int width, int height) {

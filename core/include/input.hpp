@@ -11,6 +11,7 @@ class mouse {
 public:
 
 	enum class button { none, left, middle, right };
+	enum class cursor { arrow, pointer };
 
 	struct move_message {
 		vector2i relative;
@@ -43,7 +44,7 @@ public:
 	message_event<double_click_message> double_click;
 	message_event<scroll_message> scroll;
 	message_event<visibility_message> visibility;
-	signal_event cursor;
+	signal_event icon;
 
 	mouse(window* parent_window);
 	mouse() = default;
@@ -52,6 +53,7 @@ public:
 	int y() const;
 	vector2i position() const;
 	bool is_button_down(button button) const;
+	void set_icon(cursor icon);
 
 private:
 

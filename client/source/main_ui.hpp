@@ -131,6 +131,7 @@ public:
 	no::transform2 body_transform() const;
 	no::transform2 slot_transform(int index) const;
 	void draw() const;
+	void add_context_options(context_menu& context);
 
 	no::vector2i hovered_slot() const;
 
@@ -145,13 +146,58 @@ private:
 
 	int object_id = -1;
 
-	struct inventory_slot {
+	struct item_slot {
 		no::rectangle rectangle;
 		item_instance item;
 	};
 
 	no::rectangle background;
-	std::unordered_map<int, inventory_slot> slots;
+	std::unordered_map<int, item_slot> slots;
+	int add_item_event = -1;
+	int remove_item_event = -1;
+
+};
+
+class equipment_view {
+public:
+
+	equipment_view(const no::ortho_camera& camera, game_state& game, world_state& world);
+	equipment_view(const equipment_view&) = delete;
+	equipment_view(equipment_view&&) = delete;
+
+	~equipment_view();
+
+	equipment_view& operator=(const equipment_view&) = delete;
+	equipment_view& operator=(equipment_view&&) = delete;
+
+	void listen(int object_id);
+	void ignore();
+
+	no::transform2 body_transform() const;
+	no::transform2 slot_transform(equipment_slot slot) const;
+	void draw() const;
+	void add_context_options(context_menu& context);
+
+	equipment_slot hovered_slot() const;
+
+private:
+
+	void on_item_added(const item_container::add_event& event);
+	void on_item_removed(const item_container::remove_event& event);
+
+	const no::ortho_camera& camera;
+	world_state& world;
+	game_state& game;
+
+	int object_id = -1;
+
+	struct item_slot {
+		no::rectangle rectangle;
+		item_instance item;
+	};
+
+	no::rectangle background;
+	std::unordered_map<equipment_slot, item_slot> slots;
 	int add_item_event = -1;
 	int remove_item_event = -1;
 
@@ -219,6 +265,7 @@ public:
 private:
 
 	inventory_view inventory;
+	equipment_view equipment;
 	context_menu* context = nullptr;
 	
 	void draw_tabs() const;
@@ -250,6 +297,7 @@ private:
 	no::shader_variable color;
 
 	int press_event_id = -1;
+	int cursor_icon_id = -1;
 
 	no::font font;
 

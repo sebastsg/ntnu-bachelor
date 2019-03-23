@@ -150,7 +150,7 @@ void create(window& window) {
 	data.mouse_scroll_id = window.mouse.scroll.listen([&](const mouse::scroll_message& event) {
 		io.MouseWheel += event.steps;
 	});
-	data.mouse_cursor_id = window.mouse.cursor.listen([] {
+	data.mouse_cursor_id = window.mouse.icon.listen([] {
 		update_cursor_icon();
 	});
 	data.mouse_press_id = window.mouse.press.listen([&](const mouse::press_message& event) {
@@ -194,7 +194,7 @@ void destroy() {
 	data.window->keyboard.release.ignore(data.keyboard_release_id);
 	data.window->keyboard.input.ignore(data.keybord_input_id);
 	data.window->mouse.scroll.ignore(data.mouse_scroll_id);
-	data.window->mouse.cursor.ignore(data.mouse_cursor_id);
+	data.window->mouse.icon.ignore(data.mouse_cursor_id);
 	data.window->mouse.press.ignore(data.mouse_press_id);
 	data.window->mouse.double_click.ignore(data.mouse_double_click_id);
 	data.window->mouse.release.ignore(data.mouse_release_id);
