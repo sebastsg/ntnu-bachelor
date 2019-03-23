@@ -77,6 +77,7 @@ public:
 	float elevation_at(no::vector2i tile) const;
 	void set_elevation_at(no::vector2i tile, float elevation);
 	void elevate_tile(no::vector2i tile, float amount);
+	float average_elevation_at(no::vector2i tile) const;
 
 	void set_tile_type(no::vector2i tile, int type);
 	void set_tile_solid(no::vector2i tile, bool solid);

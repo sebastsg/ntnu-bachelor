@@ -161,7 +161,9 @@ void game_state::update() {
 	if (world.my_player_id == -1) {
 		return;
 	}
-	follower.update(renderer.camera, world.my_player().object.transform);
+	no::transform3 camera_follow = world.my_player().object.transform;
+	camera_follow.position.y = 0.0f; // since it's annoying if camera bumps up and down
+	follower.update(renderer.camera, camera_follow);
 	dragger.update(renderer.camera);
 	rotater.update(renderer.camera, keyboard());
 	world.update();

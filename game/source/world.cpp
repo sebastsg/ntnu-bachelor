@@ -98,6 +98,14 @@ float world_terrain::elevation_at(no::vector2i tile) const {
 	return tile_array.at(tile.x, tile.y).height;
 }
 
+float world_terrain::average_elevation_at(no::vector2i tile) const {
+	float sum = tile_array.at(tile.x, tile.y).height;
+	sum += tile_array.at(tile.x + 1, tile.y).height;
+	sum += tile_array.at(tile.x + 1, tile.y + 1).height;
+	sum += tile_array.at(tile.x, tile.y + 1).height;
+	return sum / 4.0f;
+}
+
 void world_terrain::set_elevation_at(no::vector2i tile, float elevation) {
 	tile_array.at(tile.x, tile.y).height = elevation;
 	dirty = true;

@@ -60,6 +60,7 @@ void character_stat::read(no::io_stream& stream) {
 }
 
 void character_object::update(world_state& world, game_object& object) {
+	object.transform.position.y = world.terrain.average_elevation_at(object.tile());
 	while (!target_path.empty() && target_path.back() < 0) {
 		target_path.pop_back();
 	}
