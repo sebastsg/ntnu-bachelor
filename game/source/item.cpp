@@ -11,6 +11,10 @@ item_definition_list& item_definitions() {
 	return global::item_definitions;
 }
 
+const item_definition& item_instance::definition() const {
+	return global::item_definitions.get(definition_id);
+}
+
 item_definition_list::item_definition_list() {
 	invalid.name = "Invalid item";
 	no::post_configure_event().listen([this] {
@@ -92,40 +96,11 @@ bool item_definition_list::conflicts(const item_definition& other_definition) co
 	return false;
 }
 
-void item_container::resize(no::vector2i new_size) {
-	size = new_size;
-	items.resize(size.x * size.y);
+item_instance inventory_container::get(no::vector2i slot) const {
+	return items[slot.y * columns + slot.x];
 }
 
-item_instance item_container::at(no::vector2i slot) const {
-	int index = slot.y * size.x + slot.x;
-	if (index < 0 || index >= count()) {
-		return {};
-	}
-	return items[index];
-}
-
-item_instance& item_container::at(no::vector2i slot) {
-	int index = slot.y * size.x + slot.x;
-	ASSERT(index >= 0 && index < count());
-	return items[index];
-}
-
-void item_container::for_each(const std::function<void(no::vector2i, const item_instance&)>& handler) const {
-	no::vector2i slot;
-	for (auto& item : items) {
-		if (item.definition_id != -1) {
-			handler(slot, item);
-		}
-		slot.x++;
-		if (slot.x == size.x) {
-			slot.x = 0;
-			slot.y++;
-		}
-	}
-}
-
-void item_container::add_from(item_instance& other_item) {
+void inventory_container::add_from(item_instance& other_item) {
 	if (other_item.stack <= 0) {
 		other_item = {};
 		return;
@@ -135,32 +110,32 @@ void item_container::add_from(item_instance& other_item) {
 		if (my_item.definition_id == -1 || my_item.stack < 1) {
 			my_item.definition_id = other_item.definition_id;
 			my_item.stack = other_item.stack;
-			events.add.emit(other_item, slot);
 			other_item.stack = 0;
 			other_item.definition_id = -1;
+			events.change.emit(slot);
 			break;
 		} else if (my_item.definition_id == other_item.definition_id) {
 			long long can_hold = item_definitions().get(my_item.definition_id).max_stack - my_item.stack;
 			if (can_hold >= other_item.stack) {
 				my_item.stack += other_item.stack;
-				events.add.emit(other_item, slot);
 				other_item = {};
+				events.change.emit(slot);
 				break;
 			} else {
 				my_item.stack += can_hold;
 				other_item.stack -= can_hold;
-				events.add.emit(item_instance{ other_item.definition_id, can_hold }, slot);
+				events.change.emit(slot);
 			}
 		}
 		slot.x++;
-		if (slot.x == size.x) {
+		if (slot.x == columns) {
 			slot.x = 0;
 			slot.y++;
 		}
 	}
 }
 
-void item_container::remove_to(long long stack, item_instance& other_item) {
+void inventory_container::remove_to(long long stack, item_instance& other_item) {
 	if (stack <= 0) {
 		return;
 	}
@@ -172,40 +147,34 @@ void item_container::remove_to(long long stack, item_instance& other_item) {
 				item.stack -= remaining;
 				other_item.stack += remaining;
 				remaining = 0;
-				events.remove.emit(item, slot);
+				events.change.emit(slot);
 				break;
 			} else {
 				other_item.stack += item.stack;
 				remaining -= item.stack;
-				remove_event event;
-				event.item = item;
-				event.slot = slot;
 				item = {};
-				events.remove.emit(event);
+				events.change.emit(slot);
 			}
 		}
 		slot.x++;
-		if (slot.x == size.x) {
+		if (slot.x == columns) {
 			slot.x = 0;
 			slot.y++;
 		}
 	}
 }
 
-long long item_container::take_all(int id) {
+long long inventory_container::take_all(int id) {
 	long long total = 0;
 	no::vector2i slot;
 	for (auto& item : items) {
 		if (item.definition_id == id) {
 			total += item.stack;
-			remove_event event;
-			event.item = item;
-			event.slot = slot;
 			item = {};
-			events.remove.emit(event);
+			events.change.emit(slot);
 		}
 		slot.x++;
-		if (slot.x == size.x) {
+		if (slot.x == columns) {
 			slot.x = 0;
 			slot.y++;
 		}
@@ -213,13 +182,13 @@ long long item_container::take_all(int id) {
 	return total;
 }
 
-void item_container::clear() {
+void inventory_container::clear() {
 	for (auto& item : items) {
 		item = {};
 	}
 }
 
-long long item_container::can_hold_more(int id) const {
+long long inventory_container::can_hold_more(int id) const {
 	long long can_hold = 0;
 	for (auto& item : items) {
 		if (item.definition_id == -1) {
@@ -231,33 +200,114 @@ long long item_container::can_hold_more(int id) const {
 	return can_hold;
 }
 
-void item_container::write(no::io_stream& stream) const {
-	stream.write(size);
+void inventory_container::write(no::io_stream& stream) const {
+	stream.write<int32_t>(columns);
+	stream.write<int32_t>(rows);
 	for (auto& item : items) {
 		stream.write<int64_t>(item.definition_id);
 		stream.write<int64_t>(item.stack);
 	}
 }
 
-void item_container::read(no::io_stream& stream) {
-	size = stream.read<no::vector2i>();
-	for (int i = 0; i < count(); i++) {
-		auto& item = items.emplace_back();
-		item.definition_id = stream.read<int64_t>();
-		item.stack = stream.read<int64_t>();
+void inventory_container::read(no::io_stream& stream) {
+	stream.read<no::vector2i>(); // might be useful later
+	for (int i = 0; i < slots; i++) {
+		items[i].definition_id = stream.read<int64_t>();
+		items[i].stack = stream.read<int64_t>();
 	}
 }
 
-int item_container::rows() const {
-	return size.y;
+item_instance equipment_container::get(equipment_slot slot) const {
+	return items[(size_t)slot];
 }
 
-int item_container::columns() const {
-	return size.x;
+void equipment_container::add_from(item_instance& other_item) {
+	if (other_item.stack <= 0) {
+		other_item = {};
+		return;
+	}
+	int slot = (int)other_item.definition().slot;
+	if (items[slot].definition_id != other_item.definition_id && items[slot].definition_id != -1) {
+		return;
+	}
+	if (items[slot].definition_id == -1 || items[slot].stack < 1) {
+		items[slot].definition_id = other_item.definition_id;
+		items[slot].stack = other_item.stack;
+		other_item.stack = 0;
+		other_item.definition_id = -1;
+	} else {
+		long long can_hold = items[slot].definition().max_stack - items[slot].stack;
+		if (can_hold >= other_item.stack) {
+			items[slot].stack += other_item.stack;
+			other_item = {};
+		} else {
+			items[slot].stack += can_hold;
+			other_item.stack -= can_hold;
+		}
+	}
+	events.change.emit(slot);
 }
 
-int item_container::count() const {
-	return size.x * size.y;
+void equipment_container::remove_to(long long stack, item_instance& other_item) {
+	if (stack <= 0) {
+		return;
+	}
+	int slot = (int)other_item.definition().slot;
+	if (items[slot].definition_id != other_item.definition_id) {
+		return;
+	}
+	if (items[slot].stack > stack) {
+		items[slot].stack -= stack;
+		other_item.stack += stack;
+	} else {
+		other_item.stack += items[slot].stack;
+		items[slot] = {};
+	}
+	events.change.emit((equipment_slot)slot);
+}
+
+long long equipment_container::take_all(int id) {
+	const auto& item = item_definitions().get(id);
+	if (item.type != item_type::equipment) {
+		return 0;
+	}
+	int slot = (int)item.slot;
+	long long stack = items[slot].stack;
+	items[slot] = {};
+	events.change.emit(item.slot);
+	return stack;
+}
+
+void equipment_container::clear() {
+	for (auto& item : items) {
+		item = {};
+	}
+}
+
+long long equipment_container::can_hold_more(int id) const {
+	long long can_hold = 0;
+	for (auto& item : items) {
+		if (item.definition_id == -1) {
+			can_hold += item_definitions().get(id).max_stack;
+		} else if (item.definition_id == id) {
+			can_hold += item_definitions().get(id).max_stack - item.stack;
+		}
+	}
+	return can_hold;
+}
+
+void equipment_container::write(no::io_stream& stream) const {
+	for (auto& item : items) {
+		stream.write<int64_t>(item.definition_id);
+		stream.write<int64_t>(item.stack);
+	}
+}
+
+void equipment_container::read(no::io_stream& stream) {
+	for (int i = 0; i < (int)equipment_slot::total_slots; i++) {
+		items[i].definition_id = stream.read<int64_t>();
+		items[i].stack = stream.read<int64_t>();
+	}
 }
 
 std::ostream& operator<<(std::ostream& out, equipment_slot slot) {

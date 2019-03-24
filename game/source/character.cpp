@@ -113,24 +113,29 @@ void character_object::read(no::io_stream& stream) {
 }
 
 void character_object::equip_from_inventory(no::vector2i slot) {
-	item_instance item = inventory.at(slot);
+	item_instance item = inventory.get(slot);
 	item.stack = 0;
-	inventory.remove_to(inventory.at(slot).stack, item);
+	inventory.remove_to(inventory.get(slot).stack, item);
 	events.equip.emit(item);
 	equipment.add_from(item);
 }
 
-void character_object::unequip_to_inventory(no::vector2i slot) {
-	item_instance item = equipment.at(slot);
+void character_object::unequip_to_inventory(equipment_slot slot) {
+	item_instance item = equipment.get(slot);
 	item.stack = 0;
-	equipment.remove_to(equipment.at(slot).stack, item);
+	equipment.remove_to(equipment.get(slot).stack, item);
 	inventory.add_from(item);
-	events.unequip.emit(item_definitions().get(item.definition_id).slot);
+	events.unequip.emit(item.definition().slot);
 }
 
 void character_object::equip(item_instance item) {
 	equipment.add_from(item);
 	events.equip.emit(item);
+}
+
+void character_object::unequip(equipment_slot slot) {
+	equipment.items[(int)slot] = {};
+	events.unequip.emit(slot);
 }
 
 bool character_object::is_moving() const {

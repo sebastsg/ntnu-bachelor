@@ -62,14 +62,12 @@ character_object* server_state::load_player(int client_index) {
 	auto& client = clients[client_index];
 	client.object.player_instance_id = world.objects.add(1);
 	auto player = world.objects.character(client.object.player_instance_id);
-	player->inventory.resize({ 4, 6 });
-	player->equipment.resize({ 4, 4 });
 	no::vector2i tile = persister.load_player_tile(client.player.id);
 	client.player.variables = persister.load_player_variables(client.player.id);
 	client.player.quests = persister.load_player_quests(client.player.id);
 	client.object.player_instance_id = player->object_id;
 	persister.load_player_items(client.player.id, 0, player->inventory);
-	persister.load_player_items(client.player.id, 1, player->equipment);
+	//persister.load_player_items(client.player.id, 1, player->equipment);
 	auto& object = world.objects.object(client.object.player_instance_id);
 	object.transform.position.x = (float)tile.x;
 	object.transform.position.z = (float)tile.y;
@@ -93,7 +91,7 @@ void server_state::save_player(int client_index) {
 	persister.save_player_variables(client.player.id, client.player.variables);
 	persister.save_player_quests(client.player.id, client.player.quests);
 	persister.save_player_items(client.player.id, inventory_container_type, player->inventory);
-	persister.save_player_items(client.player.id, equipment_container_type, player->equipment);
+	//persister.save_player_items(client.player.id, equipment_container_type, player->equipment);
 	client.last_saved.start();
 }
 
@@ -140,6 +138,9 @@ void server_state::on_receive_packet(int client_index, int16_t type, no::io_stre
 		break;
 	case to_server::game::equip_from_inventory::type:
 		on_equip_from_inventory(client_index, { stream });
+		break;
+	case to_server::game::unequip_to_inventory::type:
+		on_unequip_to_inventory(client_index, { stream });
 		break;
 	case to_server::game::follow_character::type:
 		on_follow_character(client_index, { stream });
@@ -241,12 +242,23 @@ void server_state::on_start_combat(int client_index, const to_server::game::star
 void server_state::on_equip_from_inventory(int client_index, const to_server::game::equip_from_inventory& packet) {
 	auto& client = clients[client_index];
 	auto character = world.objects.character(client.object.player_instance_id);
-	auto item = character->inventory.at(packet.slot);
+	auto item = character->inventory.get(packet.slot);
 	character->equip_from_inventory(packet.slot);
 	to_client::game::character_equips client_packet;
 	client_packet.instance_id = client.object.player_instance_id;
 	client_packet.item_id = item.definition_id;
 	client_packet.stack = item.stack;
+	no::broadcast(client_packet, client_index);
+}
+
+void server_state::on_unequip_to_inventory(int client_index, const to_server::game::unequip_to_inventory& packet) {
+	auto& client = clients[client_index];
+	auto character = world.objects.character(client.object.player_instance_id);
+	auto item = character->equipment.get(packet.slot);
+	character->unequip_to_inventory(packet.slot);
+	to_client::game::character_unequips client_packet;
+	client_packet.instance_id = client.object.player_instance_id;
+	client_packet.slot = packet.slot;
 	no::broadcast(client_packet, client_index);
 }
 

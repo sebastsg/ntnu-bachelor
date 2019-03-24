@@ -46,8 +46,8 @@ public:
 		no::message_event<bool> run;
 	} events;
 
-	item_container inventory;
-	item_container equipment;
+	inventory_container inventory;
+	equipment_container equipment;
 
 	character_object(int object_id) : object_id(object_id) {}
 
@@ -58,8 +58,9 @@ public:
 	void read(no::io_stream& stream);
 
 	void equip_from_inventory(no::vector2i slot);
-	void unequip_to_inventory(no::vector2i slot);
+	void unequip_to_inventory(equipment_slot slot);
 	void equip(item_instance item);
+	void unequip(equipment_slot slot);
 
 	bool is_moving() const;
 

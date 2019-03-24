@@ -279,3 +279,10 @@ void game_state::equip_from_inventory(no::vector2i slot) {
 	packet.slot = slot;
 	no::send_packet(server(), packet);
 }
+
+void game_state::unequip_to_inventory(equipment_slot slot) {
+	world.my_player().character.unequip_to_inventory(slot);
+	to_server::game::unequip_to_inventory packet;
+	packet.slot = slot;
+	no::send_packet(server(), packet);
+}

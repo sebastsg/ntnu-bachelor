@@ -68,6 +68,14 @@ Read(character_equips)
 	stack = stream.read<int64_t>();
 End
 
+Write(character_unequips)
+	stream.write(instance_id);
+	stream.write((int32_t)slot);
+Read(character_unequips)
+	instance_id = stream.read<int32_t>();
+	slot = (equipment_slot)stream.read<int32_t>();
+End
+
 Write(character_follows)
 	stream.write(follower_id);
 	stream.write(target_id);
@@ -114,6 +122,12 @@ Write(equip_from_inventory)
 	stream.write(slot);
 Read(equip_from_inventory)
 	slot = stream.read<no::vector2i>();
+End
+
+Write(unequip_to_inventory)
+	stream.write((int32_t)slot);
+Read(unequip_to_inventory)
+	slot = (equipment_slot)stream.read<int32_t>();
 End
 
 Write(follow_character)

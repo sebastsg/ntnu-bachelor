@@ -57,6 +57,7 @@ public:
 	void follow_character(int target_id);
 
 	void equip_from_inventory(no::vector2i slot);
+	void unequip_to_inventory(equipment_slot slot);
 
 	chat_view chat;
 

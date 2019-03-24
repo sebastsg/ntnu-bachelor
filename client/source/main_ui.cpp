@@ -326,44 +326,30 @@ inventory_view::~inventory_view() {
 	ignore();
 }
 
-void inventory_view::on_item_added(const item_container::add_event& event) {
-	int i = event.slot.y * 4 + event.slot.x;
-	auto slot = slots.find(i);
-	if (slot == slots.end()) {
-		slots[i] = {};
-		slots[i].item = event.item;
-		set_item_uv(slots[i].rectangle, item_definitions().get(event.item.definition_id).uv);
+void inventory_view::on_change(no::vector2i slot) {
+	auto player = world.objects.character(object_id);
+	item_instance item = player->inventory.get(slot);
+	int slot_index = slot.y * inventory_container::columns + slot.x;
+	if (item.definition_id == -1) {
+		slots.erase(slot_index);
 	} else {
-		// todo: update stack text
-	}
-}
-
-void inventory_view::on_item_removed(const item_container::remove_event& event) {
-	int i = event.slot.y * 4 + event.slot.x;
-	auto slot = slots.find(i);
-	if (slot != slots.end()) {
-		ASSERT(slot->second.item.definition_id == event.item.definition_id);
-		slot->second.item.stack -= event.item.stack;
-		if (slot->second.item.stack <= 0) {
-			slots.erase(i);
-		} else {
-			// todo: update stack text
-		}
+		slots[slot_index] = {};
+		slots[slot_index].item = item;
+		set_item_uv(slots[slot_index].rectangle, item.definition().uv);
 	}
 }
 
 void inventory_view::listen(int object_id_) {
 	object_id = object_id_;
 	auto player = world.objects.character(object_id);
-	add_item_event = player->inventory.events.add.listen([this](const item_container::add_event& event) {
-		on_item_added(event);
+	change_event = player->inventory.events.change.listen([this](no::vector2i slot) {
+		on_change(slot);
 	});
-	remove_item_event = player->inventory.events.remove.listen([this](const item_container::remove_event& event) {
-		on_item_removed(event);
-	});
-	player->inventory.for_each([this](no::vector2i slot, const item_instance& item) {
-		on_item_added({ item, slot });
-	});
+	for (int x = 0; x < inventory_container::columns; x++) {
+		for (int y = 0; y < inventory_container::rows; y++) {
+			on_change({ x, y });
+		}
+	}
 }
 
 void inventory_view::ignore() {
@@ -371,10 +357,8 @@ void inventory_view::ignore() {
 		return;
 	}
 	auto player = world.objects.character(object_id);
-	player->inventory.events.add.ignore(add_item_event);
-	player->inventory.events.remove.ignore(remove_item_event);
-	add_item_event = -1;
-	remove_item_event = -1;
+	player->inventory.events.change.ignore(change_event);
+	change_event = -1;
 	player = nullptr;
 }
 
@@ -410,7 +394,7 @@ void inventory_view::add_context_options(context_menu& context) {
 		return;
 	}
 	auto player = world.objects.character(object_id);
-	auto item = player->inventory.at(slot);
+	auto item = player->inventory.get(slot);
 	if (item.definition_id == -1) {
 		return;
 	}
@@ -446,42 +430,26 @@ equipment_view::~equipment_view() {
 	ignore();
 }
 
-void equipment_view::on_item_added(const item_container::add_event& event) {
-	equipment_slot slot = item_definitions().get(event.item.definition_id).slot;
-	if (slots.find(slot) == slots.end()) {
-		slots[slot] = {};
-		slots[slot].item = event.item;
-		set_item_uv(slots[slot].rectangle, item_definitions().get(event.item.definition_id).uv);
+void equipment_view::on_change(equipment_slot slot) {
+	item_instance item = world.objects.character(object_id)->equipment.get(slot);
+	if (item.definition_id == -1) {
+		slots.erase(slot);
 	} else {
-		// todo: update stack text
-	}
-}
-
-void equipment_view::on_item_removed(const item_container::remove_event& event) {
-	equipment_slot slot = item_definitions().get(event.item.definition_id).slot;
-	if (slots.find(slot) != slots.end()) {
-		ASSERT(slots[slot].item.definition_id == event.item.definition_id);
-		slots[slot].item.stack -= event.item.stack;
-		if (slots[slot].item.stack <= 0) {
-			slots.erase(slot);
-		} else {
-			// todo: update stack text
-		}
+		slots[slot] = {};
+		slots[slot].item = item;
+		set_item_uv(slots[slot].rectangle, item.definition().uv);
 	}
 }
 
 void equipment_view::listen(int object_id_) {
 	object_id = object_id_;
 	auto player = world.objects.character(object_id);
-	add_item_event = player->equipment.events.add.listen([this](const item_container::add_event& event) {
-		on_item_added(event);
+	change_event = player->equipment.events.change.listen([this](equipment_slot slot) {
+		on_change(slot);
 	});
-	remove_item_event = player->equipment.events.remove.listen([this](const item_container::remove_event& event) {
-		on_item_removed(event);
-	});
-	player->equipment.for_each([this](no::vector2i slot, const item_instance& item) {
-		on_item_added({ item, slot });
-	});
+	for (int i = 0; i < (int)equipment_slot::total_slots; i++) {
+		on_change((equipment_slot)i);
+	}
 }
 
 void equipment_view::ignore() {
@@ -489,10 +457,8 @@ void equipment_view::ignore() {
 		return;
 	}
 	auto player = world.objects.character(object_id);
-	player->equipment.events.add.ignore(add_item_event);
-	player->equipment.events.remove.ignore(remove_item_event);
-	add_item_event = -1;
-	remove_item_event = -1;
+	player->equipment.events.change.ignore(change_event);
+	change_event = -1;
 	player = nullptr;
 }
 
@@ -549,7 +515,7 @@ void equipment_view::add_context_options(context_menu& context) {
 	}
 	auto definition = item_definitions().get(item.definition_id);
 	context.add_option("Unequip", [this, slot] {
-		//game.unequip_to_inventory(slot);
+		game.unequip_to_inventory(slot);
 	});
 }
 

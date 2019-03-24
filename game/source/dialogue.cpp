@@ -354,17 +354,16 @@ void choice_node::read(no::io_stream& stream) {
 
 int has_item_condition_node::process() {
 	long long has_stack = 0;
-	tree->inventory->for_each([&](no::vector2i slot, const item_instance& inventory_item) {
+	for (auto& inventory_item : tree->inventory->items) {
 		if (inventory_item.definition_id == item.definition_id) {
 			has_stack += inventory_item.stack;
 		}
-	});
+	}
 	if (check_equipment_too) {
-		tree->equipment->for_each([&](no::vector2i slot, const item_instance& equipment_item) {
-			if (equipment_item.definition_id == item.definition_id) {
-				has_stack += equipment_item.stack;
-			}
-		});
+		item_instance equipment_item = tree->equipment->get(item.definition().slot);
+		if (equipment_item.definition_id == item.definition_id) {
+			has_stack += equipment_item.stack;
+		}
 	}
 	return has_stack >= item.stack ? 1 : 0;
 }

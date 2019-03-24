@@ -138,8 +138,8 @@ public:
 	// what nodes check and modify:
 	game_variable_map* variables = nullptr;
 	int player_object_id = -1;
-	item_container* inventory = nullptr;
-	item_container* equipment = nullptr;
+	inventory_container* inventory = nullptr;
+	equipment_container* equipment = nullptr;
 	quest_instance_list* quests = nullptr;
 	world_state* world = nullptr;
 

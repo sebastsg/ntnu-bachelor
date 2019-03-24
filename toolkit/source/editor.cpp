@@ -249,19 +249,16 @@ void object_tool::update_imgui() {
 		ImGui::Text("Equipment");
 		auto& equipment = character->equipment;
 		bool dirty = false;
-		if (equipment.columns() == 0) {
-			equipment.resize(4);
-		}
-		for (int x = 0; x < equipment.columns(); x++) {
-			for (int y = 0; y < equipment.rows(); y++) {
-				auto& item = equipment.at({ x, y });
-				auto& definition = item_definitions().get(item.definition_id);
-				auto uv = definition.uv;
-				ImGui::Text(CSTRING((equipment_slot)definition.slot << ":"));
-				ImGui::SameLine();
-				ImGui::ImageButton((ImTextureID)ui_texture, { 32.0f }, item_uv1(uv, ui_texture), item_uv2(uv, ui_texture), 1);
-				item_popup_context(CSTRING("##Equip" << x << y << character), &item, ui_texture, dirty);
+		for (int slot = 1; slot < (int)equipment_slot::total_slots; slot++) {
+			auto& item = equipment.items[(int)slot];
+			ImGui::Text(CSTRING((equipment_slot)slot << ":"));
+			ImGui::SameLine();
+			no::vector2f uv;
+			if (item.definition_id != -1) {
+				uv = item.definition().uv;
 			}
+			ImGui::ImageButton((ImTextureID)ui_texture, { 32.0f }, item_uv1(uv, ui_texture), item_uv2(uv, ui_texture), 1);
+			item_popup_context(CSTRING("##Equip" << &item), &item, ui_texture, dirty);
 		}
 	}
 

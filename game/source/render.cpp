@@ -80,9 +80,11 @@ void character_renderer::add(character_object& object) {
 	character.events.defend = object.events.run.listen([i, this](bool running) {
 		characters[i].animation = (running ? "run" : "idle"); // todo: other animations
 	});
-	object.equipment.for_each([&](no::vector2i slot, const item_instance& item) {
-		on_equip(characters[i], item);
-	});
+	for (auto& item : object.equipment.items) {
+		if (item.definition_id != -1) {
+			on_equip(characters[i], item);
+		}
+	}
 	character.animation_id = character_animator.add();
 }
 

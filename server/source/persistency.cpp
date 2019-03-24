@@ -172,7 +172,7 @@ void game_persister::save_player_variables(int player_id, const game_variable_ma
 	});
 }
 
-void game_persister::load_player_items(int player_id, int container, item_container& items) {
+void game_persister::load_player_items(int player_id, int container, inventory_container& items) {
 	auto result = database.execute("select * from item_ownership where player_id = $1 and container = $2", {
 		std::to_string(player_id),
 		std::to_string(container)
@@ -185,16 +185,19 @@ void game_persister::load_player_items(int player_id, int container, item_contai
 	}
 }
 
-void game_persister::save_player_items(int player_id, int container, item_container& items) {
-	items.for_each([&](no::vector2i slot, const item_instance& item) {
+void game_persister::save_player_items(int player_id, int container, inventory_container& items) {
+	for (auto& item : items.items) {
+		if (item.definition_id == -1) {
+			continue;
+		}
 		database.call("set_item_ownership", {
 			std::to_string(player_id),
 			std::to_string(container),
-			std::to_string(items.columns()),
+			std::to_string(inventory_container::columns),
 			std::to_string(item.definition_id),
 			std::to_string(item.stack)
-		});
-	});
+		 });
+	}
 }
 
 quest_instance_list game_persister::load_player_quests(int player_id) {

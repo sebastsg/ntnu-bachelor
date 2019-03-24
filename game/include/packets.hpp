@@ -51,7 +51,11 @@ Packet(character_equips, 6)
 	int32_t item_id = -1;
 	int64_t stack = 0;
 
-Packet(character_follows, 7)
+Packet(character_unequips, 7)
+	int32_t instance_id = -1;
+	equipment_slot slot;
+
+Packet(character_follows, 8)
 	int32_t follower_id = -1;
 	int32_t target_id = -1;
 
@@ -77,7 +81,10 @@ Packet(start_combat, 4)
 Packet(equip_from_inventory, 5)
 	no::vector2i slot;
 
-Packet(follow_character, 6)
+Packet(unequip_to_inventory, 6)
+	equipment_slot slot;
+
+Packet(follow_character, 7)
 	int32_t target_id = -1;
 
 End

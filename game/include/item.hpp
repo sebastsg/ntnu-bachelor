@@ -38,8 +38,12 @@ struct item_definition {
 };
 
 struct item_instance {
+
 	int definition_id = -1;
 	long long stack = 0;
+
+	const item_definition& definition() const;
+
 };
 
 class item_definition_list {
@@ -66,47 +70,47 @@ private:
 
 item_definition_list& item_definitions();
 
-class item_container {
-public:
-
-	struct add_event {
-		item_instance item;
-		no::vector2i slot;
-	};
-
-	struct remove_event {
-		item_instance item;
-		no::vector2i slot;
-	};
+struct inventory_container {
+	
+	static const int columns = 4;
+	static const int rows = 4;
+	static const int slots = columns * rows;
 
 	struct {
-		no::message_event<add_event> add;
-		no::message_event<remove_event> remove;
+		no::message_event<no::vector2i> change;
 	} events;
 
-	item_instance at(no::vector2i slot) const;
-	item_instance& at(no::vector2i slot);
-	void for_each(const std::function<void(no::vector2i, const item_instance&)>& handler) const;
+	item_instance items[slots];
 
-	void resize(no::vector2i size);
+	item_instance get(no::vector2i slot) const;
 	void add_from(item_instance& item);
 	void remove_to(long long stack, item_instance& item);
 	long long take_all(int id);
 	void clear();
-
 	long long can_hold_more(int id) const;
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);
 
-	int rows() const;
-	int columns() const;
-	int count() const;
+};
 
-private:
+struct equipment_container {
 
-	std::vector<item_instance> items;
-	no::vector2i size;
+	struct {
+		no::message_event<equipment_slot> change;
+	} events;
+
+	item_instance items[(size_t)equipment_slot::total_slots];
+
+	item_instance get(equipment_slot slot) const;
+	void add_from(item_instance& item);
+	void remove_to(long long stack, item_instance& item);
+	long long take_all(int id);
+	void clear();
+	long long can_hold_more(int id) const;
+
+	void write(no::io_stream& stream) const;
+	void read(no::io_stream& stream);
 
 };
 

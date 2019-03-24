@@ -137,8 +137,7 @@ public:
 
 private:
 
-	void on_item_added(const item_container::add_event& event);
-	void on_item_removed(const item_container::remove_event& event);
+	void on_change(no::vector2i slot);
 
 	const no::ortho_camera& camera;
 	world_state& world;
@@ -153,8 +152,7 @@ private:
 
 	no::rectangle background;
 	std::unordered_map<int, item_slot> slots;
-	int add_item_event = -1;
-	int remove_item_event = -1;
+	int change_event = -1;
 
 };
 
@@ -182,8 +180,7 @@ public:
 
 private:
 
-	void on_item_added(const item_container::add_event& event);
-	void on_item_removed(const item_container::remove_event& event);
+	void on_change(equipment_slot slot);
 
 	const no::ortho_camera& camera;
 	world_state& world;
@@ -198,8 +195,7 @@ private:
 
 	no::rectangle background;
 	std::unordered_map<equipment_slot, item_slot> slots;
-	int add_item_event = -1;
-	int remove_item_event = -1;
+	int change_event = -1;
 
 };
 
