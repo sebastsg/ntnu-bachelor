@@ -92,8 +92,8 @@ public:
 	game_variable_map load_player_variables(int player_id);
 	void save_player_variables(int player_id, const game_variable_map& variables);
 
-	void load_player_items(int player_id, int container, inventory_container& items);
-	void save_player_items(int player_id, int container, inventory_container& items);
+	void load_player_items(int player_id, int container, item_instance* items, int count);
+	void save_player_items(int player_id, int container, item_instance* items, int count);
 
 	quest_instance_list load_player_quests(int player_id);
 	void save_player_quests(int player_id, quest_instance_list& quests);

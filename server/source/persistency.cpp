@@ -172,30 +172,30 @@ void game_persister::save_player_variables(int player_id, const game_variable_ma
 	});
 }
 
-void game_persister::load_player_items(int player_id, int container, inventory_container& items) {
+void game_persister::load_player_items(int player_id, int container, item_instance* items, int count) {
 	auto result = database.execute("select * from item_ownership where player_id = $1 and container = $2", {
 		std::to_string(player_id),
 		std::to_string(container)
 	});
-	items.clear();
 	for (int i = 0; i < result.count(); i++) {
 		auto row = result.row(i);
-		item_instance item{ row.integer("item"), row.integer("stack") };
-		items.add_from(item);
+		int slot = row.integer("slot");
+		if (slot < 0 || slot >= count) {
+			WARNING(player_id << " has invalid slot " << slot << " in " << container);
+			continue;
+		}
+		items[slot] = { row.integer("item"), row.integer("stack") };
 	}
 }
 
-void game_persister::save_player_items(int player_id, int container, inventory_container& items) {
-	for (auto& item : items.items) {
-		if (item.definition_id == -1) {
-			continue;
-		}
+void game_persister::save_player_items(int player_id, int container, item_instance* items, int count) {
+	for (int i = 0; i < count; i++) {
 		database.call("set_item_ownership", {
 			std::to_string(player_id),
 			std::to_string(container),
-			std::to_string(inventory_container::columns),
-			std::to_string(item.definition_id),
-			std::to_string(item.stack)
+			std::to_string(i),
+			std::to_string(items[i].definition_id),
+			std::to_string(items[i].stack)
 		 });
 	}
 }

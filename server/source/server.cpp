@@ -66,8 +66,8 @@ character_object* server_state::load_player(int client_index) {
 	client.player.variables = persister.load_player_variables(client.player.id);
 	client.player.quests = persister.load_player_quests(client.player.id);
 	client.object.player_instance_id = player->object_id;
-	persister.load_player_items(client.player.id, 0, player->inventory);
-	//persister.load_player_items(client.player.id, 1, player->equipment);
+	persister.load_player_items(client.player.id, inventory_container_type, player->inventory.items, player->inventory.slots);
+	persister.load_player_items(client.player.id, equipment_container_type, player->equipment.items, (int)equipment_slot::total_slots);
 	auto& object = world.objects.object(client.object.player_instance_id);
 	object.transform.position.x = (float)tile.x;
 	object.transform.position.z = (float)tile.y;
@@ -90,8 +90,8 @@ void server_state::save_player(int client_index) {
 	persister.save_player_tile(client.player.id, object.tile());
 	persister.save_player_variables(client.player.id, client.player.variables);
 	persister.save_player_quests(client.player.id, client.player.quests);
-	persister.save_player_items(client.player.id, inventory_container_type, player->inventory);
-	//persister.save_player_items(client.player.id, equipment_container_type, player->equipment);
+	persister.save_player_items(client.player.id, inventory_container_type, player->inventory.items, player->inventory.slots);
+	persister.save_player_items(client.player.id, equipment_container_type, player->equipment.items, (int)equipment_slot::total_slots);
 	client.last_saved.start();
 }
 
