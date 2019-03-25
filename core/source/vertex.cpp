@@ -255,31 +255,31 @@ void assimp_importer::load_mesh(aiMesh* mesh) {
 				vertex.weights_extra.y = weight.mWeight;
 				vertex.bones_extra.y = b;
 			} else if (weight.mWeight > vertex.weights.x) {
-				WARNING("Discarding weight #0 = " << vertex.weights.x << " for vertex " << weight.mVertexId);
+				//WARNING("Discarding weight #0 = " << vertex.weights.x << " for vertex " << weight.mVertexId);
 				vertex.weights.x = weight.mWeight;
 				vertex.bones.x = b;
 			} else if (weight.mWeight > vertex.weights.y) {
-				WARNING("Discarding weight #1 = " << vertex.weights.y << " for vertex " << weight.mVertexId);
+				//WARNING("Discarding weight #1 = " << vertex.weights.y << " for vertex " << weight.mVertexId);
 				vertex.weights.y = weight.mWeight;
 				vertex.bones.y = b;
 			} else if (weight.mWeight > vertex.weights.z) {
-				WARNING("Discarding weight #2 = " << vertex.weights.z << " for vertex " << weight.mVertexId);
+				//WARNING("Discarding weight #2 = " << vertex.weights.z << " for vertex " << weight.mVertexId);
 				vertex.weights.z = weight.mWeight;
 				vertex.bones.z = b;
 			} else if (weight.mWeight > vertex.weights.w) {
-				WARNING("Discarding weight #3 = " << vertex.weights.w << " for vertex " << weight.mVertexId);
+				//WARNING("Discarding weight #3 = " << vertex.weights.w << " for vertex " << weight.mVertexId);
 				vertex.weights.w = weight.mWeight;
 				vertex.bones.w = b;
 			} else if (weight.mWeight > vertex.weights_extra.x) {
-				WARNING("Discarding weight #4 = " << vertex.weights_extra.x<< " for vertex " << weight.mVertexId);
+				//WARNING("Discarding weight #4 = " << vertex.weights_extra.x<< " for vertex " << weight.mVertexId);
 				vertex.weights_extra.x = weight.mWeight;
 				vertex.bones_extra.x = b;
 			} else if (weight.mWeight > vertex.weights_extra.y) {
-				WARNING("Discarding weight #5 = " << vertex.weights_extra.y << " for vertex " << weight.mVertexId);
+				//WARNING("Discarding weight #5 = " << vertex.weights_extra.y << " for vertex " << weight.mVertexId);
 				vertex.weights_extra.y = weight.mWeight;
 				vertex.bones_extra.y = b;
 			} else {
-				WARNING("Discarding weight #6 = " << weight.mWeight << " for vertex " << weight.mVertexId);
+				//WARNING("Discarding weight #6 = " << weight.mWeight << " for vertex " << weight.mVertexId);
 			}
 		}
 	}

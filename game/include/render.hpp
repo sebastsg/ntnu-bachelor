@@ -32,7 +32,7 @@ public:
 	
 	void update(const no::bone_attachment_mapping_list& mappings, const world_objects& objects);
 	void draw();
-	void add(character_object& object);
+	void add(world_objects& objects, int object_id);
 	void remove(character_object& object);
 
 private:
@@ -53,12 +53,13 @@ private:
 	struct character_animation {
 		int object_id = -1;
 		int animation_id = -1;
+		std::string model;
 		std::string animation;
 		character_events events;
 		std::vector<character_equipment> equipments;
 	};
 
-	struct equipment_model {
+	struct textured_model {
 		no::model model;
 		int texture = -1;
 	};
@@ -66,17 +67,13 @@ private:
 	void on_equip(character_animation& object, const item_instance& item);
 	void on_unequip(character_animation& object, equipment_slot slot);
 
-	no::skeletal_animator character_animator;
-	no::model character_model;
-	int character_texture = -1;
 	std::vector<character_animation> characters;
 
-	std::unordered_map<int, no::skeletal_animator> equipment_animators;
-	std::unordered_map<int, equipment_model> equipments;
+	std::unordered_map<std::string, no::skeletal_animator> animators;
+	std::unordered_map<std::string, textured_model> character_models;
 
-	//no::model model_legs;
-	//no::model model_body;
-	//no::model model_legs_and_body;
+	std::unordered_map<int, no::skeletal_animator> equipment_animators;
+	std::unordered_map<int, textured_model> equipments;
 
 };
 

@@ -29,6 +29,9 @@ struct skeletal_animation {
 	int reference = -1;
 	float time = 0.0f;
 	transform3 transform;
+	int next_p = 1;
+	int next_r = 1;
+	int next_s = 1;
 };
 
 class skeletal_animator {

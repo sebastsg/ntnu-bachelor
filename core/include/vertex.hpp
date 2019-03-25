@@ -363,11 +363,12 @@ model_data<V> merge_model_animations(const std::vector<model_data<V>>& models) {
 		}
 		bool equal = true;
 		for (size_t n = 0; n < output.nodes.size(); n++) {
-			if (output.nodes[n].transform != model.nodes[n].transform) {
+			// maybe this isn't that important?
+			/*if (output.nodes[n].transform != model.nodes[n].transform) {
 				WARNING("Different node transform " << n << ". Skipping.");
 				equal = false;
 				break;
-			}
+			}*/
 			if (output.nodes[n].children != model.nodes[n].children) {
 				WARNING("Different node children " << n << ". Skipping.");
 				equal = false;

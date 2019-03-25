@@ -3,7 +3,7 @@
 namespace no {
 
 static glm::mat4 interpolate_positions(float factor, const vector3f& begin, const vector3f& end) {
-	ASSERT(factor >= 0.0f && factor <= 1.0f);
+	//ASSERT(factor >= 0.0f && factor <= 1.0f);
 	const vector3f delta = end - begin;
 	const vector3f interpolated = factor * delta;
 	const vector3f translation = begin + interpolated;
@@ -11,12 +11,12 @@ static glm::mat4 interpolate_positions(float factor, const vector3f& begin, cons
 }
 
 static glm::mat4 interpolate_rotations(float factor, const glm::quat& begin, const glm::quat& end) {
-	ASSERT(factor >= 0.0f && factor <= 1.0f);
+	//ASSERT(factor >= 0.0f && factor <= 1.0f);
 	return glm::mat4_cast(glm::normalize(glm::slerp(begin, end, factor)));
 }
 
 static glm::mat4 interpolate_scales(float factor, const vector3f& begin, const vector3f& end) {
-	ASSERT(factor >= 0.0f && factor <= 1.0f);
+	//ASSERT(factor >= 0.0f && factor <= 1.0f);
 	const vector3f delta = end - begin;
 	const vector3f interpolated = factor * delta;
 	const vector3f scale = begin + interpolated;
@@ -115,10 +115,12 @@ void skeletal_animator::animate() {
 
 glm::mat4 skeletal_animator::next_interpolated_position(skeletal_animation& animation, int node_index) {
 	auto& node = skeleton.animations[animation.reference].channels[node_index];
-	for (int p = 0; p < (int)node.positions.size() - 1; p++) {
-		if (node.positions[p + 1].time > animation.time) {
-			auto& current = node.positions[p];
-			auto& next = node.positions[p + 1];
+	const int count = (int)node.positions.size();
+	for (int p = animation.next_p; p < count; p++) {
+		if (node.positions[p].time > animation.time) {
+			animation.next_p = p;
+			auto& current = node.positions[p - 1];
+			auto& next = node.positions[p];
 			float delta_time = next.time - current.time;
 			float factor = (animation.time - current.time) / delta_time;
 			return interpolate_positions(factor, current.position, next.position);
@@ -127,16 +129,19 @@ glm::mat4 skeletal_animator::next_interpolated_position(skeletal_animation& anim
 	if (node.positions.empty()) {
 		return glm::mat4{ 1.0f };
 	}
+	animation.next_p = 1;
 	auto& translation = node.positions.front().position;
 	return glm::translate(glm::mat4{ 1.0f }, { translation.x, translation.y, translation.z });
 }
 
 glm::mat4 skeletal_animator::next_interpolated_rotation(skeletal_animation& animation, int node_index) {
 	auto& node = skeleton.animations[animation.reference].channels[node_index];
-	for (int r = 0; r < (int)node.rotations.size() - 1; r++) {
-		if (node.rotations[r + 1].time > animation.time) {
-			auto& current = node.rotations[r];
-			auto& next = node.rotations[r + 1];
+	const int count = (int)node.rotations.size();
+	for (int r = animation.next_r; r < count; r++) {
+		if (node.rotations[r].time > animation.time) {
+			animation.next_r = r;
+			auto& current = node.rotations[r - 1];
+			auto& next = node.rotations[r];
 			float delta_time = next.time - current.time;
 			float factor = (animation.time - current.time) / delta_time;
 			return interpolate_rotations(factor, current.rotation, next.rotation);
@@ -145,15 +150,18 @@ glm::mat4 skeletal_animator::next_interpolated_rotation(skeletal_animation& anim
 	if (node.rotations.empty()) {
 		return glm::mat4{ 1.0f };
 	}
+	animation.next_r = 1;
 	return glm::mat4_cast(node.rotations.front().rotation);
 }
 
 glm::mat4 skeletal_animator::next_interpolated_scale(skeletal_animation& animation, int node_index) {
 	auto& node = skeleton.animations[animation.reference].channels[node_index];
-	for (int s = 0; s < (int)node.scales.size() - 1; s++) {
-		if (node.scales[s + 1].time > animation.time) {
-			auto& current = node.scales[s];
-			auto& next = node.scales[s + 1];
+	const int count = (int)node.scales.size();
+	for (int s = animation.next_s; s < count; s++) {
+		if (node.scales[s].time > animation.time) {
+			animation.next_s = s;
+			auto& current = node.scales[s - 1];
+			auto& next = node.scales[s];
 			float delta_time = next.time - current.time;
 			float factor = (animation.time - current.time) / delta_time;
 			return interpolate_scales(factor, current.scale, next.scale);
@@ -162,6 +170,7 @@ glm::mat4 skeletal_animator::next_interpolated_scale(skeletal_animation& animati
 	if (node.scales.empty()) {
 		return glm::mat4{ 1.0f };
 	}
+	animation.next_s = 1;
 	auto& scale = node.scales.front().scale;
 	return glm::scale(glm::mat4{ 1.0f }, { scale.x, scale.y, scale.z });
 }
@@ -196,7 +205,13 @@ void skeletal_animator::animate(skeletal_animation& animation) {
 	auto& reference = skeleton.animations[animation.reference];
 	double seconds = (double)animation.play_timer.milliseconds() * 0.001;
 	double play_duration = seconds * (double)reference.ticks_per_second;
+	float time = animation.time;
 	animation.time = (float)std::fmod(play_duration, (double)reference.duration);
+	if (time > animation.time) {
+		animation.next_p = 1;
+		animation.next_r = 1;
+		animation.next_s = 1;
+	}
 	animation.transforms[0] = animation.root_transform;
 	animation.bone_count = (int)skeleton.bones.size();
 	animation.transform_count = skeleton.total_nodes();

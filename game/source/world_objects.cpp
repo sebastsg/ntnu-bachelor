@@ -119,6 +119,7 @@ void world_objects::load(const std::string& path) {
 		int definition_id = stream.read<int32_t>();
 		int instance_id = add(definition_id);
 		object(instance_id).read(stream);
+		object(instance_id).instance_id = instance_id;
 		if (object_definition(definition_id).type == game_object_type::character) {
 			characters.back().read(stream); // added in add()
 		}

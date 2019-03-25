@@ -69,6 +69,7 @@ public:
 
 	bool add(const game_object_definition& definition);
 	bool conflicts(const game_object_definition& definition) const;
+	std::vector<game_object_definition> of_type(game_object_type type) const;
 
 private:
 

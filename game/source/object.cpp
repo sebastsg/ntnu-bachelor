@@ -95,6 +95,16 @@ bool game_object_definition_list::conflicts(const game_object_definition& other_
 	return false;
 }
 
+std::vector<game_object_definition> game_object_definition_list::of_type(game_object_type type) const {
+	std::vector<game_object_definition> result;
+	for (auto& definition : definitions) {
+		if (definition.type == type) {
+			result.push_back(definition);
+		}
+	}
+	return result;
+}
+
 void game_object::write(no::io_stream& stream) const {
 	stream.write<int32_t>(definition_id);
 	stream.write<int32_t>(instance_id);

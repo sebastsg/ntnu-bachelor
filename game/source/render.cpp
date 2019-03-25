@@ -24,24 +24,31 @@ static std::vector<unsigned short> filter_red_blue_indices(const no::model_data<
 	return result;
 }
 
-character_renderer::character_renderer() : character_animator{ character_model } {
-	no::model_data<no::animated_mesh_vertex> model_data;
-	no::import_model(no::asset_path("models/character.nom"), model_data);
-	character_model.load<no::animated_mesh_vertex>(model_data);
+character_renderer::character_renderer() {
+	std::vector<game_object_definition> definitions = object_definitions().of_type(game_object_type::character);
+	for (auto& definition : definitions) {
+		if (character_models.find(definition.model) == character_models.end()) {
+			character_models[definition.model] = {};
+			no::model_data<no::animated_mesh_vertex> model_data;
+			no::import_model(no::asset_path("models/" + definition.model + ".nom"), model_data);
+			auto& model = character_models[definition.model];
+			model.model.load(model_data);
+			model.texture = no::create_texture({ no::asset_path("textures/" + model_data.texture + ".png") });
+		}
+	}
+	for (auto& definition : definitions) {
+		if (animators.find(definition.model) == animators.end()) {
+			animators.emplace(definition.model, character_models[definition.model].model);
+		}
+	}
 
-	auto model_legs_hidden = model_data;
-	auto model_body_hidden = model_data;
-	auto model_legs_and_body_hidden = model_data;
-
-	model_legs_hidden.shape.indices = filter_red_blue_indices(model_data, 0.9f, 0.1f);
-	model_body_hidden.shape.indices = filter_red_blue_indices(model_data, -0.1f, 0.9f);
-	model_legs_and_body_hidden.shape.indices = filter_red_blue_indices(model_data, 0.1f, -0.1f);
-
+	//model_legs_hidden.shape.indices = filter_red_blue_indices(model_data, 0.9f, 0.1f);
+	//model_body_hidden.shape.indices = filter_red_blue_indices(model_data, -0.1f, 0.9f);
+	//model_legs_and_body_hidden.shape.indices = filter_red_blue_indices(model_data, 0.1f, -0.1f);
 	//model_legs.load<no::animated_mesh_vertex>(model_legs_hidden);
 	//model_body.load<no::animated_mesh_vertex>(model_body_hidden);
 	//model_legs_and_body.load<no::animated_mesh_vertex>(model_legs_and_body_hidden);
 
-	character_texture = no::create_texture({ no::asset_path("textures/character.png") });
 	std::vector<item_definition> items = item_definitions().of_type(item_type::equipment);
 	for (auto& item : items) {
 		auto& equipment = equipments[item.id];
@@ -54,17 +61,21 @@ character_renderer::character_renderer() : character_animator{ character_model }
 }
 
 character_renderer::~character_renderer() {
-	no::delete_texture(character_texture);
+	for (auto& model : character_models) {
+		no::delete_texture(model.second.texture);
+	}
 	for (auto& equipment : equipments) {
 		no::delete_texture(equipment.second.texture);
 	}
 }
 
-void character_renderer::add(character_object& object) {
+void character_renderer::add(world_objects& objects, int object_id) {
 	int i = (int)characters.size();
 	auto& character = characters.emplace_back();
-	character.object_id = object.object_id;
+	character.object_id = object_id;
+	character.model = objects.object(object_id).definition().model;
 	character.animation = "idle";
+	auto& object = *objects.character(object_id);
 	character.events.equip = object.events.equip.listen([i, this](const item_instance& item) {
 		on_equip(characters[i], item);
 	});
@@ -85,7 +96,7 @@ void character_renderer::add(character_object& object) {
 			on_equip(characters[i], item);
 		}
 	}
-	character.animation_id = character_animator.add();
+	character.animation_id = animators.find(character.model)->second.add();
 }
 
 void character_renderer::remove(character_object& object) {
@@ -96,7 +107,7 @@ void character_renderer::remove(character_object& object) {
 			object.events.attack.ignore(characters[i].events.attack);
 			object.events.defend.ignore(characters[i].events.defend);
 			object.events.run.ignore(characters[i].events.run);
-			character_animator.erase(characters[i].animation_id);
+			animators.find(characters[i].model)->second.erase(characters[i].animation_id);
 			characters.erase(characters.begin() + i);
 			break;
 		}
@@ -106,9 +117,11 @@ void character_renderer::remove(character_object& object) {
 void character_renderer::update(const no::bone_attachment_mapping_list& mappings, const world_objects& objects) {
 	for (auto& character : characters) {
 		auto& object = objects.object(character.object_id);
-		auto& animation = character_animator.get(character.animation_id);
+		auto& animator = animators.find(object.definition().model)->second;
+		auto& model = character_models[object.definition().model].model;
+		auto& animation = animator.get(character.animation_id);
 		animation.transform = object.transform;
-		character_animator.play(character.animation_id, character.animation, -1);
+		animator.play(character.animation_id, character.animation, -1);
 		for (auto& equipment : character.equipments) {
 			auto& equipment_animator = equipment_animators.find(equipment.item_id)->second;
 			auto& equipment_animation = equipment_animator.get(equipment.animation_id);
@@ -119,9 +132,9 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 				equipment_animator.play(equipment.animation_id, "default", -1);
 				std::string equipment_name = equipments[equipment.item_id].model.name();
 				equipment_animation.is_attachment = true;
-				int char_animation = character_model.index_of_animation(character.animation);
-				mappings.update(character_model, char_animation, equipment_name, equipment_animation.attachment);
-				equipment_animation.root_transform = character_animator.get(character.animation_id).transforms[equipment_animation.attachment.parent];
+				int char_animation = model.index_of_animation(character.animation);
+				mappings.update(model, char_animation, equipment_name, equipment_animation.attachment);
+				equipment_animation.root_transform = animation.transforms[equipment_animation.attachment.parent];
 			} else {
 				equipment_animator.play(equipment.animation_id, character.animation, -1);
 			}
@@ -130,10 +143,12 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 }
 
 void character_renderer::draw() {
-	character_animator.shader.bones = shader.bones;
-	character_animator.animate();
-	no::bind_texture(character_texture);
-	character_animator.draw();
+	for (auto& animator : animators) {
+		animator.second.shader.bones = shader.bones;
+		animator.second.animate();
+		no::bind_texture(character_models[animator.first].texture);
+		animator.second.draw();
+	}
 	for (auto& equipment : equipment_animators) {
 		equipment.second.shader.bones = shader.bones;
 		equipment.second.animate();
@@ -285,7 +300,7 @@ world_view::world_view(world_state& world) : world(world) {
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 6, 2);
 	
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
-	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, false);
+	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, true);
 	no::surface surface = { 2, 2, no::pixel_format::rgba };
 	surface.clear(0xFFFFFFFF);
 	highlight_texture = no::create_texture(surface);
@@ -348,7 +363,7 @@ void world_view::add(const game_object& object) {
 		decorations.add(object);
 		break;
 	case game_object_type::character:
-		characters.add(*world.objects.character(object.instance_id));
+		characters.add(world.objects, object.instance_id);
 		break;
 	case game_object_type::item_spawn:
 		break;
