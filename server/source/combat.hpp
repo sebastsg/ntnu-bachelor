@@ -3,7 +3,7 @@
 #include "event.hpp"
 #include "timer.hpp"
 
-class world_state;
+class server_world;
 class character_object;
 
 class active_combat {
@@ -12,7 +12,7 @@ public:
 	int attacker_id = -1;
 	int target_id = -1;
 
-	active_combat(int attacker_id, int target_id, world_state& world);
+	active_combat(int attacker_id, int target_id, server_world& world);
 
 	bool can_hit() const;
 	bool is_target_in_range() const;
@@ -21,7 +21,7 @@ public:
 
 private:
 
-	world_state* world = nullptr;
+	server_world* world = nullptr;
 	no::timer last_hit;
 
 };
@@ -39,7 +39,7 @@ public:
 		no::message_event<hit_event> hit;
 	} events;
 
-	combat_system(world_state& world);
+	combat_system(server_world& world);
 	combat_system(const combat_system&) = delete;
 	combat_system(combat_system&&) = delete;
 
@@ -56,7 +56,7 @@ public:
 private:
 
 	std::vector<active_combat> combats;
-	world_state& world;
+	server_world& world;
 	int object_remove_event = -1;
 
 };

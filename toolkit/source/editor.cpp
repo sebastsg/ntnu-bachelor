@@ -151,7 +151,7 @@ void tile_flag_tool::erase(no::vector2i tile) {
 }
 
 object_tool::object_tool(world_editor_state& editor) : world_editor_tool(editor) {
-	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));
+	ui_texture = no::create_texture({ no::asset_path("sprites/ui.png") });
 }
 
 object_tool::~object_tool() {
@@ -246,6 +246,10 @@ void object_tool::update_imgui() {
 		if (health_level != health.real()) {
 			health.set_experience(health.experience_for_level(health_level));
 		}
+		ImGui::Separator();
+		ImGui::Checkbox("Walking around", &character->walking_around);
+		character->walking_around_center = object.tile();
+		ImGui::Separator();
 		ImGui::Text("Equipment");
 		auto& equipment = character->equipment;
 		bool dirty = false;
@@ -325,6 +329,7 @@ void world_editor_state::update() {
 			brush_tiles.emplace_back(x + hovered_tile.x, y + hovered_tile.y);
 		}
 	}
+	world.terrain.shift_to_center_of(world_position_to_tile_index(renderer.camera.transform.position));
 	world.update();
 	update_editor();
 	update_imgui();
@@ -378,20 +383,6 @@ void world_editor_state::update_imgui() {
 	ImGui::Separator();
 	if (ImGui::Button("Save")) {
 		world.save(no::asset_path("worlds/main.ew"));
-	}
-	ImGui::Separator();
-	if (ImGui::Button("/\\")) {
-		world.terrain.shift_up();
-	}
-	if (ImGui::Button("<-")) {
-		world.terrain.shift_left();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("->")) {
-		world.terrain.shift_right();
-	}
-	if (ImGui::Button("\\/")) {
-		world.terrain.shift_down();
 	}
 	ImGui::Separator();
 

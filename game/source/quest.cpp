@@ -61,7 +61,7 @@ void quest_task_list::write(no::io_stream& stream) const {
 }
 
 void quest_task_list::read(no::io_stream& stream) {
-	int id_counter = stream.read<int32_t>();
+	id_counter = stream.read<int32_t>();
 	int count = stream.read<int32_t>();
 	for (int i = 0; i < count; i++) {
 		quest_task task;

@@ -59,6 +59,15 @@ private:
 class server_world : public world_state {
 public:
 
+	struct kill_event {
+		int attacker_id = -1;
+		int target_id = -1;
+	};
+
+	struct {
+		no::event_message_queue<kill_event> kill;
+	} events;
+
 	combat_system combat;
 
 	server_world(const std::string& name);

@@ -68,7 +68,7 @@ public:
 
 	world_terrain(world_state& world);
 	world_terrain(const world_terrain&) = delete;
-	world_terrain(world_terrain&&) = default;
+	world_terrain(world_terrain&&) = delete;
 
 	world_terrain& operator=(const world_terrain&) = delete;
 	world_terrain& operator=(world_terrain&&) = delete;
@@ -94,11 +94,15 @@ public:
 	void shift_right();
 	void shift_up();
 	void shift_down();
+	void shift_to_center_of(no::vector2i tile);
 
 	bool is_dirty() const;
 	void set_clean();
 
 private:
+
+	const int active_radius = 128;
+	const int tile_stride = active_radius * sizeof(world_tile);
 
 	no::vector2i global_to_local_tile(no::vector2i tile) const;
 	no::vector2i local_to_global_tile(no::vector2i tile) const;

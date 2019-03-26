@@ -99,15 +99,27 @@ void object_editor::ui_select_object() {
 			model.load<no::static_mesh_vertex>(no::asset_path("models/" + selected.model + ".nom"));
 		}
 		no::delete_texture(model_texture);
-		model_texture = no::create_texture(no::surface(no::asset_path("textures/" + model.texture_name() + ".png")), no::scale_option::nearest_neighbour, true);
+		model_texture = no::create_texture({ no::asset_path("textures/" + model.texture_name() + ".png") });
 	}
 	imgui_input_text<128>("Name##EditObjectName", selected.name);
 	imgui_input_text<128>("Description##EditObjectDescription", selected.description);
 	object_type_combo(selected.type, "Edit");
 	imgui_input_text<128>("Model##EditObjectModel", selected.model);
-	ImGui::InputInt("Dialogue ID##EditObjectDialogue", &selected.dialogue_id);
-	if (!dialogue_meta().find(selected.dialogue_id)) {
-		selected.dialogue_id = -1;
+	ImGui::Separator();
+	ImGui::Text("Scripts");
+	ImGui::InputInt("Dialogue:##EditObjectDialogue", &selected.script_id.dialogue);
+	if (!dialogue_meta().find(selected.script_id.dialogue)) {
+		selected.script_id.dialogue = -1;
+	} else {
+		ImGui::SameLine();
+		ImGui::Text(dialogue_meta().find(selected.script_id.dialogue)->name.c_str());
+	}
+	ImGui::InputInt("Killed:##EditObjectKilled", &selected.script_id.killed);
+	if (!dialogue_meta().find(selected.script_id.killed)) {
+		selected.script_id.killed = -1;
+	} else {
+		ImGui::SameLine();
+		ImGui::Text(dialogue_meta().find(selected.script_id.killed)->name.c_str());
 	}
 	ImGui::Separator();
 	ImGui::InputFloat3("Min##EditObjectBBoxMin", &selected.bounding_box.position.x);
@@ -135,7 +147,7 @@ void object_editor::update() {
 		| ImGuiWindowFlags_NoCollapse
 		| ImGuiWindowFlags_NoTitleBar;
 	ImGui::SetNextWindowPos({ 0.0f, 20.0f }, ImGuiSetCond_Once);
-	ImGui::SetNextWindowSize({ 320.0f, (float)window().height() - 20.0f }, ImGuiSetCond_Always);
+	ImGui::SetNextWindowSize({ 512.0f, (float)window().height() - 20.0f }, ImGuiSetCond_Always);
 	ImGui::Begin("##ObjectEditor", nullptr, imgui_flags);
 
 	ui_create_object();
@@ -165,6 +177,7 @@ void object_editor::draw() {
 	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f });
 	no::get_shader_variable("uni_FogStart").set(100.0f);
 	no::get_shader_variable("uni_FogDistance").set(0.0f);
+	no::get_shader_variable("uni_Color").set(no::vector4f{ 1.0f });
 	if (model_texture != -1) {
 		no::bind_texture(model_texture);
 	}
@@ -191,4 +204,3 @@ void object_editor::draw() {
 bool object_editor::is_mouse_over_ui() const {
 	return mouse().position().x < 320;
 }
-

@@ -86,12 +86,24 @@ void character_object::update(world_state& world, game_object& object) {
 				object.transform.rotation.y = new_angle;
 			}
 		}
+	} else if (walking_around && target_path.empty()) {
+		walk_around(world, object);
 	}
 }
 
 void character_object::start_path_movement(const std::vector<no::vector2i>& path) {
 	target_path = path;
 	tiles_moved = 0;
+	walk_around_timer.start();
+}
+
+void character_object::walk_around(world_state& world, game_object& object) {
+	no::random_number_generator random;
+	if (walk_around_timer.has_started() && walk_around_timer.milliseconds() < random.next(4000, 5000)) {
+		return;
+	}
+	no::vector2i distance{ random.next(-8, 8), random.next(-8, 8) };
+	start_path_movement(world.path_between(object.tile(), walking_around_center + distance));
 }
 
 void character_object::write(no::io_stream& stream) const {
@@ -101,6 +113,8 @@ void character_object::write(no::io_stream& stream) const {
 	for (auto& stat : stats) {
 		stat.write(stream);
 	}
+	stream.write<uint8_t>(walking_around ? 1 : 0);
+	stream.write(walking_around_center);
 }
 
 void character_object::read(no::io_stream& stream) {
@@ -110,6 +124,8 @@ void character_object::read(no::io_stream& stream) {
 	for (int i = 0; i < count; i++) {
 		stats[i].read(stream);
 	}
+	walking_around = (stream.read<uint8_t>() != 0);
+	walking_around_center = stream.read<no::vector2i>();
 }
 
 void character_object::equip_from_inventory(no::vector2i slot) {

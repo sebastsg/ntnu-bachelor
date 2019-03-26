@@ -52,6 +52,28 @@ void server_state::update() {
 		}
 	}
 	world.update();
+	world.events.kill.all([&](const server_world::kill_event& event) {
+		const auto& definition = world.objects.object(event.target_id).definition();
+		if (definition.script_id.killed) {
+			for (auto& client : clients) {
+				if (client.object.player_instance_id == event.attacker_id) {
+					auto player = world.objects.character(event.attacker_id);
+					dialogue_tree script;
+					script.quests = &client.player.quests;
+					script.variables = &client.player.variables;
+					script.player_object_id = client.object.player_instance_id;
+					script.inventory = &player->inventory;
+					script.equipment = &player->equipment;
+					script.world = &world;
+					script.load(definition.script_id.killed);
+					script.process_entry_point();
+					break;
+				}
+			}
+		}
+		world.combat.stop_all(event.target_id);
+		world.objects.remove(event.target_id);
+	});
 }
 
 void server_state::draw() {

@@ -293,6 +293,7 @@ void context_menu::draw_option(int option_index, int ui_texture) const {
 	}
 	no::transform2 transform;
 	transform.position = position + context_uv[top_tile_1].zw;
+	transform.position.x -= 6.0f;
 	transform.position.y += (float)option_index * context_uv[item_tile].w + 2.0f;
 	transform.scale = no::texture_size(option.texture).to<float>();
 	no::bind_texture(option.texture);
@@ -829,13 +830,13 @@ void user_interface_view::create_context() {
 					});
 				}
 			}
-			if (definition.dialogue_id != -1) {
+			if (definition.script_id.dialogue != -1) {
 				std::string option_name = "Use ";
 				if (definition.type == game_object_type::character) {
 					option_name = "Talk to ";
 				}
 				context->add_option(option_name + definition.name, [&] {
-					game.start_dialogue(definition.dialogue_id);
+					game.start_dialogue(definition.script_id.dialogue);
 				});
 			}
 			if (!definition.description.empty()) {

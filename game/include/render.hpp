@@ -120,7 +120,7 @@ public:
 	object_pick_renderer& operator=(const object_pick_renderer&) = delete;
 	object_pick_renderer& operator=(object_pick_renderer&&) = delete;
 
-	void draw(const world_objects& objects);
+	void draw(no::vector2i offset, const world_objects& objects);
 	void add(const game_object& object);
 	void remove(const game_object& object);
 

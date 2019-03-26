@@ -1,8 +1,8 @@
 #include "combat.hpp"
-#include "world.hpp"
+#include "server.hpp"
 #include "character.hpp"
 
-active_combat::active_combat(int attacker_id, int target_id, world_state& world) :
+active_combat::active_combat(int attacker_id, int target_id, server_world& world) :
 	attacker_id(attacker_id), target_id(target_id), world(&world) {
 	last_hit.start();
 }
@@ -27,6 +27,9 @@ int active_combat::hit() {
 	last_hit.start();
 	int damage = std::rand() % 4;
 	target->stat(stat_type::health).add_effective(-damage);
+	if (target->stat(stat_type::health).effective() < 1) {
+		world->events.kill.move_and_push({ attacker_id, target_id });
+	}
 	return damage;
 }
 
@@ -34,7 +37,7 @@ void active_combat::next_turn() {
 	std::swap(attacker_id, target_id);
 }
 
-combat_system::combat_system(world_state& world_) : world(world_) {
+combat_system::combat_system(server_world& world_) : world(world_) {
 	object_remove_event = world.objects.events.remove.listen([this](const game_object& object) {
 		stop_all(object.instance_id);
 	});
@@ -47,6 +50,10 @@ combat_system::~combat_system() {
 void combat_system::update() {
 	for (auto& combat : combats) {
 		if (combat.can_hit()) {
+			auto target = world.objects.character(combat.target_id);
+			if (target->stat(stat_type::health).effective() < 1) {
+				continue;
+			}
 			if (combat.is_target_in_range()) {
 				events.hit.emit(combat.attacker_id, combat.target_id, combat.hit());
 			}

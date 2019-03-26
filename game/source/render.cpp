@@ -108,7 +108,7 @@ void character_renderer::remove(character_object& object) {
 			object.events.defend.ignore(characters[i].events.defend);
 			object.events.run.ignore(characters[i].events.run);
 			animators.find(characters[i].model)->second.erase(characters[i].animation_id);
-			characters.erase(characters.begin() + i);
+			characters[i] = {};
 			break;
 		}
 	}
@@ -116,6 +116,9 @@ void character_renderer::remove(character_object& object) {
 
 void character_renderer::update(const no::bone_attachment_mapping_list& mappings, const world_objects& objects) {
 	for (auto& character : characters) {
+		if (character.object_id < 0) {
+			continue;
+		}
 		auto& object = objects.object(character.object_id);
 		auto& animator = animators.find(object.definition().model)->second;
 		auto& model = character_models[object.definition().model].model;
@@ -240,7 +243,7 @@ object_pick_renderer::~object_pick_renderer() {
 
 }
 
-void object_pick_renderer::draw(const world_objects& objects) {
+void object_pick_renderer::draw(no::vector2i offset, const world_objects& objects) {
 	if (!box.is_drawable()) {
 		return;
 	}
@@ -256,7 +259,7 @@ void object_pick_renderer::draw(const world_objects& objects) {
 		transform.scale = object.transform.scale * bbox.scale;
 		transform.rotation.x = 270.0f;
 		transform.rotation.z = object.transform.rotation.y;
-		no::vector2f tile = (object.tile() + 1).to<float>();
+		no::vector2f tile = (object.tile() + 1 - offset).to<float>();
 		var_pick_color.set(no::vector3f{ tile.x / 255.0f, tile.y / 255.0f, 0.0f });
 		no::set_shader_model(transform.to_matrix4_origin());
 		box.draw();
@@ -432,7 +435,7 @@ void world_view::draw_for_picking() {
 	transform.position.x = (float)world.terrain.offset().x;
 	transform.position.z = (float)world.terrain.offset().y;
 	no::draw_shape(height_map_pick, transform);
-	pick_objects.draw(world.objects);
+	pick_objects.draw(world.terrain.offset(), world.objects);
 }
 
 void world_view::draw_tile_highlights(const std::vector<no::vector2i>& tiles, const no::vector4f& color) {

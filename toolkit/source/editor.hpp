@@ -17,9 +17,6 @@ public:
 
 	void update();
 
-private:
-
-
 };
 
 class world_editor_tool {

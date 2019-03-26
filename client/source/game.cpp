@@ -119,6 +119,14 @@ game_state::game_state() :
 			target->follow_object_id = attacker->object_id;
 			attacker->follow_distance = 1;
 			target->follow_distance = 2;
+			if (attacker->stat(stat_type::health).effective() < 1) {
+				world.objects.remove(packet.attacker_id);
+				target->follow_object_id = -1;
+			}
+			if (target->stat(stat_type::health).effective() < 1) {
+				world.objects.remove(packet.target_id);
+				attacker->follow_object_id = -1;
+			}
 			break;
 		}
 		case to_client::game::character_equips::type:
@@ -178,29 +186,7 @@ void game_state::update() {
 			close_dialogue();
 		}
 	}
-	// shift terrain to center player
-	no::vector2i player_tile = world.my_player().object.tile();
-	no::vector2i world_offset = world.terrain.offset();
-	no::vector2i world_size = world.terrain.size();
-	no::vector2i goal_offset = player_tile - world_size / 2;
-	goal_offset.x = std::max(0, goal_offset.x);
-	goal_offset.y = std::max(0, goal_offset.y);
-	while (world_offset.x > goal_offset.x) {
-		world_offset.x--;
-		world.terrain.shift_left();
-	}
-	while (world_offset.x < goal_offset.x) {
-		world_offset.x++;
-		world.terrain.shift_right();
-	}
-	while (world_offset.y > goal_offset.y) {
-		world_offset.y--;
-		world.terrain.shift_up();
-	}
-	while (world_offset.y < goal_offset.y) {
-		world_offset.y++;
-		world.terrain.shift_down();
-	}
+	world.terrain.shift_to_center_of(world.my_player().object.tile());
 }
 
 void game_state::draw() {

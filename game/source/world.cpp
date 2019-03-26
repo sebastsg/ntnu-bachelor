@@ -87,7 +87,7 @@ no::vector2i world_autotiler::uv_index(uint32_t corners) const {
 }
 
 world_terrain::world_terrain(world_state& world) : world(world) {
-	tile_array.resize_and_reset(128, {});
+	tile_array.resize_and_reset(active_radius, {});
 }
 
 bool world_terrain::is_out_of_bounds(no::vector2i tile) const {
@@ -99,6 +99,9 @@ float world_terrain::elevation_at(no::vector2i tile) const {
 }
 
 float world_terrain::average_elevation_at(no::vector2i tile) const {
+	if (is_out_of_bounds(tile) || is_out_of_bounds(tile + 1)) {
+		return 0.0f;
+	}
 	float sum = tile_array.at(tile.x, tile.y).height;
 	sum += tile_array.at(tile.x + 1, tile.y).height;
 	sum += tile_array.at(tile.x + 1, tile.y + 1).height;
@@ -204,34 +207,57 @@ const no::shifting_2d_array<world_tile>& world_terrain::tiles() const {
 void world_terrain::load(const std::string& path) {
 	stream.set_read_index(0);
 	no::file::read(path, stream);
-	tile_array.read(stream, 1024, {});
+	tile_array.read(stream, tile_stride, {});
 	dirty = true;
 }
 
 void world_terrain::save(const std::string& path) const {
-	tile_array.write(stream, 1024, {});
+	tile_array.write(stream, tile_stride, {});
 	stream.set_write_index(stream.size());
 	no::file::write(path, stream);
 }
 
 void world_terrain::shift_left() {
-	tile_array.shift_left(stream, 1024, {});
+	tile_array.shift_left(stream, tile_stride, {});
 	dirty = true;
 }
 
 void world_terrain::shift_right() {
-	tile_array.shift_right(stream, 1024, {});
+	tile_array.shift_right(stream, tile_stride, {});
 	dirty = true;
 }
 
 void world_terrain::shift_up() {
-	tile_array.shift_up(stream, 1024, {});
+	tile_array.shift_up(stream, tile_stride, {});
 	dirty = true;
 }
 
 void world_terrain::shift_down() {
-	tile_array.shift_down(stream, 1024, {});
+	tile_array.shift_down(stream, tile_stride, {});
 	dirty = true;
+}
+
+void world_terrain::shift_to_center_of(no::vector2i tile) {
+	no::vector2i current = offset();
+	no::vector2i goal = tile - size() / 2;
+	goal.x = std::max(0, goal.x);
+	goal.y = std::max(0, goal.y);
+	while (current.x > goal.x) {
+		current.x--;
+		shift_left();
+	}
+	while (current.x < goal.x) {
+		current.x++;
+		shift_right();
+	}
+	while (current.y > goal.y) {
+		current.y--;
+		shift_up();
+	}
+	while (current.y < goal.y) {
+		current.y++;
+		shift_down();
+	}
 }
 
 bool world_terrain::is_dirty() const {

@@ -3,6 +3,7 @@
 #include "item.hpp"
 #include "event.hpp"
 #include "object.hpp"
+#include "timer.hpp"
 
 enum class stat_type { health, stamina, sword, defensive, axe, spear, fishing, total };
 
@@ -37,6 +38,8 @@ public:
 	int object_id = -1;
 	int follow_object_id = -1;
 	int follow_distance = 1;
+	bool walking_around = false;
+	no::vector2i walking_around_center;
 
 	struct {
 		no::message_event<item_instance> equip;
@@ -53,6 +56,7 @@ public:
 
 	void update(world_state& world, game_object& object);
 	void start_path_movement(const std::vector<no::vector2i>& path);
+	void walk_around(world_state& world, game_object& object);
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);
@@ -72,5 +76,6 @@ private:
 	int tiles_moved = 0;
 	bool moved_last_frame = false;
 	character_stat stats[(size_t)stat_type::total];
+	no::timer walk_around_timer;
 
 };

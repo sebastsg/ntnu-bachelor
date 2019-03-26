@@ -36,7 +36,10 @@ struct game_object_definition {
 	std::string name;
 	std::string model;
 	no::transform3 bounding_box;
-	int dialogue_id = -1;
+	struct {
+		int dialogue = -1;
+		int killed = -1;
+	} script_id;
 	std::string description;
 };
 

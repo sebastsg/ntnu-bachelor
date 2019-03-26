@@ -13,6 +13,9 @@ void world_minimap::update(no::vector2i tile) {
 	begin.y = std::max(0, begin.y);
 	for (int x = begin.x; x < end.x; x++) {
 		for (int y = begin.y; y < end.y; y++) {
+			if (tiles.is_out_of_bounds(x, y)) {
+				continue;
+			}
 			int grass = tiles.at(x, y).corners_of_type(world_tile::grass);
 			int dirt = tiles.at(x, y).corners_of_type(world_tile::dirt);
 			int water = tiles.at(x, y).corners_of_type(world_tile::water);
