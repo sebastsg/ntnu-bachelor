@@ -35,8 +35,7 @@ enum class node_type {
 enum class node_output_type { unknown, variable, single, boolean };
 enum class node_other_var_type { value, local, global };
 
-class dialogue_meta_item {
-public:
+struct script_meta_item {
 
 	std::string name;
 	int id = 0;
@@ -46,14 +45,14 @@ public:
 
 };
 
-class dialogue_meta_list {
+class script_meta_list {
 public:
 
-	dialogue_meta_list();
+	script_meta_list();
 
-	dialogue_meta_item& add(const std::string& name);
-	dialogue_meta_item* find(int id);
-	dialogue_meta_item* find_by_index(int index);
+	script_meta_item& add(const std::string& name);
+	script_meta_item* find(int id);
+	script_meta_item* find_by_index(int index);
 	int find_index_by_id(int id) const;
 	int count() const;
 	int next_id() const;
@@ -66,12 +65,12 @@ public:
 
 private:
 
-	std::vector<dialogue_meta_item> items;
+	std::vector<script_meta_item> items;
 	int id_counter = 0;
 
 };
 
-dialogue_meta_list& dialogue_meta();
+script_meta_list& script_meta();
 
 struct node_output {
 	int node_id = -1;
@@ -83,12 +82,12 @@ struct node_choice_info {
 	int node_id = -1;
 };
 
-class dialogue_tree;
+class script_tree;
 
-class abstract_node {
+class script_node {
 public:
 
-	friend class dialogue_tree;
+	friend class script_tree;
 
 	int id = -1;
 	int scope_id = -1;
@@ -115,11 +114,11 @@ public:
 
 protected:
 
-	dialogue_tree* tree = nullptr;
+	script_tree* tree = nullptr;
 
 };
 
-class dialogue_tree {
+class script_tree {
 public:
 
 	struct choice_event {
@@ -133,7 +132,7 @@ public:
 	int id = -1;
 	int id_counter = 0;
 	int start_node_id = 0; // todo: when deleting node, make sure start node is valid
-	std::unordered_map<int, abstract_node*> nodes;
+	std::unordered_map<int, script_node*> nodes;
 
 	// what nodes check and modify:
 	game_variable_map* variables = nullptr;
@@ -166,7 +165,7 @@ private:
 
 };
 
-class condition_node : public abstract_node {
+class condition_node : public script_node {
 public:
 
 	node_output_type output_type() const override {
@@ -175,7 +174,7 @@ public:
 
 };
 
-class effect_node : public abstract_node {
+class effect_node : public script_node {
 public:
 
 	node_output_type output_type() const override {
@@ -184,7 +183,7 @@ public:
 
 };
 
-class message_node : public abstract_node {
+class message_node : public script_node {
 public:
 
 	std::string text = "Example text";
@@ -202,7 +201,7 @@ public:
 
 };
 
-class choice_node : public abstract_node {
+class choice_node : public script_node {
 public:
 
 	std::string text = "Example text";
@@ -389,7 +388,7 @@ public:
 
 };
 
-class random_node : public abstract_node {
+class random_node : public script_node {
 public:
 
 	node_type type() const override {

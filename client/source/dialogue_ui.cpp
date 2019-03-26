@@ -16,7 +16,7 @@ dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera_,
 		return;
 	}
 	open = true;
-	dialogue.events.choice.listen([this](const dialogue_tree::choice_event& event) {
+	dialogue.events.choice.listen([this](const script_tree::choice_event& event) {
 		current_choice = 0;
 		current_choices = event.choices;
 		message_view.render(font, ((choice_node*)dialogue.nodes[dialogue.current_node()])->text);

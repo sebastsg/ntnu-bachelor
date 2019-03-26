@@ -2,15 +2,15 @@
 
 #include "menu.hpp"
 #include "draw.hpp"
-#include "dialogue.hpp"
+#include "script.hpp"
 
 struct ImDrawList;
 
-class dialogue_editor_state : public menu_bar_state {
+class script_editor_state : public menu_bar_state {
 public:
 
-	dialogue_editor_state();
-	~dialogue_editor_state() override;
+	script_editor_state();
+	~script_editor_state() override;
 
 	void update() override;
 	void draw() override;
@@ -27,11 +27,11 @@ private:
 		}
 	};
 
-	std::unordered_map<abstract_node*, std::vector<link_circle>> node_circles;
+	std::unordered_map<script_node*, std::vector<link_circle>> node_circles;
 
-	int selected_dialogue_index = -1;
+	int selected_script_index = -1;
 
-	dialogue_tree dialogue;
+	script_tree script;
 
 	int node_index_link_from = -1;
 	int node_link_from_out = -1;
@@ -47,17 +47,17 @@ private:
 	bool dirty = false;
 	
 	void update_header();
-	void update_dialogue_list();
-	void update_selected_dialogue();
+	void update_script_list();
+	void update_selected_script();
 	void update_node_links(ImDrawList* draw_list, no::vector2f offset);
 	void update_nodes(ImDrawList* draw_list, no::vector2f offset);
 	void update_context_menu(no::vector2f offset);
 	void update_scrolling();
 
-	void destroy_current_dialogue();
-	void create_new_dialogue();
-	void load_dialogue(int index);
-	void save_dialogue();
+	void destroy_current_script();
+	void create_new_script();
+	void load_script(int index);
+	void save_script();
 
 	void update_node_ui(message_node& node);
 	void update_node_ui(choice_node& node);

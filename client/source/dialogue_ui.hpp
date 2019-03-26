@@ -1,7 +1,7 @@
 #pragma once
 
 #include "main_ui.hpp"
-#include "dialogue.hpp"
+#include "script.hpp"
 
 class dialogue_view {
 public:
@@ -29,7 +29,7 @@ private:
 	int key_listener = -1;
 
 	bool open = true;
-	dialogue_tree dialogue;
+	script_tree dialogue;
 	int current_choice = 0;
 	std::vector<node_choice_info> current_choices;
 	no::transform2 transform;

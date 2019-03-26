@@ -3,7 +3,7 @@
 #include "assets.hpp"
 #include "platform.hpp"
 #include "surface.hpp"
-#include "dialogue.hpp"
+#include "script.hpp"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_platform.h"
@@ -108,18 +108,18 @@ void object_editor::ui_select_object() {
 	ImGui::Separator();
 	ImGui::Text("Scripts");
 	ImGui::InputInt("Dialogue:##EditObjectDialogue", &selected.script_id.dialogue);
-	if (!dialogue_meta().find(selected.script_id.dialogue)) {
+	if (!script_meta().find(selected.script_id.dialogue)) {
 		selected.script_id.dialogue = -1;
 	} else {
 		ImGui::SameLine();
-		ImGui::Text(dialogue_meta().find(selected.script_id.dialogue)->name.c_str());
+		ImGui::Text(script_meta().find(selected.script_id.dialogue)->name.c_str());
 	}
 	ImGui::InputInt("Killed:##EditObjectKilled", &selected.script_id.killed);
-	if (!dialogue_meta().find(selected.script_id.killed)) {
+	if (!script_meta().find(selected.script_id.killed)) {
 		selected.script_id.killed = -1;
 	} else {
 		ImGui::SameLine();
-		ImGui::Text(dialogue_meta().find(selected.script_id.killed)->name.c_str());
+		ImGui::Text(script_meta().find(selected.script_id.killed)->name.c_str());
 	}
 	ImGui::Separator();
 	ImGui::InputFloat3("Min##EditObjectBBoxMin", &selected.bounding_box.position.x);

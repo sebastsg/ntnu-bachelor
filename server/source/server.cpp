@@ -58,7 +58,7 @@ void server_state::update() {
 			for (auto& client : clients) {
 				if (client.object.player_instance_id == event.attacker_id) {
 					auto player = world.objects.character(event.attacker_id);
-					dialogue_tree script;
+					script_tree script;
 					script.quests = &client.player.quests;
 					script.variables = &client.player.variables;
 					script.player_object_id = client.object.player_instance_id;
@@ -230,7 +230,7 @@ void server_state::on_start_dialogue(int client_index, const to_server::game::st
 		return;
 	}
 	int dialogue_id = 0; // todo: associate dialogues with objects
-	client.dialogue = new dialogue_tree();
+	client.dialogue = new script_tree;
 	client.dialogue->quests = &client.player.quests;
 	client.dialogue->variables = &client.player.variables;
 	client.dialogue->player_object_id = client.object.player_instance_id;

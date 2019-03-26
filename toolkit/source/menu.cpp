@@ -3,7 +3,7 @@
 #include "editor.hpp"
 #include "item_editor.hpp"
 #include "object_editor.hpp"
-#include "dialogue_editor.hpp"
+#include "script_editor.hpp"
 #include "quest_editor.hpp"
 #include "window.hpp"
 
@@ -34,8 +34,8 @@ void menu_bar_state::update_menu() {
 		if (ImGui::MenuItem("Object editor")) {
 			change_state<object_editor>();
 		}
-		if (ImGui::MenuItem("Dialogue editor")) {
-			change_state<dialogue_editor_state>();
+		if (ImGui::MenuItem("Script editor")) {
+			change_state<script_editor_state>();
 		}
 		if (ImGui::MenuItem("Quest editor")) {
 			change_state<quest_editor>();

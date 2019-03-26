@@ -7,7 +7,7 @@
 #include "world.hpp"
 #include "character.hpp"
 #include "packets.hpp"
-#include "dialogue.hpp"
+#include "script.hpp"
 #include "quest.hpp"
 #include "combat.hpp"
 
@@ -52,7 +52,7 @@ private:
 		int player_instance_id = -1;
 	} object;
 
-	dialogue_tree* dialogue = nullptr;
+	script_tree* dialogue = nullptr;
 
 };
 

@@ -1,4 +1,4 @@
-#include "dialogue.hpp"
+#include "script.hpp"
 #include "debug.hpp"
 #include "assets.hpp"
 #include "loop.hpp"
@@ -11,10 +11,10 @@
 #include <ctime>
 
 namespace global {
-static dialogue_meta_list dialogue_meta;
+static script_meta_list script_meta;
 }
 
-static abstract_node* create_dialogue_node(node_type type) {
+static script_node* create_script_node(node_type type) {
 	switch (type) {
 	case node_type::message: return new message_node();
 	case node_type::choice: return new choice_node();
@@ -37,29 +37,29 @@ static abstract_node* create_dialogue_node(node_type type) {
 	}
 }
 
-void dialogue_meta_item::write(no::io_stream& stream) const {
+void script_meta_item::write(no::io_stream& stream) const {
 	stream.write(name);
 	stream.write<int32_t>(id);
 }
 
-void dialogue_meta_item::read(no::io_stream& stream) {
+void script_meta_item::read(no::io_stream& stream) {
 	name = stream.read<std::string>();
 	id = stream.read<int32_t>();
 }
 
-dialogue_meta_list::dialogue_meta_list() {
+script_meta_list::script_meta_list() {
 	no::post_configure_event().listen([this] {
 		load();
 	});
 }
 
-dialogue_meta_item& dialogue_meta_list::add(const std::string& name) {
-	dialogue_meta_item item{ name, id_counter };
+script_meta_item& script_meta_list::add(const std::string& name) {
+	script_meta_item item{ name, id_counter };
 	id_counter++;
 	return items.emplace_back(item);
 }
 
-dialogue_meta_item* dialogue_meta_list::find(int id) {
+script_meta_item* script_meta_list::find(int id) {
 	for (auto& item : items) {
 		if (item.id == id) {
 			return &item;
@@ -68,11 +68,11 @@ dialogue_meta_item* dialogue_meta_list::find(int id) {
 	return nullptr;
 }
 
-dialogue_meta_item* dialogue_meta_list::find_by_index(int index) {
+script_meta_item* script_meta_list::find_by_index(int index) {
 	return (index >= 0 || index < count()) ? &items[index] : nullptr;
 }
 
-int dialogue_meta_list::find_index_by_id(int id) const {
+int script_meta_list::find_index_by_id(int id) const {
 	for (int i = 0; i < count(); i++) {
 		if (items[i].id == id) {
 			return i;
@@ -81,15 +81,15 @@ int dialogue_meta_list::find_index_by_id(int id) const {
 	return -1;
 }
 
-int dialogue_meta_list::count() const {
+int script_meta_list::count() const {
 	return (int)items.size();
 }
 
-int dialogue_meta_list::next_id() const {
+int script_meta_list::next_id() const {
 	return id_counter;
 }
 
-void dialogue_meta_list::write(no::io_stream& stream) const {
+void script_meta_list::write(no::io_stream& stream) const {
 	stream.write<int32_t>(id_counter);
 	stream.write((int32_t)items.size());
 	for (auto& item : items) {
@@ -97,7 +97,7 @@ void dialogue_meta_list::write(no::io_stream& stream) const {
 	}
 }
 
-void dialogue_meta_list::read(no::io_stream& stream) {
+void script_meta_list::read(no::io_stream& stream) {
 	id_counter = stream.read<int32_t>();
 	int count = stream.read<int32_t>();
 	for (int i = 0; i < count; i++) {
@@ -105,25 +105,25 @@ void dialogue_meta_list::read(no::io_stream& stream) {
 	}
 }
 
-void dialogue_meta_list::save() const {
+void script_meta_list::save() const {
 	no::io_stream stream;
 	write(stream);
-	no::file::write(no::asset_path("dialogues.meta"), stream);
+	no::file::write(no::asset_path("scripts.meta"), stream);
 }
 
-void dialogue_meta_list::load() {
+void script_meta_list::load() {
 	no::io_stream stream;
-	no::file::read(no::asset_path("dialogues.meta"), stream);
+	no::file::read(no::asset_path("scripts.meta"), stream);
 	if (stream.size_left_to_read() > 0) {
 		read(stream);
 	}
 }
 
-dialogue_meta_list& dialogue_meta() {
-	return global::dialogue_meta;
+script_meta_list& script_meta() {
+	return global::script_meta;
 }
 
-void abstract_node::write(no::io_stream& stream) {
+void script_node::write(no::io_stream& stream) {
 	stream.write<int32_t>(id);
 	stream.write(transform);
 	stream.write((int32_t)out.size());
@@ -133,7 +133,7 @@ void abstract_node::write(no::io_stream& stream) {
 	}
 }
 
-void abstract_node::read(no::io_stream& stream) {
+void script_node::read(no::io_stream& stream) {
 	id = stream.read<int32_t>();
 	transform = stream.read<no::transform3>();
 	int out_count = stream.read<int32_t>();
@@ -145,7 +145,7 @@ void abstract_node::read(no::io_stream& stream) {
 	}
 }
 
-void abstract_node::remove_output_node(int node_id) {
+void script_node::remove_output_node(int node_id) {
 	for (int i = 0; i < (int)out.size(); i++) {
 		if (out[i].node_id == node_id) {
 			out.erase(out.begin() + i);
@@ -154,7 +154,7 @@ void abstract_node::remove_output_node(int node_id) {
 	}
 }
 
-void abstract_node::remove_output_type(int out_id) {
+void script_node::remove_output_type(int out_id) {
 	for (int i = 0; i < (int)out.size(); i++) {
 		if (out[i].out_id == out_id) {
 			out.erase(out.begin() + i);
@@ -163,7 +163,7 @@ void abstract_node::remove_output_type(int out_id) {
 	}
 }
 
-int abstract_node::get_output(int out_id) {
+int script_node::get_output(int out_id) {
 	for (auto& i : out) {
 		if (i.out_id == out_id) {
 			return i.node_id;
@@ -172,14 +172,14 @@ int abstract_node::get_output(int out_id) {
 	return -1;
 }
 
-int abstract_node::get_first_output() {
+int script_node::get_first_output() {
 	if (out.empty()) {
 		return -1;
 	}
 	return out[0].node_id;
 }
 
-void abstract_node::set_output_node(int out_id, int node_id) {
+void script_node::set_output_node(int out_id, int node_id) {
 	if (node_id == -1) {
 		return;
 	}
@@ -201,7 +201,7 @@ void abstract_node::set_output_node(int out_id, int node_id) {
 	out.push_back(output);
 }
 
-void dialogue_tree::write(no::io_stream& stream) const {
+void script_tree::write(no::io_stream& stream) const {
 	stream.write<int32_t>(id);
 	stream.write((int32_t)nodes.size());
 	for (auto& i : nodes) {
@@ -212,12 +212,12 @@ void dialogue_tree::write(no::io_stream& stream) const {
 	stream.write<int32_t>(start_node_id);
 }
 
-void dialogue_tree::read(no::io_stream& stream) {
+void script_tree::read(no::io_stream& stream) {
 	id = stream.read<int32_t>();
 	int node_count = stream.read<int32_t>();
 	for (int i = 0; i < node_count; i++) {
 		node_type type = (node_type)stream.read<int32_t>();
-		auto node = create_dialogue_node(type);
+		auto node = create_script_node(type);
 		node->tree = this;
 		node->read(stream);
 		nodes[node->id] = node;
@@ -226,39 +226,39 @@ void dialogue_tree::read(no::io_stream& stream) {
 	start_node_id = stream.read<int32_t>();
 }
 
-void dialogue_tree::save() const {
+void script_tree::save() const {
 	no::io_stream stream;
 	write(stream);
-	no::file::write(no::asset_path(STRING("dialogues/" << id << ".ed")), stream);
+	no::file::write(no::asset_path(STRING("scripts/" << id << ".ed")), stream);
 }
 
-void dialogue_tree::load(int id) {
+void script_tree::load(int id) {
 	no::io_stream stream;
-	no::file::read(no::asset_path(STRING("dialogues/" << id << ".ed")), stream);
+	no::file::read(no::asset_path(STRING("scripts/" << id << ".ed")), stream);
 	if (stream.size_left_to_read() > 0) {
 		read(stream);
 	}
 }
 
-int dialogue_tree::current_node() const {
+int script_tree::current_node() const {
 	return current_node_id;
 }
 
-void dialogue_tree::select_choice(int node_id) {
+void script_tree::select_choice(int node_id) {
 	if (nodes.find(node_id) == nodes.end()) {
-		WARNING("Node not found: " << node_id << ". Dialogue: " << id);
+		WARNING("Node not found: " << node_id << ". Script: " << id);
 		return;
 	}
 	current_node_id = nodes[node_id]->get_first_output();
 	while (process_choice_selection());
 }
 
-void dialogue_tree::process_entry_point() {
+void script_tree::process_entry_point() {
 	current_node_id = start_node_id;
 	while (process_choice_selection());
 }
 
-bool dialogue_tree::process_choice_selection() {
+bool script_tree::process_choice_selection() {
 	if (current_node_id == -1) {
 		return false;
 	}
@@ -268,14 +268,14 @@ bool dialogue_tree::process_choice_selection() {
 		return false;
 	}
 	if (type == node_type::choice) {
-		INFO("A choice cannot be the entry point of a dialogue.");
+		INFO("A choice cannot be the entry point of a script.");
 		return false;
 	}
 	current_node_id = process_non_ui_node(current_node_id, type);
 	return current_node_id != -1;
 }
 
-void dialogue_tree::prepare_message() {
+void script_tree::prepare_message() {
 	choice_event event;
 	std::vector<int> choices = process_current_and_get_choices();
 	for (int choice : choices) {
@@ -287,7 +287,7 @@ void dialogue_tree::prepare_message() {
 	events.choice.emit(event);
 }
 
-std::vector<int> dialogue_tree::process_current_and_get_choices() {
+std::vector<int> script_tree::process_current_and_get_choices() {
 	std::vector<int> choices;
 	for (auto& output : nodes[current_node_id]->out) {
 		node_type out_type = nodes[output.node_id]->type();
@@ -303,7 +303,7 @@ std::vector<int> dialogue_tree::process_current_and_get_choices() {
 	return choices;
 }
 
-int dialogue_tree::process_nodes_get_choice(int id, node_type type) {
+int script_tree::process_nodes_get_choice(int id, node_type type) {
 	while (true) {
 		if (id == -1 || type == node_type::message) {
 			return -1;
@@ -323,7 +323,7 @@ int dialogue_tree::process_nodes_get_choice(int id, node_type type) {
 	return -1;
 }
 
-int dialogue_tree::process_non_ui_node(int id, node_type type) {
+int script_tree::process_non_ui_node(int id, node_type type) {
 	auto node = nodes[id];
 	int out = node->process();
 	if (out == -1) {
@@ -333,22 +333,22 @@ int dialogue_tree::process_non_ui_node(int id, node_type type) {
 }
 
 void message_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write(text);
 }
 
 void message_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	text = stream.read<std::string>();
 }
 
 void choice_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write(text);
 }
 
 void choice_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	text = stream.read<std::string>();
 }
 
@@ -369,14 +369,14 @@ int has_item_condition_node::process() {
 }
 
 void has_item_condition_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(item.definition_id);
 	stream.write<int64_t>(item.stack);
 	stream.write<uint8_t>(check_equipment_too);
 }
 
 void has_item_condition_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	item.definition_id = stream.read<int32_t>();
 	item.stack = stream.read<int64_t>();
 	check_equipment_too = (stream.read<uint8_t>() != 0);
@@ -388,14 +388,14 @@ int stat_condition_node::process() {
 }
 
 void stat_condition_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(stat);
 	stream.write<int32_t>(min_value);
 	stream.write<int32_t>(max_value);
 }
 
 void stat_condition_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	stat = stream.read<int32_t>();
 	min_value = stream.read<int32_t>();
 	max_value = stream.read<int32_t>();
@@ -411,14 +411,14 @@ int inventory_effect_node::process() {
 }
 
 void inventory_effect_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(item.definition_id);
 	stream.write<int64_t>(item.stack);
 	stream.write<uint8_t>(give ? 1 : 0);
 }
 
 void inventory_effect_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	item.definition_id = stream.read<int32_t>();
 	item.stack = stream.read<int64_t>();
 	give = (stream.read<uint8_t>() != 0);
@@ -430,14 +430,14 @@ int stat_effect_node::process() {
 }
 
 void stat_effect_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(stat);
 	stream.write<int32_t>(value);
 	stream.write<uint8_t>(assign);
 }
 
 void stat_effect_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	stat = stream.read<int32_t>();
 	value = stream.read<int32_t>();
 	assign = (stream.read<uint8_t>() != 0);
@@ -451,13 +451,13 @@ int warp_effect_node::process() {
 }
 
 void warp_effect_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(world_id);
 	stream.write(tile);
 }
 
 void warp_effect_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	world_id = stream.read<int32_t>();
 	tile = stream.read<no::vector2f>();
 }
@@ -499,7 +499,7 @@ int var_condition_node::process() {
 }
 
 void var_condition_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<uint8_t>(is_global);
 	stream.write((int32_t)other_type);
 	stream.write(var_name);
@@ -508,7 +508,7 @@ void var_condition_node::write(no::io_stream& stream) {
 }
 
 void var_condition_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	is_global = (stream.read<uint8_t>() != 0);
 	other_type = (node_other_var_type)stream.read<int32_t>();
 	var_name = stream.read<std::string>();
@@ -554,7 +554,7 @@ int modify_var_node::process() {
 }
 
 void modify_var_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<uint8_t>(is_global);
 	stream.write((int32_t)other_type);
 	stream.write(var_name);
@@ -563,7 +563,7 @@ void modify_var_node::write(no::io_stream& stream) {
 }
 
 void modify_var_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	is_global = (stream.read<uint8_t>() != 0);
 	other_type = (node_other_var_type)stream.read<int32_t>();
 	var_name = stream.read<std::string>();
@@ -596,7 +596,7 @@ int create_var_node::process() {
 }
 
 void create_var_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<uint8_t>(is_global);
 	stream.write<uint8_t>(overwrite);
 	stream.write((int32_t)var.type);
@@ -606,7 +606,7 @@ void create_var_node::write(no::io_stream& stream) {
 }
 
 void create_var_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	is_global = (stream.read<uint8_t>() != 0);
 	overwrite = (stream.read<uint8_t>() != 0);
 	var.type = (variable_type)stream.read<int32_t>();
@@ -623,13 +623,13 @@ int var_exists_node::process() {
 }
 
 void var_exists_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	is_global = (stream.read<uint8_t>() != 0);
 	var_name = stream.read<std::string>();
 }
 
 void var_exists_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<uint8_t>(is_global);
 	stream.write(var_name);
 }
@@ -644,13 +644,13 @@ int delete_var_node::process() {
 }
 
 void delete_var_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<uint8_t>(is_global);
 	stream.write(var_name);
 }
 
 void delete_var_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	is_global = (stream.read<uint8_t>() != 0);
 	var_name = stream.read<std::string>();
 }
@@ -665,11 +665,11 @@ int random_node::process() {
 }
 
 void random_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 }
 
 void random_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 }
 
 int random_condition_node::process() {
@@ -678,12 +678,12 @@ int random_condition_node::process() {
 }
 
 void random_condition_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(percent);
 }
 
 void random_condition_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	percent = stream.read<int32_t>();
 }
 
@@ -696,14 +696,14 @@ int quest_task_condition_node::process() {
 }
 
 void quest_task_condition_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(quest_id);
 	stream.write<int32_t>(task_id);
 	stream.write<int32_t>(task_progress);
 }
 
 void quest_task_condition_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	quest_id = stream.read<int32_t>();
 	task_id = stream.read<int32_t>();
 	task_progress = stream.read<int32_t>();
@@ -718,13 +718,13 @@ int quest_done_condition_node::process() {
 }
 
 void quest_done_condition_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(quest_id);
 	stream.write<uint8_t>(require_optionals ? 1 : 0);
 }
 
 void quest_done_condition_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	quest_id = stream.read<int32_t>();
 	require_optionals = stream.read<uint8_t>() != 0;
 }
@@ -738,14 +738,14 @@ int quest_update_task_effect_node::process() {
 }
 
 void quest_update_task_effect_node::write(no::io_stream& stream) {
-	abstract_node::write(stream);
+	script_node::write(stream);
 	stream.write<int32_t>(quest_id);
 	stream.write<int32_t>(task_id);
 	stream.write<int32_t>(task_progress);
 }
 
 void quest_update_task_effect_node::read(no::io_stream& stream) {
-	abstract_node::read(stream);
+	script_node::read(stream);
 	quest_id = stream.read<int32_t>();
 	task_id = stream.read<int32_t>();
 	task_progress = stream.read<int32_t>();

@@ -1,4 +1,4 @@
-#include "dialogue_editor.hpp"
+#include "script_editor.hpp"
 #include "window.hpp"
 #include "assets.hpp"
 #include "platform.hpp"
@@ -6,54 +6,54 @@
 
 #include <filesystem>
 
-dialogue_editor_state::dialogue_editor_state() {
+script_editor_state::script_editor_state() {
 	no::imgui::create(window());
 	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));
 	blank_texture = no::create_texture(no::surface{ 2, 2, no::pixel_format::rgba, 0xFFFFFFFF });
-	if (dialogue_meta().count() > 0) {
-		load_dialogue(0);
+	if (script_meta().count() > 0) {
+		load_script(0);
 	} else {
-		create_new_dialogue();
+		create_new_script();
 	}
 }
 
-dialogue_editor_state::~dialogue_editor_state() {
+script_editor_state::~script_editor_state() {
 	no::delete_texture(ui_texture);
 	no::delete_texture(blank_texture);
 	no::imgui::destroy();
 }
 
-void dialogue_editor_state::destroy_current_dialogue() {
-	dialogue = {};
-	selected_dialogue_index = -1;
+void script_editor_state::destroy_current_script() {
+	script = {};
+	selected_script_index = -1;
 	node_index_link_from = -1;
 	node_link_from_out = -1;
 	node_selected = -1;
 	scrolling = 0;
 }
 
-void dialogue_editor_state::create_new_dialogue() {
-	destroy_current_dialogue();
-	dialogue.id = dialogue_meta().add("New dialogue").id;
-	selected_dialogue_index = dialogue_meta().find_index_by_id(dialogue.id);
+void script_editor_state::create_new_script() {
+	destroy_current_script();
+	script.id = script_meta().add("New script").id;
+	selected_script_index = script_meta().find_index_by_id(script.id);
 }
 
-void dialogue_editor_state::load_dialogue(int index) {
-	destroy_current_dialogue();
-	auto item = dialogue_meta().find_by_index(index);
+void script_editor_state::load_script(int index) {
+	destroy_current_script();
+	auto item = script_meta().find_by_index(index);
 	if (item) {
-		selected_dialogue_index = index;
-		dialogue.load(item->id);
+		selected_script_index = index;
+		script.load(item->id);
 	}
 }
 
-void dialogue_editor_state::save_dialogue() {
-	dialogue.save();
-	dialogue_meta().save();
+void script_editor_state::save_script() {
+	script.save();
+	script_meta().save();
 	dirty = false;
 }
 
-void dialogue_editor_state::update() {
+void script_editor_state::update() {
 	no::imgui::start_frame();
 	menu_bar_state::update();
 	ImGuiWindowFlags imgui_flags
@@ -63,12 +63,12 @@ void dialogue_editor_state::update() {
 		| ImGuiWindowFlags_NoTitleBar;
 	ImGui::SetNextWindowPos({ 0.0f, 20.0f }, ImGuiSetCond_Once);
 	ImGui::SetNextWindowSize(window().size().to<float>(), ImGuiSetCond_Always);
-	ImGui::Begin("##DialogueEditor", nullptr, imgui_flags);
+	ImGui::Begin("##ScriptEditor", nullptr, imgui_flags);
 
 	ImGui::BeginChild("##NodeList", { 192, 0 });
 	update_header();
-	update_dialogue_list();
-	update_selected_dialogue();
+	update_script_list();
+	update_selected_script();
 	ImGui::EndChild();
 
 	ImGui::SameLine(); // important for scrolling region to be placed correctly
@@ -121,11 +121,11 @@ void dialogue_editor_state::update() {
 	no::imgui::end_frame();
 }
 
-void dialogue_editor_state::draw() {
+void script_editor_state::draw() {
 	no::imgui::draw();
 }
 
-void dialogue_editor_state::update_header() {
+void script_editor_state::update_header() {
 	ImGui::Text(CSTRING("Saved: " << (dirty ? "No " : "Yes")));
 	ImGui::SameLine();
 	no::vector4f saved{ 0.2f, 1.0f, 0.4f, 0.7f };
@@ -135,54 +135,54 @@ void dialogue_editor_state::update_header() {
 	ImGui::Image((ImTextureID)blank_texture, { 10.0f }, { 0.0f }, { 1.0f }, status, border);
 }
 
-void dialogue_editor_state::update_dialogue_list() {
-	int new_dialogue_index = selected_dialogue_index;
+void script_editor_state::update_script_list() {
+	int new_script_index = selected_script_index;
 	ImGui::PushItemWidth(-1);
-	ImGui::ListBox("##DialogueMetaList", &new_dialogue_index, [](void* data, int i, const char** out_text) -> bool {
-		auto item = dialogue_meta().find_by_index(i);
+	ImGui::ListBox("##ScriptMetaList", &new_script_index, [](void* data, int i, const char** out_text) -> bool {
+		auto item = script_meta().find_by_index(i);
 		if (!item) {
 			return false;
 		}
 		*out_text = &item->name[0];
 		return true;
-	}, this, dialogue_meta().count(), 20);
+	}, this, script_meta().count(), 20);
 	ImGui::PopItemWidth();
-	if (new_dialogue_index != selected_dialogue_index) {
-		save_dialogue();
-		load_dialogue(new_dialogue_index);
+	if (new_script_index != selected_script_index) {
+		save_script();
+		load_script(new_script_index);
 	}
-	if (ImGui::Button("Create new dialogue")) {
-		create_new_dialogue();
+	if (ImGui::Button("Create new script")) {
+		create_new_script();
 	}
 }
 
-void dialogue_editor_state::update_selected_dialogue() {
-	auto item = dialogue_meta().find_by_index(selected_dialogue_index);
+void script_editor_state::update_selected_script() {
+	auto item = script_meta().find_by_index(selected_script_index);
 	if (!item) {
 		return;
 	}
-	ImGui::PushID("SelectedDialogue");
+	ImGui::PushID("SelectedScript");
 	ImGui::Separator();
 	ImGui::Text("Name:");
 	ImGui::SameLine();
 	imgui_input_text<128>("##Name", item->name);
-	ImGui::Text("Dialogue ID: %i", item->id);
-	ImGui::Text("Nodes: %i", dialogue.nodes.size());
+	ImGui::Text("Script ID: %i", item->id);
+	ImGui::Text("Nodes: %i", script.nodes.size());
 	if (ImGui::Button("Save")) {
-		save_dialogue();
+		save_script();
 	}
 	ImGui::Separator();
 	ImGui::PopID();
 }
 
-void dialogue_editor_state::update_node_links(ImDrawList* draw_list, no::vector2f offset) {
-	for (auto& i : dialogue.nodes) {
+void script_editor_state::update_node_links(ImDrawList* draw_list, no::vector2f offset) {
+	for (auto& i : script.nodes) {
 		auto node = i.second;
 		for (auto& j : node->out) {
 			if (j.node_id == -1) {
 				continue;
 			}
-			auto out_node = dialogue.nodes[j.node_id];
+			auto out_node = script.nodes[j.node_id];
 			const no::vector2f size1 = node->transform.scale.xy;
 			const no::vector2f size2 = out_node->transform.scale.xy;
 			no::vector2f pos1 = node->transform.position.xy;
@@ -356,9 +356,9 @@ void dialogue_editor_state::update_node_links(ImDrawList* draw_list, no::vector2
 	}
 }
 
-void dialogue_editor_state::update_nodes(ImDrawList* draw_list, no::vector2f offset) {
+void script_editor_state::update_nodes(ImDrawList* draw_list, no::vector2f offset) {
 	node_index_hovered = -1;
-	for (auto& i : dialogue.nodes) {
+	for (auto& i : script.nodes) {
 		ImGui::PushID(i.first);
 		auto node = i.second;
 		const no::vector2f node_rect_min = offset + node->transform.position.xy;
@@ -415,7 +415,7 @@ void dialogue_editor_state::update_nodes(ImDrawList* draw_list, no::vector2f off
 		if (node_selected == i.first) {
 			node_background_color = ImColor(75, 75, 75);
 		}
-		if (node->id == dialogue.start_node_id) {
+		if (node->id == script.start_node_id) {
 			node_background_color = ImColor(75, 90, 75);
 		}
 		draw_list->AddRectFilled(node_rect_min, node_rect_max, node_background_color, 4.0f);
@@ -424,16 +424,16 @@ void dialogue_editor_state::update_nodes(ImDrawList* draw_list, no::vector2f off
 	}
 }
 
-void dialogue_editor_state::update_context_menu(no::vector2f offset) {
+void script_editor_state::update_context_menu(no::vector2f offset) {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 	bool opened = ImGui::BeginPopup("GridContextMenu");
 	if (!opened) {
 		ImGui::PopStyleVar();
 		return;
 	}
-	abstract_node* node = nullptr;
+	script_node* node = nullptr;
 	if (node_selected != -1) {
-		node = dialogue.nodes[node_selected];
+		node = script.nodes[node_selected];
 	}
 	ImVec2 scene_pos = ImGui::GetMousePosOnOpeningCurrentPopup();
 	scene_pos.x -= offset.x;
@@ -470,7 +470,7 @@ void dialogue_editor_state::update_context_menu(no::vector2f offset) {
 				}
 			}
 		} else {
-			auto from_node = dialogue.nodes[node_index_link_from];
+			auto from_node = script.nodes[node_index_link_from];
 			bool can_connect = true;
 			if (from_node->id == node->id) {
 				can_connect = false;
@@ -490,15 +490,15 @@ void dialogue_editor_state::update_context_menu(no::vector2f offset) {
 			}
 		}
 		if (node->type() != node_type::choice && ImGui::MenuItem("Set as starting point")) {
-			dialogue.start_node_id = node->id;
+			script.start_node_id = node->id;
 			dirty = true;
 		}
 		if (ImGui::MenuItem("Delete")) {
-			for (auto& i : dialogue.nodes) {
+			for (auto& i : script.nodes) {
 				i.second->remove_output_node(node->id);
 			}
-			delete dialogue.nodes[node_selected];
-			dialogue.nodes.erase(node_selected);
+			delete script.nodes[node_selected];
+			script.nodes.erase(node_selected);
 			node_selected = -1;
 			node_index_link_from = -1;
 			node_link_from_out = -1;
@@ -576,10 +576,10 @@ void dialogue_editor_state::update_context_menu(no::vector2f offset) {
 			ImGui::EndMenu();
 		}
 		if (node) {
-			node->id = dialogue.id_counter;
-			dialogue.id_counter++;
+			node->id = script.id_counter;
+			script.id_counter++;
 			node->transform.position.xy = { scene_pos.x, scene_pos.y };
-			dialogue.nodes[node->id] = node;
+			script.nodes[node->id] = node;
 			dirty = true;
 		}
 	}
@@ -587,7 +587,7 @@ void dialogue_editor_state::update_context_menu(no::vector2f offset) {
 	ImGui::PopStyleVar();
 }
 
-void dialogue_editor_state::update_scrolling() {
+void script_editor_state::update_scrolling() {
 	if (ImGui::IsAnyItemActive()) {
 		return;
 	}
@@ -610,17 +610,17 @@ void dialogue_editor_state::update_scrolling() {
 	}
 }
 
-void dialogue_editor_state::update_node_ui(message_node& node) {
+void script_editor_state::update_node_ui(message_node& node) {
 	ImGui::Text("Message");
 	dirty |= imgui_input_text_multiline<1024>("##Message", node.text, { 350.0f, ImGui::GetTextLineHeight() * 8.0f });
 }
 
-void dialogue_editor_state::update_node_ui(choice_node& node) {
+void script_editor_state::update_node_ui(choice_node& node) {
 	ImGui::Text("Choice");
 	dirty |= imgui_input_text_multiline<1024>("##Choice", node.text, { 350.0f, ImGui::GetTextLineHeight() * 3.0f });
 }
 
-void dialogue_editor_state::update_node_ui(has_item_condition_node& node) {
+void script_editor_state::update_node_ui(has_item_condition_node& node) {
 	ImGui::Text("Has item");
 	auto uv = item_definitions().get(node.item.definition_id).uv;
 	ImGui::ImageButton((ImTextureID)ui_texture, { 32.0f }, item_uv1(uv, ui_texture), item_uv2(uv, ui_texture), 1);
@@ -635,7 +635,7 @@ void dialogue_editor_state::update_node_ui(has_item_condition_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(stat_condition_node& node) {
+void script_editor_state::update_node_ui(stat_condition_node& node) {
 	ImGui::Text("Stat condition");
 	ImGui::PushItemWidth(100.0f);
 	dirty |= select_stat_combo(&node.stat);
@@ -645,7 +645,7 @@ void dialogue_editor_state::update_node_ui(stat_condition_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(inventory_effect_node& node) {
+void script_editor_state::update_node_ui(inventory_effect_node& node) {
 	ImGui::Text("Inventory effect");
 	int current = (int)(!node.give); // note: "give" is actually 1, but in the combo it's 0
 	ImGui::PushItemWidth(100.0f);
@@ -662,7 +662,7 @@ void dialogue_editor_state::update_node_ui(inventory_effect_node& node) {
 	ImGui::Text(item_definitions().get(node.item.definition_id).name.c_str());
 }
 
-void dialogue_editor_state::update_node_ui(stat_effect_node& node) {
+void script_editor_state::update_node_ui(stat_effect_node& node) {
 	ImGui::Text("Modify stat");
 	ImGui::PushItemWidth(100.0f);
 	dirty |= select_stat_combo(&node.stat);
@@ -674,7 +674,7 @@ void dialogue_editor_state::update_node_ui(stat_effect_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(warp_effect_node& node) {
+void script_editor_state::update_node_ui(warp_effect_node& node) {
 	ImGui::Text("Warp effect");
 	ImGui::PushItemWidth(100.0f);
 	//ImGui::Text("World");
@@ -685,7 +685,7 @@ void dialogue_editor_state::update_node_ui(warp_effect_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(var_condition_node& node) {
+void script_editor_state::update_node_ui(var_condition_node& node) {
 	ImGui::Text("Compare variable");
 	ImGui::PushItemWidth(200.0f);
 	dirty |= ImGui::Checkbox("Global", &node.is_global);
@@ -696,7 +696,7 @@ void dialogue_editor_state::update_node_ui(var_condition_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(modify_var_node& node) {
+void script_editor_state::update_node_ui(modify_var_node& node) {
 	ImGui::Text("Modify variable");
 	ImGui::PushItemWidth(200.0f);
 	dirty |= ImGui::Checkbox("Global", &node.is_global);
@@ -707,7 +707,7 @@ void dialogue_editor_state::update_node_ui(modify_var_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(create_var_node& node) {
+void script_editor_state::update_node_ui(create_var_node& node) {
 	ImGui::Text("Create variable");
 	ImGui::PushItemWidth(200.0f);
 	dirty |= ImGui::Checkbox("Global", &node.is_global);
@@ -738,7 +738,7 @@ void dialogue_editor_state::update_node_ui(create_var_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(var_exists_node& node) {
+void script_editor_state::update_node_ui(var_exists_node& node) {
 	ImGui::Text("Does variable exist");
 	ImGui::PushItemWidth(200.0f);
 	dirty |= ImGui::Checkbox("Global", &node.is_global);
@@ -746,7 +746,7 @@ void dialogue_editor_state::update_node_ui(var_exists_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(delete_var_node& node) {
+void script_editor_state::update_node_ui(delete_var_node& node) {
 	ImGui::Text("Delete variable");
 	ImGui::PushItemWidth(200.0f);
 	dirty |= ImGui::Checkbox("Global", &node.is_global);
@@ -754,19 +754,19 @@ void dialogue_editor_state::update_node_ui(delete_var_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(random_node& node) {
+void script_editor_state::update_node_ui(random_node& node) {
 	ImGui::PushItemWidth(100.0f);
 	ImGui::Text("Random");
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(random_condition_node& node) {
+void script_editor_state::update_node_ui(random_condition_node& node) {
 	ImGui::Text("Random condition");
 	dirty |= ImGui::InputInt("% Chance of success", &node.percent);
 	node.percent = no::clamp(node.percent, 0, 100);
 }
 
-void dialogue_editor_state::update_node_ui(quest_task_condition_node& node) {
+void script_editor_state::update_node_ui(quest_task_condition_node& node) {
 	ImGui::PushItemWidth(160.0f);
 	ImGui::Text("Is quest task done?");
 	dirty |= select_quest_combo(&node.quest_id);
@@ -774,14 +774,14 @@ void dialogue_editor_state::update_node_ui(quest_task_condition_node& node) {
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(quest_done_condition_node& node) {
+void script_editor_state::update_node_ui(quest_done_condition_node& node) {
 	ImGui::PushItemWidth(160.0f);
 	ImGui::Text("Is quest done?");
 	dirty |= select_quest_combo(&node.quest_id);
 	ImGui::PopItemWidth();
 }
 
-void dialogue_editor_state::update_node_ui(quest_update_task_effect_node& node) {
+void script_editor_state::update_node_ui(quest_update_task_effect_node& node) {
 	ImGui::PushItemWidth(160.0f);
 	ImGui::Text("Update quest task progress");
 	dirty |= select_quest_combo(&node.quest_id);
