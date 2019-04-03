@@ -82,6 +82,8 @@ struct winsock_socket {
 
 struct winsock_state {
 
+	static constexpr int max_broadcasts_per_sync = 4192;
+
 	LPFN_ACCEPTEX AcceptEx = nullptr;
 	LPFN_GETACCEPTEXSOCKADDRS GetAcceptExSockaddrs = nullptr;
 
@@ -92,8 +94,12 @@ struct winsock_state {
 	std::vector<std::unique_ptr<std::mutex>> mutexes;
 	std::vector<std::thread> threads;
 
-	std::vector<io_stream> queued_packets; // to keep memory alive
-	std::vector<int> destroy_queue; // sockets to destroy in synchronise
+	// sockets to destroy in synchronise
+	std::vector<int> destroy_queue;
+
+	// to keep broadcast packets alive until sync (instead of 1 copy per socket)
+	int broadcast_count = 0;
+	io_stream queued_packets[max_broadcasts_per_sync]; // 20 * 4192 = 82 KiB
 
 };
 

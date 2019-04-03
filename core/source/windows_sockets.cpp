@@ -401,7 +401,7 @@ void synchronise_sockets() {
 			synchronize_socket(i);
 		}
 	}
-	winsock.queued_packets.clear();
+	winsock.broadcast_count = 0;
 	for (int destroy_id : winsock.destroy_queue) {
 		destroy_socket(destroy_id);
 	}
@@ -469,19 +469,21 @@ void socket_send(int id, io_stream&& stream) {
 }
 
 void broadcast(io_stream&& stream) {
-	auto& packet = winsock.queued_packets.emplace_back(std::move(stream));
+	winsock.queued_packets[winsock.broadcast_count] = std::move(stream);
 	for (auto& socket : winsock.sockets) {
-		socket.queued_packets.emplace_back(packet.data(), packet.write_index(), io_stream::construct_by::shallow_copy);
+		socket.queued_packets.emplace_back(winsock.queued_packets[winsock.broadcast_count].data(), winsock.queued_packets[winsock.broadcast_count].write_index(), io_stream::construct_by::shallow_copy);
 	}
+	winsock.broadcast_count++;
 }
 
 void broadcast(io_stream&& stream, int except_id) {
-	auto& packet = winsock.queued_packets.emplace_back(std::move(stream));
+	winsock.queued_packets[winsock.broadcast_count] = std::move(stream);
 	for (int i = 0; i < (int)winsock.sockets.size(); i++) {
 		if (i != except_id) {
-			winsock.sockets[i].queued_packets.emplace_back(packet.data(), packet.write_index(), io_stream::construct_by::shallow_copy);
+			winsock.sockets[i].queued_packets.emplace_back(winsock.queued_packets[winsock.broadcast_count].data(), winsock.queued_packets[winsock.broadcast_count].write_index(), io_stream::construct_by::shallow_copy);
 		}
 	}
+	winsock.broadcast_count++;
 }
 
 socket_events& socket_event(int id) {
