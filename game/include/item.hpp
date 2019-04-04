@@ -44,6 +44,9 @@ struct item_instance {
 
 	const item_definition& definition() const;
 
+	void write(no::io_stream& stream) const;
+	void read(no::io_stream& stream);
+
 };
 
 class item_definition_list {

@@ -82,7 +82,7 @@ struct winsock_socket {
 
 struct winsock_state {
 
-	static constexpr int max_broadcasts_per_sync = 4192;
+	static const int max_broadcasts_per_sync = 4192;
 
 	LPFN_ACCEPTEX AcceptEx = nullptr;
 	LPFN_GETACCEPTEXSOCKADDRS GetAcceptExSockaddrs = nullptr;

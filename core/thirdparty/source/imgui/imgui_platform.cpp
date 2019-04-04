@@ -184,7 +184,7 @@ void create(window& window) {
 
 	data.font_texture_id = create_texture();
 	bind_texture(data.font_texture_id);
-	load_texture(data.font_texture_id, surface((uint32_t*)pixels, width, height, pixel_format::rgba, surface::construct_by::copy));
+	load_texture(data.font_texture_id, { (uint32_t*)pixels, width, height, pixel_format::rgba, surface::construct_by::copy });
 
 	io.Fonts->TexID = (ImTextureID)data.font_texture_id;
 }
@@ -211,7 +211,7 @@ void start_frame() {
 
 	RECT rect;
 	GetClientRect(data.window->platform_window()->handle(), &rect);
-	io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
+	io.DisplaySize = { (float)(rect.right - rect.left), (float)(rect.bottom - rect.top) };
 
 	INT64 current_time;
 	QueryPerformanceCounter((LARGE_INTEGER*)&current_time);

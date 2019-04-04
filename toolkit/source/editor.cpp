@@ -217,8 +217,7 @@ void object_tool::update_imgui() {
 			if (object->tile() != context_menu_tile) {
 				return;
 			}
-			auto& definition = object->definition();
-			if (ImGui::MenuItem(CSTRING(definition.name << " (" << object->instance_id << ")"))) {
+			if (ImGui::MenuItem(CSTRING(object->definition().name << " (" << object->instance_id << ")"))) {
 				selected_object_instance_id = object->instance_id;
 			}
 		});
@@ -277,13 +276,7 @@ void object_tool::draw() {
 	
 }
 
-world_editor_state::world_editor_state() :
-	renderer(world),
-	dragger(mouse()),
-	elevate(*this),
-	tiling(*this),
-	object(*this),
-	tile_flag(*this) {
+world_editor_state::world_editor_state() : renderer(world), dragger(mouse()), elevate(*this), tiling(*this), object(*this), tile_flag(*this) {
 	window().set_swap_interval(no::swap_interval::immediate);
 	set_synchronization(no::draw_synchronization::if_updated);
 	no::imgui::create(window());

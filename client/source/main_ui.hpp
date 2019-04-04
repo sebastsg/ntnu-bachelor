@@ -9,6 +9,10 @@
 
 class game_state;
 
+void set_ui_uv(no::rectangle& rectangle, no::vector2f uv, no::vector2f uv_size);
+void set_ui_uv(no::rectangle& rectangle, no::vector4f uv);
+void set_item_uv(no::rectangle& rectangle, no::vector2f uv);
+
 class hit_splat {
 public:
 
@@ -113,10 +117,15 @@ private:
 
 };
 
+struct item_slot {
+	no::rectangle rectangle;
+	item_instance item;
+};
+
 class inventory_view {
 public:
 
-	inventory_view(const no::ortho_camera& camera, game_state& game, world_state& world);
+	inventory_view(game_state& game);
 	inventory_view(const inventory_view&) = delete;
 	inventory_view(inventory_view&&) = delete;
 
@@ -139,16 +148,9 @@ private:
 
 	void on_change(no::vector2i slot);
 
-	const no::ortho_camera& camera;
-	world_state& world;
 	game_state& game;
 
 	int object_id = -1;
-
-	struct item_slot {
-		no::rectangle rectangle;
-		item_instance item;
-	};
 
 	no::rectangle background;
 	std::unordered_map<int, item_slot> slots;
@@ -159,7 +161,7 @@ private:
 class equipment_view {
 public:
 
-	equipment_view(const no::ortho_camera& camera, game_state& game, world_state& world);
+	equipment_view(game_state& game);
 	equipment_view(const equipment_view&) = delete;
 	equipment_view(equipment_view&&) = delete;
 
@@ -182,16 +184,9 @@ private:
 
 	void on_change(equipment_slot slot);
 
-	const no::ortho_camera& camera;
-	world_state& world;
 	game_state& game;
 
 	int object_id = -1;
-
-	struct item_slot {
-		no::rectangle rectangle;
-		item_instance item;
-	};
 
 	no::rectangle background;
 	std::unordered_map<equipment_slot, item_slot> slots;
@@ -234,9 +229,8 @@ public:
 
 	hud_view hud;
 	world_minimap minimap;
-	no::ortho_camera camera;
 
-	user_interface_view(game_state& game, world_state& world);
+	user_interface_view(game_state& game);
 	user_interface_view(const user_interface_view&) = delete;
 	user_interface_view(user_interface_view&&) = delete;
 
@@ -256,7 +250,7 @@ public:
 	void ignore();
 
 	void update();
-	void draw() const;
+	void draw();
 
 private:
 
@@ -271,7 +265,6 @@ private:
 
 	void create_context();
 
-	world_state& world;
 	game_state& game;
 
 	int ui_texture = -1;

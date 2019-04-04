@@ -52,7 +52,7 @@ struct gl_texture {
 
 struct gl_shader {
 	unsigned int id = 0;
-	glm::mat4 model = glm::mat4(1.0f);
+	glm::mat4 model{ 1.0f };
 	glm::mat4 view;
 	glm::mat4 projection;
 	int model_view_projection_location = -1;

@@ -115,6 +115,7 @@ void character_object::write(no::io_stream& stream) const {
 	}
 	stream.write<uint8_t>(walking_around ? 1 : 0);
 	stream.write(walking_around_center);
+	stream.write(name);
 }
 
 void character_object::read(no::io_stream& stream) {
@@ -126,6 +127,7 @@ void character_object::read(no::io_stream& stream) {
 	}
 	walking_around = (stream.read<uint8_t>() != 0);
 	walking_around_center = stream.read<no::vector2i>();
+	name = stream.read<std::string>();
 }
 
 void character_object::equip_from_inventory(no::vector2i slot) {

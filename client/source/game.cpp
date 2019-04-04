@@ -8,6 +8,7 @@
 #include "packets.hpp"
 #include "network.hpp"
 #include "pathfinding.hpp"
+#include "trading.hpp"
 
 game_world::game_world() {
 	load(no::asset_path("worlds/main.ew"));
@@ -20,17 +21,16 @@ player_data game_world::my_player() {
 	};
 }
 
-game_state::game_state() : 
-	renderer(world), 
-	dragger(mouse()), 
-	ui(*this, world), 
-	chat(*this, ui.camera), 
-	ui_font(no::asset_path("fonts/leo.ttf"), 14) {
+game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*this), ui_font(no::asset_path("fonts/leo.ttf"), 14) {
+	ui_camera.zoom = 2.0f;
 	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
 		if (event.button != no::mouse::button::left) {
 			return;
 		}
 		if (ui.is_mouse_over_any()) {
+			return;
+		}
+		if (is_trading()) {
 			return;
 		}
 		no::vector2i tile = hovered_pixel.xy;
@@ -147,11 +147,42 @@ game_state::game_state() :
 			}
 			break;
 		}
+		case to_client::game::trade_request::type:
+		{
+			to_client::game::trade_request packet{ stream };
+			if (sent_trade_request_to_player_id == packet.trader_id) {
+				start_trading(*this, packet.trader_id);
+			} else {
+				auto trader = world.objects.character(packet.trader_id);
+				if (trader) {
+					chat.add("", trader->name + " wants to trade with you.");
+				}
+			}
+			break;
+		}
+		case to_client::game::add_trade_item::type:
+		{
+			to_client::game::add_trade_item packet{ stream };
+			add_trade_item(0, packet.item);
+			break;
+		}
+		case to_client::game::remove_trade_item::type:
+		{
+			to_client::game::remove_trade_item packet{ stream };
+			remove_trade_item(0, packet.slot);
+			break;
+		}
+		case to_client::game::trade_decision::type:
+		{
+			to_client::game::trade_decision packet{ stream };
+			notify_trade_decision(packet.accepted);
+			sent_trade_request_to_player_id = -1;
+			break;
+		}
 		default:
 			break;
 		}
 	});
-
 	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });
 }
 
@@ -166,7 +197,7 @@ game_state::~game_state() {
 void game_state::update() {
 	no::synchronize_socket(server());
 	renderer.camera.size = window().size().to<float>();
-	ui.camera.transform.scale = window().size().to<float>();
+	ui_camera.transform.scale = window().size().to<float>();
 	if (world.my_player_id == -1) {
 		return;
 	}
@@ -233,7 +264,7 @@ void game_state::start_dialogue(int target_id) {
 	to_server::game::start_dialogue packet;
 	packet.target_instance_id = target_id;
 	no::send_packet(server(), packet);
-	dialogue = new dialogue_view(*this, ui.camera, target_id);
+	dialogue = new dialogue_view(*this, ui_camera, target_id);
 	dialogue->events.choose.listen([this](const dialogue_view::choose_event& event) {
 		to_server::game::continue_dialogue packet;
 		packet.choice = event.choice;
@@ -270,5 +301,32 @@ void game_state::unequip_to_inventory(equipment_slot slot) {
 	world.my_player().character.unequip_to_inventory(slot);
 	to_server::game::unequip_to_inventory packet;
 	packet.slot = slot;
+	no::send_packet(server(), packet);
+}
+
+void game_state::send_trade_request(int target_id) {
+	sent_trade_request_to_player_id = target_id;
+	to_server::game::trade_request packet;
+	packet.trade_with_id = target_id;
+	no::send_packet(server(), packet);
+}
+
+void game_state::send_add_trade_item(const item_instance& item) {
+	to_server::game::add_trade_item packet;
+	packet.item = item;
+	no::send_packet(server(), packet);
+	add_trade_item(1, item);
+}
+
+void game_state::send_remove_trade_item(no::vector2i slot) {
+	to_server::game::remove_trade_item packet;
+	packet.slot = slot;
+	no::send_packet(server(), packet);
+	remove_trade_item(1, slot);
+}
+
+void game_state::send_finish_trading(bool accept) {
+	to_server::game::trade_decision packet;
+	packet.accepted = accept;
 	no::send_packet(server(), packet);
 }

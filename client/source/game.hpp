@@ -4,7 +4,7 @@
 #include "render.hpp"
 #include "ui.hpp"
 #include "dialogue_ui.hpp"
-#include "chat_ui.hpp"
+#include "chat.hpp"
 #include "quest.hpp"
 
 #include "client.hpp"
@@ -39,6 +39,7 @@ public:
 	game_world world;
 	game_variable_map variables;
 	quest_instance_list quests;
+	no::ortho_camera ui_camera;
 
 	game_state();
 	~game_state() override;
@@ -58,6 +59,11 @@ public:
 
 	void equip_from_inventory(no::vector2i slot);
 	void unequip_to_inventory(equipment_slot slot);
+
+	void send_trade_request(int target_id);
+	void send_add_trade_item(const item_instance& item);
+	void send_remove_trade_item(no::vector2i slot);
+	void send_finish_trading(bool accept);
 
 	chat_view chat;
 
@@ -79,5 +85,7 @@ private:
 	no::perspective_camera::rotate_controller rotater;
 	no::perspective_camera::follow_controller follower;
 	std::vector<no::vector2i> path_found;
+
+	int sent_trade_request_to_player_id = -1;
 
 };

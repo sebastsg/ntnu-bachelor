@@ -32,6 +32,7 @@ private:
 	no::text_view login_label;
 	no::button login_button;
 	no::rectangle rectangle;
+	no::text_view status_label;
 
 	no::input_field username;
 	no::input_field password;

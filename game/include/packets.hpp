@@ -59,6 +59,18 @@ Packet(character_follows, 8)
 	int32_t follower_id = -1;
 	int32_t target_id = -1;
 
+Packet(trade_request, 9)
+	int32_t trader_id = -1;
+
+Packet(add_trade_item, 10)
+	item_instance item;
+
+Packet(remove_trade_item, 11)
+	no::vector2i slot;
+	
+Packet(trade_decision, 12)
+	bool accepted = false;
+
 End
 
 Begin(to_server::game, 1000)
@@ -86,6 +98,18 @@ Packet(unequip_to_inventory, 6)
 
 Packet(follow_character, 7)
 	int32_t target_id = -1;
+
+Packet(trade_request, 8)
+	int32_t trade_with_id = -1;
+
+Packet(add_trade_item, 9)
+	item_instance item;
+
+Packet(remove_trade_item, 10)
+	no::vector2i slot;
+	
+Packet(trade_decision, 11)
+	bool accepted = false;
 
 End
 

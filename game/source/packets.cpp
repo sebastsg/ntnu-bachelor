@@ -84,6 +84,30 @@ Read(character_follows)
 	target_id = stream.read<int32_t>();
 End
 
+Write(trade_request)
+	stream.write(trader_id);
+Read(trade_request)
+	trader_id = stream.read<int32_t>();
+End
+
+Write(add_trade_item)
+	item.write(stream);
+Read(add_trade_item)
+	item.read(stream);
+End
+
+Write(remove_trade_item)
+	stream.write(slot);
+Read(remove_trade_item)
+	slot = stream.read<no::vector2i>();
+End
+
+Write(trade_decision)
+	stream.write<uint8_t>(accepted ? 1 : 0);
+Read(trade_decision)
+	accepted = stream.read<uint8_t>() != 0;
+End
+
 }
 
 namespace to_server::game {
@@ -134,6 +158,30 @@ Write(follow_character)
 	stream.write(target_id);
 Read(follow_character)
 	target_id = stream.read<int32_t>();
+End
+
+Write(trade_request)
+	stream.write(trade_with_id);
+Read(trade_request)
+	trade_with_id = stream.read<int32_t>();
+End
+
+Write(add_trade_item)
+	item.write(stream);
+Read(add_trade_item)
+	item.read(stream);
+End
+
+Write(remove_trade_item)
+	stream.write(slot);
+Read(remove_trade_item)
+	slot = stream.read<no::vector2i>();
+End
+
+Write(trade_decision)
+	stream.write<uint8_t>(accepted ? 1 : 0);
+Read(trade_decision)
+	accepted = stream.read<uint8_t>() != 0;
 End
 
 }

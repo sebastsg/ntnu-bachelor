@@ -40,6 +40,7 @@ public:
 	int follow_distance = 1;
 	bool walking_around = false;
 	no::vector2i walking_around_center;
+	std::string name; // to override definition name
 
 	struct {
 		no::message_event<item_instance> equip;

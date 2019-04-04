@@ -6,7 +6,8 @@
 
 lobby_state::lobby_state() : 
 	font(no::asset_path("fonts/leo.ttf"), 16),
-	login_label(*this, camera), 
+	login_label(*this, camera),
+	status_label(*this, camera),
 	login_button(*this, camera),
 	username(*this, camera, font), 
 	password(*this, camera, font),
@@ -21,12 +22,16 @@ lobby_state::lobby_state() :
 		case to_client::lobby::login_status::type:
 		{
 			to_client::lobby::login_status packet{ stream };
-			if (packet.status == 1) {
+			if (packet.status == 0) {
+				status_label.render(font, "Invalid username or password.");
+			} else if (packet.status == 1) {
 				player_details.name = packet.name;
 				to_server::lobby::connect_to_world connect_packet;
 				connect_packet.world = 0;
 				no::send_packet(server(), connect_packet);
 				change_state<game_state>();
+			} else if (packet.status == 2) {
+				status_label.render(font, "This player is already logged in.");
 			}
 			break;
 		}
@@ -73,6 +78,14 @@ lobby_state::lobby_state() :
 		}
 	});
 	load_config();
+
+	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
+		if (event.key == no::key::num_5) {
+			username.set_value("test@test.no");
+		} else if (event.key == no::key::num_6) {
+			username.set_value("sebastian@sgundersen.com");
+		}
+	});
 }
 
 lobby_state::~lobby_state() {
@@ -88,6 +101,7 @@ void lobby_state::update() {
 	no::synchronize_socket(server());
 	camera.transform.scale = window().size().to<float>();
 	login_label.transform.position = 128.0f;
+	status_label.transform.position = { 128.0f, 320.0f };
 	username.transform.position = { 128.0f, 160.0f };
 	username.transform.scale = { 320.0f, 32.0f };
 	password.transform.position = { 128.0f, 208.0f };
@@ -107,6 +121,7 @@ void lobby_state::draw() {
 	no::set_shader_view_projection(camera);
 	color.set(no::vector4f{ 1.0f });
 	login_label.draw(rectangle);
+	status_label.draw(rectangle);
 
 	no::bind_texture(button_texture);
 	login_button.draw_button();

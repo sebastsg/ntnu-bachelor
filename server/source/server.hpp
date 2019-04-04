@@ -17,25 +17,11 @@ const int warehouse_container_type = 2;
 
 class client_state {
 public:
-
-	friend class server_state;
-
-	client_state() = default;
-	client_state(bool connected) : connected(connected) {}
-	client_state(const client_state&) = delete;
-	client_state(client_state&&) = default;
-
-	client_state& operator=(const client_state&) = delete;
-	client_state& operator=(client_state&&) = default;
-
-	bool is_connected() const {
-		return connected;
-	}
-
-private:
-
+	
 	bool connected = false;
 	no::timer last_saved;
+
+	int sent_trade_request_to_player_id = -1;
 
 	struct {
 		std::string email;
@@ -53,6 +39,18 @@ private:
 	} object;
 
 	script_tree* dialogue = nullptr;
+
+	client_state() = default;
+	client_state(bool connected) : connected(connected) {}
+	client_state(const client_state&) = delete;
+	client_state(client_state&&) = default;
+
+	client_state& operator=(const client_state&) = delete;
+	client_state& operator=(client_state&&) = default;
+
+	bool is_connected() const {
+		return connected;
+	}
 
 };
 
@@ -76,6 +74,19 @@ public:
 
 };
 
+struct trade_state {
+
+	inventory_container first;
+	inventory_container second;
+
+	int first_client_index = -1;
+	int second_client_index = -1;
+
+	bool first_accepts = false;
+	bool second_accepts = false;
+
+};
+
 class server_state : public no::window_state {
 public:
 
@@ -91,6 +102,8 @@ public:
 	void draw() override;
 
 private:
+
+	int client_with_player(int player_id);
 
 	character_object* load_player(int client_index);
 	void save_player(int client_index);
@@ -108,13 +121,22 @@ private:
 	void on_equip_from_inventory(int client_index, const to_server::game::equip_from_inventory& packet);
 	void on_unequip_to_inventory(int client_index, const to_server::game::unequip_to_inventory& packet);
 	void on_follow_character(int client_index, const to_server::game::follow_character& packet);
+	void on_trade_request(int client_index, const to_server::game::trade_request& packet);
+	void on_add_trade_item(int client_index, const to_server::game::add_trade_item& packet);
+	void on_remove_trade_item(int client_index, const to_server::game::remove_trade_item& packet);
+	void on_trade_decision(int client_index, const to_server::game::trade_decision& packet);
 
 	void on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet);
 	void on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet);
-	void on_version_check(int client_index, const to_server::updates::update_query& packet);
+	void on_update_query(int client_index, const to_server::updates::update_query& packet);
+
+	trade_state* find_trade(int client_index);
+	void remove_trade(int client_index);
 
 	int listener = -1;
 	client_state clients[max_clients];
+
+	std::vector<trade_state> trades;
 
 	server_world world;
 	int combat_hit_event_id = -1;

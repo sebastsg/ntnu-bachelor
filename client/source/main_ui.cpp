@@ -1,5 +1,6 @@
 #include "main_ui.hpp"
 #include "game.hpp"
+#include "trading.hpp"
 
 #include "assets.hpp"
 #include "surface.hpp"
@@ -48,15 +49,15 @@ const no::vector4f context_uv[] = {
 	{ 152.0f, 128.0f, 8.0f, 11.0f }, // bottom end
 };
 
-static void set_ui_uv(no::rectangle& rectangle, no::vector2f uv, no::vector2f uv_size) {
+void set_ui_uv(no::rectangle& rectangle, no::vector2f uv, no::vector2f uv_size) {
 	rectangle.set_tex_coords(uv.x / ui_size.x, uv.y / ui_size.y, uv_size.x / ui_size.x, uv_size.y / ui_size.y);
 }
 
-static void set_ui_uv(no::rectangle& rectangle, no::vector4f uv) {
+void set_ui_uv(no::rectangle& rectangle, no::vector4f uv) {
 	set_ui_uv(rectangle, uv.xy, uv.zw);
 }
 
-static void set_item_uv(no::rectangle& rectangle, no::vector2f uv) {
+void set_item_uv(no::rectangle& rectangle, no::vector2f uv) {
 	set_ui_uv(rectangle, uv, item_size);
 }
 
@@ -318,8 +319,7 @@ void context_menu::draw_highlighted_option(int option, int ui_texture) const {
 	color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
 }
 
-inventory_view::inventory_view(const no::ortho_camera& camera, game_state& game, world_state& world) 
-	: camera(camera), game(game), world(world) {
+inventory_view::inventory_view(game_state& game) : game(game) {
 	set_ui_uv(background, inventory_uv);
 }
 
@@ -328,7 +328,7 @@ inventory_view::~inventory_view() {
 }
 
 void inventory_view::on_change(no::vector2i slot) {
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	item_instance item = player->inventory.get(slot);
 	int slot_index = slot.y * inventory_container::columns + slot.x;
 	if (item.definition_id == -1) {
@@ -342,7 +342,7 @@ void inventory_view::on_change(no::vector2i slot) {
 
 void inventory_view::listen(int object_id_) {
 	object_id = object_id_;
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	change_event = player->inventory.events.change.listen([this](no::vector2i slot) {
 		on_change(slot);
 	});
@@ -357,7 +357,7 @@ void inventory_view::ignore() {
 	if (object_id == -1) {
 		return;
 	}
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	player->inventory.events.change.ignore(change_event);
 	change_event = -1;
 	player = nullptr;
@@ -366,7 +366,7 @@ void inventory_view::ignore() {
 no::transform2 inventory_view::body_transform() const {
 	no::transform2 transform;
 	transform.scale = inventory_uv.zw;
-	transform.position.x = camera.width() - background_uv.z - 2.0f + inventory_offset.x;
+	transform.position.x = game.ui_camera.width() - background_uv.z - 2.0f + inventory_offset.x;
 	transform.position.y = inventory_offset.y;
 	return transform;
 }
@@ -374,7 +374,7 @@ no::transform2 inventory_view::body_transform() const {
 no::transform2 inventory_view::slot_transform(int index) const {
 	no::transform2 transform;
 	transform.scale = item_size;
-	transform.position.x = camera.width() - background_uv.z + 23.0f + (float)(index % 4) * item_grid.x;
+	transform.position.x = game.ui_camera.width() - background_uv.z + 23.0f + (float)(index % 4) * item_grid.x;
 	transform.position.y = 132.0f + (float)(index / 4) * item_grid.y;
 	return transform;
 }
@@ -387,43 +387,49 @@ void inventory_view::draw() const {
 }
 
 void inventory_view::add_context_options(context_menu& context) {
-	if (!body_transform().collides_with(camera.mouse_position(game.mouse()))) {
+	if (!body_transform().collides_with(game.ui_camera.mouse_position(game.mouse()))) {
 		return;
 	}
 	no::vector2i slot = hovered_slot();
 	if (slot.x == -1) {
 		return;
 	}
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	auto item = player->inventory.get(slot);
 	if (item.definition_id == -1) {
 		return;
 	}
-	auto definition = item_definitions().get(item.definition_id);
-	if (definition.type == item_type::equipment) {
-		context.add_option("Equip", [this, slot] {
-			game.equip_from_inventory(slot);
+	if (is_trading()) {
+		context.add_option("Offer " + item.definition().name, [this, item, slot, player] {
+			game.send_add_trade_item(item);
+			player->inventory.items[slot.y * inventory_container::columns + slot.x] = {};
+			player->inventory.events.change.emit(slot);
+		});
+	} else {
+		if (item.definition().type == item_type::equipment) {
+			context.add_option("Equip " + item.definition().name, [this, slot] {
+				game.equip_from_inventory(slot);
+			});
+		}
+		context.add_option("Drop " + item.definition().name, [this, item, slot, player] {
+			item_instance ground_item;
+			ground_item.definition_id = item.definition_id;
+			player->inventory.remove_to(item.stack, ground_item);
+			// todo: drop on ground
 		});
 	}
-	context.add_option("Drop", [this, item, slot, player] {
-		item_instance ground_item;
-		ground_item.definition_id = item.definition_id;
-		player->inventory.remove_to(item.stack, ground_item);
-		// todo: drop on ground
-	});
 }
 
 no::vector2i inventory_view::hovered_slot() const {
 	for (auto& slot : slots) {
-		if (slot_transform(slot.first).collides_with(camera.mouse_position(game.mouse()))) {
+		if (slot_transform(slot.first).collides_with(game.ui_camera.mouse_position(game.mouse()))) {
 			return { slot.first % 4, slot.first / 4 };
 		}
 	}
 	return -1;
 }
 
-equipment_view::equipment_view(const no::ortho_camera& camera, game_state& game, world_state& world)
-	: camera(camera), game(game), world(world) {
+equipment_view::equipment_view(game_state& game) : game{ game } {
 	set_ui_uv(background, equipment_uv);
 }
 
@@ -432,7 +438,7 @@ equipment_view::~equipment_view() {
 }
 
 void equipment_view::on_change(equipment_slot slot) {
-	item_instance item = world.objects.character(object_id)->equipment.get(slot);
+	item_instance item = game.world.objects.character(object_id)->equipment.get(slot);
 	if (item.definition_id == -1) {
 		slots.erase(slot);
 	} else {
@@ -444,7 +450,7 @@ void equipment_view::on_change(equipment_slot slot) {
 
 void equipment_view::listen(int object_id_) {
 	object_id = object_id_;
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	change_event = player->equipment.events.change.listen([this](equipment_slot slot) {
 		on_change(slot);
 	});
@@ -457,7 +463,7 @@ void equipment_view::ignore() {
 	if (object_id == -1) {
 		return;
 	}
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	player->equipment.events.change.ignore(change_event);
 	change_event = -1;
 	player = nullptr;
@@ -466,7 +472,7 @@ void equipment_view::ignore() {
 no::transform2 equipment_view::body_transform() const {
 	no::transform2 transform;
 	transform.scale = inventory_uv.zw;
-	transform.position.x = camera.width() - background_uv.z - 2.0f + inventory_offset.x;
+	transform.position.x = game.ui_camera.width() - background_uv.z - 2.0f + inventory_offset.x;
 	transform.position.y = inventory_offset.y;
 	return transform;
 }
@@ -474,7 +480,7 @@ no::transform2 equipment_view::body_transform() const {
 no::transform2 equipment_view::slot_transform(equipment_slot slot) const {
 	no::transform2 transform;
 	transform.scale = item_size;
-	transform.position.x = camera.width() - background_uv.z + 26.0f;
+	transform.position.x = game.ui_camera.width() - background_uv.z + 26.0f;
 	transform.position.y = 141.0f;
 	switch (slot) {
 	case equipment_slot::left_hand:
@@ -502,14 +508,14 @@ void equipment_view::draw() const {
 }
 
 void equipment_view::add_context_options(context_menu& context) {
-	if (!body_transform().collides_with(camera.mouse_position(game.mouse()))) {
+	if (!body_transform().collides_with(game.ui_camera.mouse_position(game.mouse()))) {
 		return;
 	}
 	equipment_slot slot = hovered_slot();
 	if (slot == equipment_slot::none) {
 		return;
 	}
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	auto item = slots[slot].item;
 	if (item.definition_id == -1) {
 		return;
@@ -522,7 +528,7 @@ void equipment_view::add_context_options(context_menu& context) {
 
 equipment_slot equipment_view::hovered_slot() const {
 	for (auto& slot : slots) {
-		if (slot_transform(slot.first).collides_with(camera.mouse_position(game.mouse()))) {
+		if (slot_transform(slot.first).collides_with(game.ui_camera.mouse_position(game.mouse()))) {
 			return slot.first;
 		}
 	}
@@ -610,14 +616,8 @@ void hud_view::set_debug(const std::string& debug) {
 	no::load_texture(debug_texture, font.render(debug));
 }
 
-user_interface_view::user_interface_view(game_state& game, world_state& world) : 
-	game(game), 
-	world(world), 
-	inventory{ camera, game, world },
-	equipment{ camera, game, world },
-	font(no::asset_path("fonts/leo.ttf"), 9),
-	minimap{ world } {
-	camera.zoom = 2.0f;
+user_interface_view::user_interface_view(game_state& game) : 
+	game(game), inventory{ game }, equipment{ game }, font(no::asset_path("fonts/leo.ttf"), 9), minimap{ game.world } {
 	shader = no::create_shader(no::asset_path("shaders/sprite"));
 	color = no::get_shader_variable("uni_Color");
 	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));
@@ -637,20 +637,20 @@ user_interface_view::~user_interface_view() {
 bool user_interface_view::is_mouse_over() const {
 	no::transform2 transform;
 	transform.scale = background_uv.zw;
-	transform.position.x = camera.width() - transform.scale.x - 2.0f;
-	return transform.collides_with(camera.mouse_position(game.mouse()));
+	transform.position.x = game.ui_camera.width() - transform.scale.x - 2.0f;
+	return transform.collides_with(game.ui_camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_mouse_over_context() const {
-	return context && context->menu_transform().collides_with(camera.mouse_position(game.mouse()));
+	return context && context->menu_transform().collides_with(game.ui_camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_mouse_over_inventory() const {
-	return inventory.body_transform().collides_with(camera.mouse_position(game.mouse()));
+	return inventory.body_transform().collides_with(game.ui_camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_tab_hovered(int index) const {
-	return tab_transform(index).collides_with(camera.mouse_position(game.mouse()));
+	return tab_transform(index).collides_with(game.ui_camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_mouse_over_any() const {
@@ -663,7 +663,7 @@ bool user_interface_view::is_context_open() const {
 
 void user_interface_view::listen(int object_id_) {
 	object_id = object_id_;
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	equipment_event = player->events.equip.listen([this](const item_instance& event) {
 		
 	});
@@ -722,7 +722,7 @@ void user_interface_view::ignore() {
 	if (object_id == -1) {
 		return;
 	}
-	auto player = world.objects.character(object_id);
+	auto player = game.world.objects.character(object_id);
 	inventory.ignore();
 	equipment.ignore();
 	player->events.equip.ignore(equipment_event);
@@ -736,22 +736,23 @@ void user_interface_view::ignore() {
 void user_interface_view::update() {
 	hud.set_fps(((const game_state&)game).frame_counter().current_fps());
 	hud.set_debug(STRING("Tile: " << game.world.my_player().object.tile()));
-	hud.update(camera);
+	hud.update(game.ui_camera);
 	minimap.transform.position = { 104.0f, 8.0f };
-	minimap.transform.position.x += camera.width() - background_uv.z - 2.0f;
+	minimap.transform.position.x += game.ui_camera.width() - background_uv.z - 2.0f;
 	minimap.transform.scale = 64.0f;
 	minimap.transform.rotation = game.world_camera().transform.rotation.y;
 	minimap.update(game.world.my_player().object.tile());
+	update_trading_ui();
 }
 
-void user_interface_view::draw() const {
+void user_interface_view::draw() {
 	no::bind_shader(shader);
-	no::set_shader_view_projection(camera);
+	no::set_shader_view_projection(game.ui_camera);
 	color.set(no::vector4f{ 1.0f });
 	no::bind_texture(ui_texture);
 	no::transform2 transform;
 	transform.scale = background_uv.zw;
-	transform.position.x = camera.width() - transform.scale.x - 2.0f;
+	transform.position.x = game.ui_camera.width() - transform.scale.x - 2.0f;
 	no::set_shader_model(transform);
 	background.bind();
 	background.draw();
@@ -768,7 +769,10 @@ void user_interface_view::draw() const {
 		break;
 	}
 	draw_tabs();
-	hud.draw(color, ui_texture, world.objects.character(object_id));
+	hud.draw(color, ui_texture, game.world.objects.character(object_id));
+	draw_trading_ui();
+	color.set(no::vector4f{ 1.0f });
+	no::bind_texture(ui_texture);
 	if (context) {
 		context->draw(ui_texture);
 	}
@@ -801,18 +805,19 @@ no::transform2 user_interface_view::tab_transform(int index) const {
 	no::transform2 transform;
 	transform.position = { 429.0f, 146.0f };
 	transform.position -= background_uv.xy;
-	transform.position.x += camera.width() - background_uv.z - 2.0f + (tab_size.x + 4.0f) * (float)index;
+	transform.position.x += game.ui_camera.width() - background_uv.z - 2.0f + (tab_size.x + 4.0f) * (float)index;
 	transform.scale = tab_size;
 	return transform;
 }
 
 void user_interface_view::create_context() {
 	delete context;
-	context = new context_menu(camera, camera.mouse_position(game.mouse()), font, game.mouse());
+	context = new context_menu(game.ui_camera, game.ui_camera.mouse_position(game.mouse()), font, game.mouse());
 	switch (tabs.active) {
 	case 0: inventory.add_context_options(*context); break;
 	case 1: equipment.add_context_options(*context); break;
 	}
+	add_trading_context_options(*context);
 	if (!is_mouse_over_inventory()) {
 		no::vector2i tile = game.hovered_tile();
 		auto& objects = game.world.objects;
@@ -821,12 +826,21 @@ void user_interface_view::create_context() {
 				return;
 			}
 			auto& definition = object->definition();
+			std::string name = definition.name;
 			if (definition.type == game_object_type::character) {
-				auto character = world.objects.character(object->instance_id);
+				auto character = game.world.objects.character(object->instance_id);
+				if (!character->name.empty()) {
+					name = character->name;
+				}
+				int target_id = object->instance_id; // objects array can be resized
 				if (character->stat(stat_type::health).real() > 0) {
-					int target_id = object->instance_id; // objects array can be resized
-					context->add_option("Attack " + definition.name, [this, target_id] {
+					context->add_option("Attack " + name, [this, target_id] {
 						game.start_combat(target_id);
+					});
+				}
+				if (definition.id == 1) {
+					context->add_option("Trade with " + name, [this, target_id] {
+						game.send_trade_request(target_id);
 					});
 				}
 			}
@@ -835,12 +849,12 @@ void user_interface_view::create_context() {
 				if (definition.type == game_object_type::character) {
 					option_name = "Talk to ";
 				}
-				context->add_option(option_name + definition.name, [&] {
+				context->add_option(option_name + name, [&] {
 					game.start_dialogue(definition.script_id.dialogue);
 				});
 			}
 			if (!definition.description.empty()) {
-				context->add_option("Examine " + definition.name, [&] {
+				context->add_option("Examine " + name, [&] {
 					game.chat.add("", definition.description);
 				});
 			}
@@ -849,5 +863,7 @@ void user_interface_view::create_context() {
 	if (context->count() == 0) {
 		delete context;
 		context = nullptr;
+	} else {
+		context->add_option("Cancel", [] {});
 	}
 }

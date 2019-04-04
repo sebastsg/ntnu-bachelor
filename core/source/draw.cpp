@@ -201,7 +201,7 @@ void sprite_animation::set_frame(int frame) {
 void sprite_animation::set_tex_coords(vector2f position, vector2f size) {
 	uv_position = position;
 	uv_size = size;
-	const float frame_width = uv_position.x + uv_size.x / (float)frames;
+	const float frame_width = uv_size.x / (float)frames;
 	rectangle.set_tex_coords(uv_position.x + frame_width * (float)current_frame, uv_position.y, frame_width, uv_size.y);
 }
 

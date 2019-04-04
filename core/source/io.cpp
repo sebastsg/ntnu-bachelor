@@ -45,7 +45,6 @@ io_stream::io_stream(char* data, size_t size, construct_by construction) {
 	switch (construction) {
 	case construct_by::copy:
 		write(data, size);
-		write_position = end;
 		break;
 	case construct_by::move:
 		begin = data;

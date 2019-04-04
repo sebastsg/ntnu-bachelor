@@ -20,7 +20,7 @@ int world_objects::add(int definition_id) {
 		object.instance_id = (int)objects.size();
 		objects.push_back(object);
 	}
-	if (object_definition(definition_id).type == game_object_type::character) {
+	if (object.definition().type == game_object_type::character) {
 		characters.emplace_back(object.instance_id);
 	}
 	events.add.emit(object);
@@ -30,19 +30,21 @@ int world_objects::add(int definition_id) {
 int world_objects::add(no::io_stream& stream) {
 	game_object object;
 	object.read(stream);
-	object.instance_id = -1;
-	for (int i = 0; i < (int)objects.size(); i++) {
-		if (objects[i].instance_id == -1) {
-			object.instance_id = i;
-			objects[i] = object;
-			break;
-		}
-	}
 	if (object.instance_id == -1) {
 		object.instance_id = (int)objects.size();
 		objects.push_back(object);
+	} else {
+		while (object.instance_id >= (int)objects.size()) {
+			objects.emplace_back();
+		}
+		for (int i = 0; i < (int)objects.size(); i++) {
+			if (object.instance_id == i) {
+				objects[i] = object;
+				break;
+			}
+		}
 	}
-	if (object_definition(object.definition_id).type == game_object_type::character) {
+	if (object.definition().type == game_object_type::character) {
 		characters.emplace_back(object.instance_id).read(stream);
 	}
 	events.add.emit(object);
@@ -117,10 +119,15 @@ void world_objects::load(const std::string& path) {
 	int count = stream.read<int32_t>();
 	for (int i = 0; i < count; i++) {
 		int definition_id = stream.read<int32_t>();
+		game_object new_object;
+		new_object.read(stream);
+		if (new_object.instance_id == -1) {
+			continue;
+		}
 		int instance_id = add(definition_id);
-		object(instance_id).read(stream);
-		object(instance_id).instance_id = instance_id;
-		if (object_definition(definition_id).type == game_object_type::character) {
+		objects[instance_id] = new_object;
+		objects[instance_id].instance_id = instance_id;
+		if (new_object.definition().type == game_object_type::character) {
 			characters.back().read(stream); // added in add()
 		}
 	}

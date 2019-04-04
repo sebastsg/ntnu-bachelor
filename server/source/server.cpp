@@ -80,6 +80,15 @@ void server_state::draw() {
 	
 }
 
+int server_state::client_with_player(int player_id) {
+	for (int i = 0; i < max_clients; i++) {
+		if (clients[i].object.player_instance_id == player_id) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 character_object* server_state::load_player(int client_index) {
 	auto& client = clients[client_index];
 	client.object.player_instance_id = world.objects.add(1);
@@ -95,6 +104,7 @@ character_object* server_state::load_player(int client_index) {
 	object.transform.position.z = (float)tile.y;
 	object.transform.scale = 0.5f;
 	player->stat(stat_type::health).add_experience(player->stat(stat_type::health).experience_for_level(20));
+	player->name = client.player.display_name;
 	return player;
 }
 
@@ -142,46 +152,29 @@ void server_state::connect(int index) {
 }
 
 void server_state::on_receive_packet(int client_index, int16_t type, no::io_stream& stream) {
+#define on_packet_case(NS, PACKET) case to_server::NS::PACKET::type: on_##PACKET(client_index, { stream }); break
 	switch (type) {
-	case to_server::game::move_to_tile::type:
-		on_move_to_tile(client_index, { stream });
-		break;
-	case to_server::game::start_dialogue::type:
-		on_start_dialogue(client_index, { stream });
-		break;
-	case to_server::game::continue_dialogue::type:
-		on_continue_dialogue(client_index, { stream });
-		break;
-	case to_server::game::chat_message::type:
-		on_chat_message(client_index, { stream });
-		break;
-	case to_server::game::start_combat::type:
-		on_start_combat(client_index, { stream });
-		break;
-	case to_server::game::equip_from_inventory::type:
-		on_equip_from_inventory(client_index, { stream });
-		break;
-	case to_server::game::unequip_to_inventory::type:
-		on_unequip_to_inventory(client_index, { stream });
-		break;
-	case to_server::game::follow_character::type:
-		on_follow_character(client_index, { stream });
-		break;
-	case to_server::lobby::login_attempt::type:
-		on_login_attempt(client_index, { stream });
-		break;
-	case to_server::lobby::connect_to_world::type:
-		on_connect_to_world(client_index, { stream });
-		break;
-	case to_server::updates::update_query::type:
-		on_version_check(client_index, { stream });
-		break;
-	default:
-		break;
+		on_packet_case(game, move_to_tile);
+		on_packet_case(game, start_dialogue);
+		on_packet_case(game, continue_dialogue);
+		on_packet_case(game, chat_message);
+		on_packet_case(game, start_combat);
+		on_packet_case(game, equip_from_inventory);
+		on_packet_case(game, unequip_to_inventory);
+		on_packet_case(game, follow_character);
+		on_packet_case(game, trade_request);
+		on_packet_case(game, add_trade_item);
+		on_packet_case(game, remove_trade_item);
+		on_packet_case(game, trade_decision);
+		on_packet_case(lobby, login_attempt);
+		on_packet_case(lobby, connect_to_world);
+		on_packet_case(updates, update_query);
 	}
+#undef on_packet_case
 }
 
 void server_state::on_disconnect(int client_index) {
+	remove_trade(client_index);
 	save_player(client_index);
 	world.objects.remove(clients[client_index].object.player_instance_id);
 	clients[client_index] = { false };
@@ -202,15 +195,13 @@ void server_state::on_move_to_tile(int client_index, const to_server::game::move
 		object.transform.position.x = (float)packet.tile.x;
 		object.transform.position.z = (float)packet.tile.y;
 	}
-	no::broadcast(new_packet, client_index);
-	no::send_packet(client_index, new_packet);
+	no::broadcast(new_packet);
 
 	// todo: this should be its own function, just testing now
 	to_client::game::character_follows client_packet;
 	client_packet.follower_id = client.object.player_instance_id;
 	client_packet.target_id = -1;
-	no::broadcast(client_packet, client_index);
-	no::send_packet(client_index, client_packet);
+	no::broadcast(client_packet);
 }
 
 void server_state::on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet) {
@@ -297,20 +288,130 @@ void server_state::on_follow_character(int client_index, const to_server::game::
 	}
 }
 
+void server_state::on_trade_request(int client_index, const to_server::game::trade_request& packet) {
+	auto& client = clients[client_index];
+	if (find_trade(client_index)) {
+		return;
+	}
+	int target_client_index = client_with_player(packet.trade_with_id);
+	if (target_client_index == -1) {
+		return;
+	}
+	auto& target_client = clients[target_client_index];
+	if (target_client.sent_trade_request_to_player_id == client.object.player_instance_id) {
+		auto& trade = trades.emplace_back();
+		trade.first_client_index = client_index;
+		trade.second_client_index = target_client_index;
+		to_client::game::trade_request trade_request;
+		trade_request.trader_id = target_client.object.player_instance_id;
+		no::send_packet(client_index, trade_request);
+	}
+	client.sent_trade_request_to_player_id = target_client.object.player_instance_id;
+	to_client::game::trade_request trade_request;
+	trade_request.trader_id = client.object.player_instance_id;
+	no::send_packet(target_client_index, trade_request);
+}
+
+void server_state::on_add_trade_item(int client_index, const to_server::game::add_trade_item& packet) {
+	auto& client = clients[client_index];
+	item_instance item{ packet.item };
+	auto trade = find_trade(client_index);
+	if (!trade) {
+		return;
+	}
+	to_client::game::add_trade_item add_trade_item;
+	add_trade_item.item = item;
+	if (trade->first_client_index == client_index) {
+		trade->first.add_from(item);
+		no::send_packet(trade->second_client_index, add_trade_item);
+	} else if (trade->second_client_index == client_index) {
+		trade->second.add_from(item);
+		no::send_packet(trade->first_client_index, add_trade_item);
+	}
+	trade->first_accepts = false;
+	trade->second_accepts = false;
+}
+
+void server_state::on_remove_trade_item(int client_index, const to_server::game::remove_trade_item& packet) {
+	auto& client = clients[client_index];
+	auto trade = find_trade(client_index);
+	if (!trade) {
+		return;
+	}
+	to_client::game::remove_trade_item remove_trade_item;
+	remove_trade_item.slot = packet.slot;
+	item_instance temp;
+	if (trade->first_client_index == client_index) {
+		trade->first.remove_to(trade->first.get(packet.slot).stack, temp);
+		no::send_packet(trade->second_client_index, remove_trade_item);
+	} else if (trade->second_client_index == client_index) {
+		trade->second.remove_to(trade->second.get(packet.slot).stack, temp);
+		no::send_packet(trade->first_client_index, remove_trade_item);
+	}
+	trade->first_accepts = false;
+	trade->second_accepts = false;
+}
+
+void server_state::on_trade_decision(int client_index, const to_server::game::trade_decision& packet) {
+	auto& client = clients[client_index];
+	auto trade = find_trade(client_index);
+	if (!trade) {
+		return;
+	}
+	to_client::game::trade_decision trade_decision;
+	trade_decision.accepted = packet.accepted;
+	if (trade->first_client_index == client_index) {
+		trade->first_accepts = packet.accepted;
+		no::send_packet(trade->second_client_index, trade_decision);
+	} else if (trade->second_client_index == client_index) {
+		trade->second_accepts = packet.accepted;
+		no::send_packet(trade->first_client_index, trade_decision);
+	}
+	if (!packet.accepted) {
+		remove_trade(client_index);
+	} else if (trade->first_accepts && trade->second_accepts) {
+		auto& first_client = clients[trade->first_client_index];
+		auto& second_client = clients[trade->second_client_index];
+		auto first_player = world.objects.character(first_client.object.player_instance_id);
+		auto second_player = world.objects.character(second_client.object.player_instance_id);
+		for (auto& item : trade->first.items) {
+			item_instance temp;
+			temp.definition_id = item.definition_id;
+			first_player->inventory.remove_to(item.stack, temp);
+			second_player->inventory.add_from(temp);
+		}
+		for (auto& item : trade->second.items) {
+			item_instance temp;
+			temp.definition_id = item.definition_id;
+			second_player->inventory.remove_to(item.stack, temp);
+			first_player->inventory.add_from(temp);
+		}
+		remove_trade(client_index);
+	}
+}
+
 void server_state::on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet) {
 	auto result = database.execute("select * from player where account_email = $1", { packet.name });
 	if (result.count() != 1) {
 		return;
 	}
 	auto row = result.row(0);
+	for (auto& client : clients) {
+		if (client.account.email == packet.name) {
+			to_client::lobby::login_status login_status;
+			login_status.status = 2;
+			no::send_packet(client_index, login_status);
+			return;
+		}
+	}
 	auto& client = clients[client_index];
 	client.account.email = row.text("account_email");
 	client.player.id = row.integer("id");
 	client.player.display_name = row.text("display_name");
-	to_client::lobby::login_status client_packet;
-	client_packet.status = 1;
-	client_packet.name = client.player.display_name;
-	no::send_packet(client_index, client_packet);
+	to_client::lobby::login_status login_status;
+	login_status.status = 1;
+	login_status.name = client.player.display_name;
+	no::send_packet(client_index, login_status);
 }
 
 void server_state::on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet) {
@@ -331,7 +432,8 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 				continue;
 			}
 			to_client::game::other_player_joined other_info;
-			other_info.player = *(character_object*)existing_player;
+			other_info.player = *existing_player;
+			other_info.object = world.objects.object(other_info.player.object_id);
 			no::send_packet(client_index, other_info);
 		}
 	}
@@ -342,11 +444,29 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 	no::broadcast(other_info, client_index);
 }
 
-void server_state::on_version_check(int client_index, const to_server::updates::update_query& packet) {
+void server_state::on_update_query(int client_index, const to_server::updates::update_query& packet) {
 	if (packet.version != newest_client_version || packet.needs_assets) {
 		updaters.emplace_back(client_index);
 	}
 	to_client::updates::latest_version latest_version;
 	latest_version.version = newest_client_version;
 	no::send_packet(client_index, latest_version);
+}
+
+trade_state* server_state::find_trade(int client_index) {
+	for (auto& trade : trades) {
+		if (trade.first_client_index == client_index || trade.second_client_index == client_index) {
+			return &trade;
+		}
+	}
+	return nullptr;
+}
+
+void server_state::remove_trade(int client_index) {
+	for (int i = 0; i < (int)trades.size(); i++) {
+		if (trades[i].first_client_index == client_index || trades[i].second_client_index == client_index) {
+			trades.erase(trades.begin() + i);
+			return;
+		}
+	}
 }

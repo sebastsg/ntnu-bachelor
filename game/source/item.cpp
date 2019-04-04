@@ -200,20 +200,28 @@ long long inventory_container::can_hold_more(int id) const {
 	return can_hold;
 }
 
+void item_instance::write(no::io_stream& stream) const {
+	stream.write<int64_t>(definition_id);
+	stream.write<int64_t>(stack);
+}
+
+void item_instance::read(no::io_stream& stream) {
+	definition_id = stream.read<int64_t>();
+	stack = stream.read<int64_t>();
+}
+
 void inventory_container::write(no::io_stream& stream) const {
 	stream.write<int32_t>(columns);
 	stream.write<int32_t>(rows);
 	for (auto& item : items) {
-		stream.write<int64_t>(item.definition_id);
-		stream.write<int64_t>(item.stack);
+		item.write(stream);
 	}
 }
 
 void inventory_container::read(no::io_stream& stream) {
 	stream.read<no::vector2i>(); // might be useful later
 	for (int i = 0; i < slots; i++) {
-		items[i].definition_id = stream.read<int64_t>();
-		items[i].stack = stream.read<int64_t>();
+		items[i].read(stream);
 	}
 }
 
@@ -222,7 +230,7 @@ item_instance equipment_container::get(equipment_slot slot) const {
 }
 
 void equipment_container::add_from(item_instance& other_item) {
-	if (other_item.stack <= 0) {
+	if (other_item.stack <= 0 || other_item.definition_id < 0) {
 		other_item = {};
 		return;
 	}
@@ -249,7 +257,7 @@ void equipment_container::add_from(item_instance& other_item) {
 }
 
 void equipment_container::remove_to(long long stack, item_instance& other_item) {
-	if (stack <= 0) {
+	if (stack <= 0 || other_item.definition_id < 0) {
 		return;
 	}
 	int slot = (int)other_item.definition().slot;
@@ -298,15 +306,13 @@ long long equipment_container::can_hold_more(int id) const {
 
 void equipment_container::write(no::io_stream& stream) const {
 	for (auto& item : items) {
-		stream.write<int64_t>(item.definition_id);
-		stream.write<int64_t>(item.stack);
+		item.write(stream);
 	}
 }
 
 void equipment_container::read(no::io_stream& stream) {
 	for (int i = 0; i < (int)equipment_slot::total_slots; i++) {
-		items[i].definition_id = stream.read<int64_t>();
-		items[i].stack = stream.read<int64_t>();
+		items[i].read(stream);
 	}
 }
 

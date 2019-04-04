@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-#include <vector>
+#include "debug.hpp"
 
 #define PLATFORM_WINDOWS (_WIN32 || _WIN64)
 
