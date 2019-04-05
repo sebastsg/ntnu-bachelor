@@ -58,6 +58,7 @@ private:
 		character_events events;
 		std::vector<character_equipment> equipments;
 		bool new_animation = true;
+		bool play_once = false;
 	};
 
 	struct textured_model {

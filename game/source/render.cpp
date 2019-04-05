@@ -87,14 +87,17 @@ void character_renderer::add(world_objects& objects, int object_id) {
 	character.events.attack = object.events.attack.listen([&objects, i, this] {
 		characters[i].animation = "attack";
 		characters[i].new_animation = true;
+		characters[i].play_once = true;
 	});
 	character.events.defend = object.events.defend.listen([i, this] {
 		characters[i].animation = "defend";
 		characters[i].new_animation = true;
+		characters[i].play_once = true;
 	});
-	character.events.defend = object.events.run.listen([&objects, i, this](bool running) {
+	character.events.run = object.events.run.listen([&objects, i, this](bool running) {
 		characters[i].animation = (running ? "run" : "idle");
 		characters[i].new_animation = true;
+		characters[i].play_once = false;
 	});
 	for (auto& item : object.equipment.items) {
 		if (item.definition_id != -1) {
@@ -134,6 +137,12 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 		auto& animator = animators.find(object.definition().model)->second;
 		auto& model = character_models[object.definition().model].model;
 		auto& animation = animator.get(character.animation_id);
+		if (!character.new_animation && character.play_once) {
+			if (animator.will_be_reset(character.animation_id)) {
+				character.animation = "idle";
+				character.new_animation = true;
+			}
+		}
 		if (character.animation == "idle" && character_object->in_combat()) {
 			character.animation = "attack_idle";
 			character.new_animation = true;
