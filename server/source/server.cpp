@@ -54,7 +54,7 @@ void server_state::update() {
 	world.update();
 	world.events.kill.all([&](const server_world::kill_event& event) {
 		const auto& definition = world.objects.object(event.target_id).definition();
-		if (definition.script_id.killed) {
+		if (definition.script_id.killed >= 0) {
 			for (auto& client : clients) {
 				if (client.object.player_instance_id == event.attacker_id) {
 					auto player = world.objects.character(event.attacker_id);
