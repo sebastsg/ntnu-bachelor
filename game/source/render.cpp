@@ -78,18 +78,23 @@ void character_renderer::add(world_objects& objects, int object_id) {
 	auto& object = *objects.character(object_id);
 	character.events.equip = object.events.equip.listen([i, this](const item_instance& item) {
 		on_equip(characters[i], item);
+		characters[i].new_animation = true;
 	});
 	character.events.unequip = object.events.unequip.listen([i, this](const equipment_slot& slot) {
 		on_unequip(characters[i], slot);
+		characters[i].new_animation = true;
 	});
-	character.events.attack = object.events.attack.listen([i, this] {
+	character.events.attack = object.events.attack.listen([&objects, i, this] {
 		characters[i].animation = "attack";
+		characters[i].new_animation = true;
 	});
 	character.events.defend = object.events.defend.listen([i, this] {
 		characters[i].animation = "defend";
+		characters[i].new_animation = true;
 	});
-	character.events.defend = object.events.run.listen([i, this](bool running) {
-		characters[i].animation = (running ? "run" : "idle"); // todo: other animations
+	character.events.defend = object.events.run.listen([&objects, i, this](bool running) {
+		characters[i].animation = (running ? "run" : "idle");
+		characters[i].new_animation = true;
 	});
 	for (auto& item : object.equipment.items) {
 		if (item.definition_id != -1) {
@@ -125,9 +130,24 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 			continue;
 		}
 		auto& object = objects.object(character.object_id);
+		auto character_object = objects.character(character.object_id);
 		auto& animator = animators.find(object.definition().model)->second;
 		auto& model = character_models[object.definition().model].model;
 		auto& animation = animator.get(character.animation_id);
+		if (character.animation == "idle" && character_object->in_combat()) {
+			character.animation = "attack_idle";
+			character.new_animation = true;
+		}
+		if (character.new_animation) {
+			auto equipment = character_object->equipment.get(equipment_slot::right_hand).definition().equipment;
+			if (equipment == equipment_type::spear) {
+				character.animation += "_spear";
+			}
+			character.new_animation = false;
+		}
+		if (character.animation == "defend_spear") {
+			character.animation = "attack_idle_spear"; // todo: need defend_spear animation
+		}
 		animation.transform = object.transform;
 		animator.play(character.animation_id, character.animation, -1);
 		for (auto& equipment : character.equipments) {

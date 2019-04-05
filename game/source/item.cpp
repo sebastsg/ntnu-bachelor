@@ -11,6 +11,28 @@ item_definition_list& item_definitions() {
 	return global::item_definitions;
 }
 
+void item_definition::write(no::io_stream& stream) const {
+	stream.write((int32_t)type);
+	stream.write((int32_t)slot);
+	stream.write((int32_t)equipment);
+	stream.write((int64_t)max_stack);
+	stream.write((int32_t)id);
+	stream.write(uv);
+	stream.write(name);
+	stream.write(model);
+}
+
+void item_definition::read(no::io_stream& stream) {
+	type = (item_type)stream.read<int32_t>();
+	slot = (equipment_slot)stream.read<int32_t>();
+	equipment = (equipment_type)stream.read<int32_t>();
+	max_stack = stream.read<int64_t>();
+	id = stream.read<int32_t>();
+	uv = stream.read<no::vector2f>();
+	name = stream.read<std::string>();
+	model = stream.read<std::string>();
+}
+
 const item_definition& item_instance::definition() const {
 	return global::item_definitions.get(definition_id);
 }
@@ -26,13 +48,7 @@ void item_definition_list::save(const std::string& path) const {
 	no::io_stream stream;
 	stream.write((int32_t)definitions.size());
 	for (auto& definition : definitions) {
-		stream.write((int32_t)definition.type);
-		stream.write((int32_t)definition.slot);
-		stream.write((int64_t)definition.max_stack);
-		stream.write((int32_t)definition.id);
-		stream.write(definition.uv);
-		stream.write(definition.name);
-		stream.write(definition.model);
+		definition.write(stream);
 	}
 	no::file::write(path, stream);
 }
@@ -47,13 +63,7 @@ void item_definition_list::load(const std::string& path) {
 	int32_t count = stream.read<int32_t>();
 	for (int32_t i = 0; i < count; i++) {
 		item_definition definition;
-		definition.type = (item_type)stream.read<int32_t>();
-		definition.slot = (equipment_slot)stream.read<int32_t>();
-		definition.max_stack = stream.read<int64_t>();
-		definition.id = stream.read<int32_t>();
-		definition.uv = stream.read<no::vector2f>();
-		definition.name = stream.read<std::string>();
-		definition.model = stream.read<std::string>();
+		definition.read(stream);
 		definitions.push_back(definition);
 	}
 }
@@ -316,6 +326,15 @@ void equipment_container::read(no::io_stream& stream) {
 	}
 }
 
+std::ostream& operator<<(std::ostream& out, item_type type) {
+	switch (type) {
+	case item_type::other: return out << "Other";
+	case item_type::equipment: return out << "Equipment";
+	case item_type::consumable: return out << "Consumable";
+	default: return out << "Unknown";
+	}
+}
+
 std::ostream& operator<<(std::ostream& out, equipment_slot slot) {
 	switch (slot) {
 	case equipment_slot::none: return out << "None";
@@ -332,11 +351,14 @@ std::ostream& operator<<(std::ostream& out, equipment_slot slot) {
 	}
 }
 
-std::ostream& operator<<(std::ostream& out, item_type type) {
+std::ostream& operator<<(std::ostream& out, equipment_type type) {
 	switch (type) {
-	case item_type::other: return out << "Other";
-	case item_type::equipment: return out << "Equipment";
-	case item_type::consumable: return out << "Consumable";
+	case equipment_type::none: return out << "None";
+	case equipment_type::sword: return out << "Sword";
+	case equipment_type::axe: return out << "Axe";
+	case equipment_type::spear: return out << "Spear";
+	case equipment_type::shield: return out << "Shield";
+	case equipment_type::pants: return out << "Pants";
 	default: return out << "Unknown";
 	}
 }

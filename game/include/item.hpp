@@ -27,14 +27,30 @@ enum class equipment_slot {
 	total_slots
 };
 
+enum class equipment_type {
+	none,
+	sword,
+	axe,
+	spear,
+	shield,
+	pants,
+	total_types
+};
+
 struct item_definition {
+
 	int id = -1;
 	long long max_stack = 1;
 	item_type type = item_type::other;
 	equipment_slot slot = equipment_slot::none;
+	equipment_type equipment = equipment_type::none;
 	std::string name;
 	no::vector2f uv;
 	std::string model;
+
+	void write(no::io_stream& stream) const;
+	void read(no::io_stream& stream);
+
 };
 
 struct item_instance {
@@ -117,5 +133,6 @@ struct equipment_container {
 
 };
 
-std::ostream& operator<<(std::ostream& out, equipment_slot slot);
 std::ostream& operator<<(std::ostream& out, item_type type);
+std::ostream& operator<<(std::ostream& out, equipment_slot slot);
+std::ostream& operator<<(std::ostream& out, equipment_type type);

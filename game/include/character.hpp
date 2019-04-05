@@ -53,7 +53,7 @@ public:
 	inventory_container inventory;
 	equipment_container equipment;
 
-	character_object(int object_id) : object_id(object_id) {}
+	character_object(int object_id);
 
 	void update(world_state& world, game_object& object);
 	void start_path_movement(const std::vector<no::vector2i>& path);
@@ -68,6 +68,7 @@ public:
 	void unequip(equipment_slot slot);
 
 	bool is_moving() const;
+	bool in_combat() const;
 
 	character_stat& stat(stat_type stat);
 
@@ -78,5 +79,7 @@ private:
 	bool moved_last_frame = false;
 	character_stat stats[(size_t)stat_type::total];
 	no::timer walk_around_timer;
+	no::timer last_combat_event_timer;
+	no::timer alive_timer;
 
 };

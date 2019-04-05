@@ -59,6 +59,18 @@ void character_stat::read(no::io_stream& stream) {
 	effective_level = real_level;
 }
 
+
+character_object::character_object(int object_id) : object_id{ object_id } {
+	last_combat_event_timer.start();
+	alive_timer.start();
+	events.attack.listen([this] {
+		last_combat_event_timer.start();
+	});
+	events.defend.listen([this] {
+		last_combat_event_timer.start();
+	});
+}
+
 void character_object::update(world_state& world, game_object& object) {
 	object.transform.position.y = world.terrain.average_elevation_at(object.tile());
 	while (!target_path.empty() && target_path.back() < 0) {
@@ -158,6 +170,10 @@ void character_object::unequip(equipment_slot slot) {
 
 bool character_object::is_moving() const {
 	return target_path.size() > 0;
+}
+
+bool character_object::in_combat() const {
+	return last_combat_event_timer.seconds() < 5 && alive_timer.seconds() > 5;
 }
 
 character_stat& character_object::stat(stat_type stat) {

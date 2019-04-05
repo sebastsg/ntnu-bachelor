@@ -57,6 +57,7 @@ private:
 		std::string animation;
 		character_events events;
 		std::vector<character_equipment> equipments;
+		bool new_animation = true;
 	};
 
 	struct textured_model {

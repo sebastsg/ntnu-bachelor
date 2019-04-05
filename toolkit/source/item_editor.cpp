@@ -28,12 +28,24 @@ void item_editor::item_type_combo(item_type& target, const std::string& ui_id) {
 	}
 }
 
-void item_editor::equipment_slot_combo(equipment_slot& slot, const std::string& ui_id) {
-	if (ImGui::BeginCombo(CSTRING("Equipment slot##ItemSlot" << ui_id), CSTRING(slot))) {
+void item_editor::equipment_slot_combo(equipment_slot& target, const std::string& ui_id) {
+	if (ImGui::BeginCombo(CSTRING("Equipment slot##ItemSlot" << ui_id), CSTRING(target))) {
 		for (int slot_value = 0; slot_value < (int)equipment_slot::total_slots; slot_value++) {
 			equipment_slot slot = (equipment_slot)slot_value;
 			if (ImGui::Selectable(CSTRING(slot << "##ItemSlot" << ui_id << slot_value))) {
-				new_item.slot = slot;
+				target = slot;
+			}
+		}
+		ImGui::End();
+	}
+}
+
+void item_editor::equipment_type_combo(equipment_type& target, const std::string& ui_id) {
+	if (ImGui::BeginCombo(CSTRING("Equipment type##ItemEquipType" << ui_id), CSTRING(target))) {
+		for (int type_value = 0; type_value < (int)equipment_type::total_types; type_value++) {
+			equipment_type type = (equipment_type)type_value;
+			if (ImGui::Selectable(CSTRING(type << "##ItemEquipType" << ui_id << type_value))) {
+				target = type;
 			}
 		}
 		ImGui::End();
@@ -42,19 +54,15 @@ void item_editor::equipment_slot_combo(equipment_slot& slot, const std::string& 
 
 void item_editor::ui_create_item() {
 	if (ImGui::CollapsingHeader("Create new item")) {
-		ImGui::InputText("Name##NewItemName", new_item.name, 100);
-		ImGui::InputInt("Max stack##NewItemMaxStack", &new_item.max_stack);
-		ImGui::InputText("Model##NewItemModel", new_item.model, 100);
+		imgui_input_text<128>("Name##NewItemName", new_item.name);
+		ImGui::InputScalar("Max stack##NewItemMaxStack", ImGuiDataType_S64, &new_item.max_stack);
+		new_item.max_stack = std::max(1LL, new_item.max_stack);
+		imgui_input_text<128>("Model##NewItemModel", new_item.model);
 		item_type_combo(new_item.type, "New");
 		equipment_slot_combo(new_item.slot, "New");
 		if (ImGui::Button("Save##SaveNewItem")) {
-			item_definition item;
+			item_definition item = new_item;
 			item.id = item_definitions().count();
-			item.name = new_item.name;
-			item.max_stack = new_item.max_stack;
-			item.type = new_item.type;
-			item.slot = new_item.slot;
-			item.model = new_item.model;
 			item_definitions().add(item);
 		}
 	}
@@ -77,12 +85,11 @@ void item_editor::ui_select_item() {
 	}
 	ImGui::Text(CSTRING("ID: " << selected.id));
 	imgui_input_text<64>("Name##EditItemName", selected.name);
-	int max_stack = (int)selected.max_stack;
-	ImGui::InputInt("Max stack##EditItemMaxStack", &max_stack);
-	max_stack = std::max(1, max_stack);
-	selected.max_stack = (long long)max_stack;
+	ImGui::InputScalar("Max stack##EditItemMaxStack", ImGuiDataType_S64, &selected.max_stack);
+	selected.max_stack = std::max(1LL, selected.max_stack);
 	item_type_combo(selected.type, "Edit");
 	equipment_slot_combo(selected.slot, "Edit");
+	equipment_type_combo(selected.equipment, "Edit");
 	ImGui::InputFloat2("UV##EditItemUV", &selected.uv.x, 0);
 	no::vector2f uv_start = selected.uv / no::texture_size(ui_texture).to<float>();
 	no::vector2f uv_end = (selected.uv + 32.0f) / no::texture_size(ui_texture).to<float>();

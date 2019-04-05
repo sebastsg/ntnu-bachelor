@@ -16,6 +16,7 @@ private:
 
 	void item_type_combo(item_type& type, const std::string& ui_id);
 	void equipment_slot_combo(equipment_slot& slot, const std::string& ui_id);
+	void equipment_type_combo(equipment_type& slot, const std::string& ui_id);
 
 	void ui_create_item();
 	void ui_select_item();
@@ -23,13 +24,7 @@ private:
 	int current_item = -1;
 	int ui_texture = -1;
 
-	struct {
-		char name[100] = {};
-		char model[100] = {};
-		int max_stack = 1;
-		item_type type = item_type::other;
-		equipment_slot slot = equipment_slot::none;
-	} new_item;
+	item_definition new_item;
 
 };
 
