@@ -51,12 +51,12 @@ character_renderer::character_renderer() {
 
 	std::vector<item_definition> items = item_definitions().of_type(item_type::equipment);
 	for (auto& item : items) {
-		auto& equipment = equipments[item.id];
+		auto& equipment = equipment_models[item.id];
 		equipment.model.load<no::animated_mesh_vertex>(no::asset_path("models/" + item.model + ".nom"));
 		equipment.texture = no::create_texture({ no::asset_path("textures/" + item.model + ".png") });
 	}
 	for (auto& item : items) {
-		equipment_animators.emplace(item.id, equipments[item.id].model);
+		equipment_animators.emplace(item.id, equipment_models[item.id].model);
 	}
 }
 
@@ -64,7 +64,7 @@ character_renderer::~character_renderer() {
 	for (auto& model : character_models) {
 		no::delete_texture(model.second.texture);
 	}
-	for (auto& equipment : equipments) {
+	for (auto& equipment : equipment_models) {
 		no::delete_texture(equipment.second.texture);
 	}
 }
@@ -107,6 +107,11 @@ void character_renderer::remove(character_object& object) {
 			object.events.attack.ignore(characters[i].events.attack);
 			object.events.defend.ignore(characters[i].events.defend);
 			object.events.run.ignore(characters[i].events.run);
+			for (int j = 0; j < (int)characters[i].equipments.size(); j++) {
+				const auto& item = item_definitions().get(characters[i].equipments[j].item_id);
+				auto& animator = equipment_animators.find(item.id)->second;
+				animator.erase(characters[i].equipments[j].animation_id);
+			}
 			animators.find(characters[i].model)->second.erase(characters[i].animation_id);
 			characters[i] = {};
 			break;
@@ -133,7 +138,7 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 			if (slot == equipment_slot::left_hand || slot == equipment_slot::right_hand) {
 				// todo: proper mapping for root -> attach animation
 				equipment_animator.play(equipment.animation_id, "default", -1);
-				std::string equipment_name = equipments[equipment.item_id].model.name();
+				std::string equipment_name = equipment_models[equipment.item_id].model.name();
 				equipment_animation.is_attachment = true;
 				int char_animation = model.index_of_animation(character.animation);
 				mappings.update(model, char_animation, equipment_name, equipment_animation.attachment);
@@ -155,7 +160,7 @@ void character_renderer::draw() {
 	for (auto& equipment : equipment_animators) {
 		equipment.second.shader.bones = shader.bones;
 		equipment.second.animate();
-		no::bind_texture(equipments[equipment.first].texture);
+		no::bind_texture(equipment_models[equipment.first].texture);
 		equipment.second.draw();
 	}
 }
@@ -163,8 +168,8 @@ void character_renderer::draw() {
 void character_renderer::on_equip(character_animation& character, const item_instance& item) {
 	equipment_slot slot = item_definitions().get(item.definition_id).slot;
 	on_unequip(character, slot);
-	auto equipment_model = equipments.find(item.definition_id);
-	if (equipment_model == equipments.end()) {
+	auto equipment_model = equipment_models.find(item.definition_id);
+	if (equipment_model == equipment_models.end()) {
 		return;
 	}
 	auto& equipment_animator = equipment_animators.find(item.definition_id);
@@ -359,42 +364,6 @@ world_view::~world_view() {
 	no::delete_texture(tileset.texture);
 }
 
-void world_view::add(const game_object& object) {
-	pick_objects.add(object);
-	switch (object.definition().type) {
-	case game_object_type::decoration:
-		decorations.add(object);
-		break;
-	case game_object_type::character:
-		characters.add(world.objects, object.instance_id);
-		break;
-	case game_object_type::item_spawn:
-		break;
-	case game_object_type::interactive:
-		break;
-	default:
-		break;
-	}
-}
-
-void world_view::remove(const game_object& object) {
-	pick_objects.remove(object);
-	switch (object.definition().type) {
-	case game_object_type::decoration:
-		decorations.remove(object);
-		break;
-	case game_object_type::character:
-		characters.remove(*world.objects.character(object.instance_id));
-		break;
-	case game_object_type::item_spawn:
-		break;
-	case game_object_type::interactive:
-		break;
-	default:
-		break;
-	}
-}
-
 void world_view::draw() {
 	light.position = camera.transform.position + camera.offset();
 	draw_terrain();
@@ -513,6 +482,74 @@ void world_view::refresh_terrain() {
 	height_map.refresh();
 	height_map_pick.refresh();
 	world.terrain.set_clean();
+}
+
+void world_view::update_object_visibility() {
+	world.objects.for_each([this](const game_object* object) {
+		if (world.terrain.is_out_of_bounds(object->tile())) {
+			remove(*object);
+		} else {
+			add(*object);
+		}
+	});
+}
+
+void world_view::add(const game_object& object) {
+	ASSERT(object.instance_id >= 0);
+	if (object.instance_id < 0) {
+		return;
+	}
+	while (object.instance_id >= (int)object_visibilities.size()) {
+		object_visibilities.emplace_back();
+	}
+	if (object_visibilities[object.instance_id]) {
+		return;
+	}
+	object_visibilities[object.instance_id] = true;
+	pick_objects.add(object);
+	switch (object.definition().type) {
+	case game_object_type::decoration:
+		decorations.add(object);
+		break;
+	case game_object_type::character:
+		characters.add(world.objects, object.instance_id);
+		break;
+	case game_object_type::item_spawn:
+		break;
+	case game_object_type::interactive:
+		break;
+	default:
+		break;
+	}
+}
+
+void world_view::remove(const game_object& object) {
+	ASSERT(object.instance_id >= 0);
+	if (object.instance_id < 0) {
+		return;
+	}
+	while (object.instance_id >= (int)object_visibilities.size()) {
+		object_visibilities.emplace_back();
+	}
+	if (!object_visibilities[object.instance_id]) {
+		return;
+	}
+	object_visibilities[object.instance_id] = false;
+	pick_objects.remove(object);
+	switch (object.definition().type) {
+	case game_object_type::decoration:
+		decorations.remove(object);
+		break;
+	case game_object_type::character:
+		characters.remove(*world.objects.character(object.instance_id));
+		break;
+	case game_object_type::item_spawn:
+		break;
+	case game_object_type::interactive:
+		break;
+	default:
+		break;
+	}
 }
 
 no::vector2f world_view::uv_step() const {

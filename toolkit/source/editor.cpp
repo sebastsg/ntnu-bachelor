@@ -322,7 +322,11 @@ void world_editor_state::update() {
 			brush_tiles.emplace_back(x + hovered_tile.x, y + hovered_tile.y);
 		}
 	}
+	no::vector2i previous_offset = world.terrain.offset();
 	world.terrain.shift_to_center_of(world_position_to_tile_index(renderer.camera.transform.position));
+	if (previous_offset != world.terrain.offset()) {
+		renderer.update_object_visibility();
+	}
 	world.update();
 	update_editor();
 	update_imgui();

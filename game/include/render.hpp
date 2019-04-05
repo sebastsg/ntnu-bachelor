@@ -73,7 +73,7 @@ private:
 	std::unordered_map<std::string, textured_model> character_models;
 
 	std::unordered_map<int, no::skeletal_animator> equipment_animators;
-	std::unordered_map<int, textured_model> equipments;
+	std::unordered_map<int, textured_model> equipment_models;
 
 };
 
@@ -169,8 +169,8 @@ public:
 	void draw_terrain();
 	void draw_for_picking();
 	void draw_tile_highlights(const std::vector<no::vector2i>& tiles, const no::vector4f& color);
-
 	void refresh_terrain();
+	void update_object_visibility();
 
 private:
 
@@ -195,6 +195,7 @@ private:
 	decoration_renderer decorations;
 	character_renderer characters;
 	object_pick_renderer pick_objects;
+	std::vector<bool> object_visibilities;
 
 	int animate_diffuse_shader = -1;
 	int static_diffuse_shader = -1;

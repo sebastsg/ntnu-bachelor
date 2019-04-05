@@ -217,7 +217,11 @@ void game_state::update() {
 			close_dialogue();
 		}
 	}
+	no::vector2i previous_offset = world.terrain.offset();
 	world.terrain.shift_to_center_of(world.my_player().object.tile());
+	if (previous_offset != world.terrain.offset()) {
+		renderer.update_object_visibility();
+	}
 }
 
 void game_state::draw() {
