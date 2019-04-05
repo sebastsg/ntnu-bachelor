@@ -529,9 +529,12 @@ void world_view::add(const game_object& object) {
 		return;
 	}
 	while (object.instance_id >= (int)object_visibilities.size()) {
-		object_visibilities.emplace_back();
+		object_visibilities.push_back(false);
 	}
 	if (object_visibilities[object.instance_id]) {
+		return;
+	}
+	if (world.terrain.is_out_of_bounds(object.tile())) {
 		return;
 	}
 	object_visibilities[object.instance_id] = true;
@@ -558,7 +561,7 @@ void world_view::remove(const game_object& object) {
 		return;
 	}
 	while (object.instance_id >= (int)object_visibilities.size()) {
-		object_visibilities.emplace_back();
+		object_visibilities.push_back(false);
 	}
 	if (!object_visibilities[object.instance_id]) {
 		return;

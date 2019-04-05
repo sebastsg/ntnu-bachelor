@@ -27,4 +27,3 @@ private:
 	item_definition new_item;
 
 };
-
