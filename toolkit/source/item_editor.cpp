@@ -95,6 +95,7 @@ void item_editor::ui_select_item() {
 	no::vector2f uv_end = (selected.uv + 32.0f) / no::texture_size(ui_texture).to<float>();
 	ImGui::Image((ImTextureID)ui_texture, { 64.0f, 64.0f }, { uv_start }, { uv_end }, { 1.0f }, { 1.0f });
 	imgui_input_text<64>("Model##EditItemModel", selected.model);
+	ImGui::Checkbox("Is attachment##EditIsAttachment", &selected.attachment);
 }
 
 void item_editor::update() {

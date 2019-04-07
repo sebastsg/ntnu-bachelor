@@ -298,6 +298,10 @@ std::vector<no::vector2i> world_state::path_between(no::vector2i from, no::vecto
 	return pathfinder{ terrain }.find_path(from, to);
 }
 
+bool world_state::can_fish_at(no::vector2i from, no::vector2i to) const {
+	return terrain.tiles().at(to.x, to.y).corners_of_type(world_tile::water) == 4 && from.distance_to(to) < 15;
+}
+
 no::vector2i world_position_to_tile_index(float x, float z) {
 	return { (int)std::floor(x), (int)std::floor(z) };
 }

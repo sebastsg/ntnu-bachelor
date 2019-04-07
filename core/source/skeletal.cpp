@@ -56,7 +56,7 @@ int skeletal_animator::count() const {
 }
 
 bool skeletal_animator::can_animate(int id) const {
-	if (id >= (int)animations.size()) {
+	if (id < 0 || id >= (int)animations.size()) {
 		return false;
 	}
 	if (animations[id].reference >= (int)skeleton.animations.size()) {
@@ -73,6 +73,9 @@ void skeletal_animator::reset(int id) {
 }
 
 bool skeletal_animator::will_be_reset(int id) const {
+	if (animations[id].reference < 0) {
+		return false;
+	}
 	auto& animation = skeleton.animations[animations[id].reference];
 	double seconds = (double)animations[id].play_timer.milliseconds() * 0.001;
 	double play_duration = seconds * (double)animation.ticks_per_second;
@@ -96,7 +99,7 @@ void skeletal_animator::play(int id, int animation_index, int loops) {
 	if (animation.reference == animation_index) {
 		return;
 	}
-	ASSERT(animation_index >= 0 && animation_index < skeleton.total_animations());
+	//ASSERT(animation_index >= 0 && animation_index < skeleton.total_animations());
 	animation.play_timer.start();
 	animation.loops_completed = 0;
 	animation.loops_assigned = loops;
@@ -306,6 +309,9 @@ void bone_attachment_mapping_list::add(const bone_attachment_mapping& mapping) {
 }
 
 bool bone_attachment_mapping_list::update(const model& root, int animation_index, const std::string& attachment_model, bone_attachment& attachment) const {
+	if (animation_index < 0) {
+		return false;
+	}
 	auto& root_animation = root.animation(animation_index);
 	for (auto& mapping : mappings) {
 		if (mapping.root_model != root.name() || mapping.root_animation != root_animation.name) {

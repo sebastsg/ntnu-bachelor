@@ -65,6 +65,8 @@ public:
 	void send_remove_trade_item(no::vector2i slot);
 	void send_finish_trading(bool accept);
 
+	void send_start_fishing(no::vector2i tile);
+
 	chat_view chat;
 
 private:

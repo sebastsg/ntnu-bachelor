@@ -179,6 +179,35 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 			sent_trade_request_to_player_id = -1;
 			break;
 		}
+		case to_client::game::started_fishing::type:
+		{
+			to_client::game::started_fishing packet{ stream };
+			auto character = world.objects.character(packet.instance_id);
+			if (character) {
+				character->bait_tile = packet.casted_to_tile;
+				character->events.start_fishing.emit();
+			}
+			break;
+		}
+		case to_client::game::fishing_progress::type:
+		{
+			to_client::game::fishing_progress packet{ stream };
+			auto character = world.objects.character(packet.instance_id);
+			if (character) {
+				character->bait_tile = packet.new_bait_tile;
+				if (packet.finished) {
+					character->events.stop_fishing.emit();
+				}
+			}
+			break;
+		}
+		case to_client::game::fish_caught::type:
+		{
+			to_client::game::fish_caught packet{ stream };
+			auto& player = world.my_player().character;
+			player.inventory.add_from(packet.item);
+			break;
+		}
 		default:
 			break;
 		}
@@ -242,6 +271,11 @@ void game_state::draw() {
 				path_found = world.path_between(world.my_player().object.tile(), hovered_pixel.xy);
 			}
 			renderer.draw_tile_highlights(path_found, { 1.0f, 1.0f, 0.2f, 0.8f });
+		}
+		if (world.my_player().character.is_fishing()) {
+			std::vector<no::vector2i> bait_tiles;
+			bait_tiles.push_back(world.my_player().character.bait_tile);
+			renderer.draw_tile_highlights(bait_tiles, { 1.0f, 0.0f, 0.5f, 0.5f });
 		}
 	}
 	ui.draw();
@@ -332,5 +366,11 @@ void game_state::send_remove_trade_item(no::vector2i slot) {
 void game_state::send_finish_trading(bool accept) {
 	to_server::game::trade_decision packet;
 	packet.accepted = accept;
+	no::send_packet(server(), packet);
+}
+
+void game_state::send_start_fishing(no::vector2i tile) {
+	to_server::game::started_fishing packet;
+	packet.casted_to_tile = tile;
 	no::send_packet(server(), packet);
 }

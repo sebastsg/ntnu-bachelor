@@ -136,6 +136,7 @@ public:
 	void save(const std::string& path) const;
 
 	std::vector<no::vector2i> path_between(no::vector2i from, no::vector2i to) const;
+	bool can_fish_at(no::vector2i from, no::vector2i to) const;
 
 };
 

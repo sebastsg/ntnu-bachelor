@@ -69,6 +69,12 @@ character_object::character_object(int object_id) : object_id{ object_id } {
 	events.defend.listen([this] {
 		last_combat_event_timer.start();
 	});
+	events.start_fishing.listen([this] {
+		fishing = true;
+	});
+	events.stop_fishing.listen([this] {
+		fishing = false;
+	});
 }
 
 void character_object::update(world_state& world, game_object& object) {
@@ -174,6 +180,10 @@ bool character_object::is_moving() const {
 
 bool character_object::in_combat() const {
 	return last_combat_event_timer.seconds() < 5 && alive_timer.seconds() > 5;
+}
+
+bool character_object::is_fishing() const {
+	return fishing;
 }
 
 character_stat& character_object::stat(stat_type stat) {

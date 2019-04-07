@@ -15,6 +15,7 @@ void item_definition::write(no::io_stream& stream) const {
 	stream.write((int32_t)type);
 	stream.write((int32_t)slot);
 	stream.write((int32_t)equipment);
+	stream.write<uint8_t>(attachment ? 1 : 0);
 	stream.write((int64_t)max_stack);
 	stream.write((int32_t)id);
 	stream.write(uv);
@@ -26,6 +27,7 @@ void item_definition::read(no::io_stream& stream) {
 	type = (item_type)stream.read<int32_t>();
 	slot = (equipment_slot)stream.read<int32_t>();
 	equipment = (equipment_type)stream.read<int32_t>();
+	attachment = stream.read<uint8_t>() != 0;
 	max_stack = stream.read<int64_t>();
 	id = stream.read<int32_t>();
 	uv = stream.read<no::vector2f>();
@@ -359,6 +361,7 @@ std::ostream& operator<<(std::ostream& out, equipment_type type) {
 	case equipment_type::spear: return out << "Spear";
 	case equipment_type::shield: return out << "Shield";
 	case equipment_type::pants: return out << "Pants";
+	case equipment_type::tool: return out << "Tool";
 	default: return out << "Unknown";
 	}
 }

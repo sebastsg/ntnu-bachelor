@@ -42,12 +42,16 @@ public:
 	no::vector2i walking_around_center;
 	std::string name; // to override definition name
 
+	no::vector2i bait_tile;
+
 	struct {
 		no::message_event<item_instance> equip;
 		no::message_event<equipment_slot> unequip;
 		no::signal_event attack;
 		no::signal_event defend;
 		no::message_event<bool> run;
+		no::signal_event start_fishing;
+		no::signal_event stop_fishing;
 	} events;
 
 	inventory_container inventory;
@@ -69,6 +73,7 @@ public:
 
 	bool is_moving() const;
 	bool in_combat() const;
+	bool is_fishing() const;
 
 	character_stat& stat(stat_type stat);
 
@@ -81,5 +86,6 @@ private:
 	no::timer walk_around_timer;
 	no::timer last_combat_event_timer;
 	no::timer alive_timer;
+	bool fishing = false;
 
 };

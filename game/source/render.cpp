@@ -84,7 +84,7 @@ void character_renderer::add(world_objects& objects, int object_id) {
 		on_unequip(characters[i], slot);
 		characters[i].new_animation = true;
 	});
-	character.events.attack = object.events.attack.listen([&objects, i, this] {
+	character.events.attack = object.events.attack.listen([i, this] {
 		characters[i].animation = "attack";
 		characters[i].new_animation = true;
 		characters[i].play_once = true;
@@ -94,10 +94,22 @@ void character_renderer::add(world_objects& objects, int object_id) {
 		characters[i].new_animation = true;
 		characters[i].play_once = true;
 	});
-	character.events.run = object.events.run.listen([&objects, i, this](bool running) {
+	character.events.run = object.events.run.listen([i, this](bool running) {
 		characters[i].animation = (running ? "run" : "idle");
 		characters[i].new_animation = true;
 		characters[i].play_once = false;
+	});
+	character.events.start_fishing = object.events.start_fishing.listen([i, this] {
+		characters[i].animation = "fishing_casting";
+		characters[i].new_animation = true;
+		characters[i].play_once = true;
+		on_unequip(characters[i], equipment_slot::right_hand);
+		on_equip(characters[i], { 5, 1 });
+	});
+	character.events.stop_fishing = object.events.stop_fishing.listen([&objects, i, this] {
+		characters[i].animation = "fishing_catching";
+		characters[i].new_animation = true;
+		characters[i].play_once = true;
 	});
 	for (auto& item : object.equipment.items) {
 		if (item.definition_id != -1) {
@@ -139,32 +151,42 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 		auto& animation = animator.get(character.animation_id);
 		if (!character.new_animation && character.play_once) {
 			if (animator.will_be_reset(character.animation_id)) {
+				if (character.animation == "fishing_catching") {
+					on_unequip(character, equipment_slot::right_hand);
+					on_equip(character, character_object->equipment.get(equipment_slot::right_hand));
+				}
 				character.animation = "idle";
 				character.new_animation = true;
 			}
 		}
-		if (character.animation == "idle" && character_object->in_combat()) {
-			character.animation = "attack_idle";
-			character.new_animation = true;
-		}
-		if (character.new_animation) {
-			auto equipment = character_object->equipment.get(equipment_slot::right_hand).definition().equipment;
-			if (equipment == equipment_type::spear) {
-				character.animation += "_spear";
+		if (character.animation == "idle") {
+			if (character_object->in_combat()) {
+				character.animation = "attack_idle";
+				character.new_animation = true;
+			} else if (character_object->is_fishing()) {
+				character.animation = "fishing";
+				character.new_animation = true;
 			}
-			character.new_animation = false;
 		}
-		if (character.animation == "defend_spear") {
-			character.animation = "attack_idle_spear"; // todo: need defend_spear animation
+		if (!character_object->is_fishing() && character.animation != "fishing_catching") {
+			if (character.new_animation) {
+				auto equipment = character_object->equipment.get(equipment_slot::right_hand).definition().equipment;
+				if (equipment == equipment_type::spear) {
+					character.animation += "_spear";
+				}
+			}
+			if (character.animation == "defend_spear") {
+				character.animation = "attack_idle_spear"; // todo: need defend_spear animation
+			}
 		}
+		character.new_animation = false;
 		animation.transform = object.transform;
 		animator.play(character.animation_id, character.animation, -1);
 		for (auto& equipment : character.equipments) {
 			auto& equipment_animator = equipment_animators.find(equipment.item_id)->second;
 			auto& equipment_animation = equipment_animator.get(equipment.animation_id);
 			equipment_animation.transform = object.transform;
-			equipment_slot slot = item_definitions().get(equipment.item_id).slot;
-			if (slot == equipment_slot::left_hand || slot == equipment_slot::right_hand) {
+			if (item_definitions().get(equipment.item_id).attachment) {
 				// todo: proper mapping for root -> attach animation
 				equipment_animator.play(equipment.animation_id, "default", -1);
 				std::string equipment_name = equipment_models[equipment.item_id].model.name();

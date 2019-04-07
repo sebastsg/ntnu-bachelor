@@ -68,6 +68,17 @@ public:
 
 	combat_system combat;
 
+	struct fishing_state {
+		no::timer fished_for;
+		no::timer last_progress;
+		int client_index = -1;
+		int player_instance_id = -1;
+		no::vector2i bait_tile;
+		bool finished = false;
+	};
+
+	std::vector<fishing_state> fishers;
+
 	server_world(const std::string& name);
 
 	void update() override;
@@ -125,6 +136,7 @@ private:
 	void on_add_trade_item(int client_index, const to_server::game::add_trade_item& packet);
 	void on_remove_trade_item(int client_index, const to_server::game::remove_trade_item& packet);
 	void on_trade_decision(int client_index, const to_server::game::trade_decision& packet);
+	void on_started_fishing(int client_index, const to_server::game::started_fishing& packet);
 
 	void on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet);
 	void on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet);

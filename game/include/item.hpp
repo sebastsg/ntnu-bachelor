@@ -34,6 +34,7 @@ enum class equipment_type {
 	spear,
 	shield,
 	pants,
+	tool,
 	total_types
 };
 
@@ -44,6 +45,7 @@ struct item_definition {
 	item_type type = item_type::other;
 	equipment_slot slot = equipment_slot::none;
 	equipment_type equipment = equipment_type::none;
+	bool attachment = false;
 	std::string name;
 	no::vector2f uv;
 	std::string model;

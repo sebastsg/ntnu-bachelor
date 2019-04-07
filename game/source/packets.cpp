@@ -108,6 +108,30 @@ Read(trade_decision)
 	accepted = stream.read<uint8_t>() != 0;
 End
 
+Write(started_fishing)
+	stream.write(instance_id);
+	stream.write(casted_to_tile);
+Read(started_fishing)
+	instance_id = stream.read<int32_t>();
+	casted_to_tile = stream.read<no::vector2i>();
+End
+
+Write(fishing_progress)
+	stream.write(instance_id);
+	stream.write(new_bait_tile);
+	stream.write<uint8_t>(finished ? 1 : 0);
+Read(fishing_progress)
+	instance_id = stream.read<int32_t>();
+	new_bait_tile = stream.read<no::vector2i>();
+	finished = stream.read<uint8_t>() != 0;
+End
+
+Write(fish_caught)
+	item.write(stream);
+Read(fish_caught)
+	item.read(stream);
+End
+
 }
 
 namespace to_server::game {
@@ -182,6 +206,12 @@ Write(trade_decision)
 	stream.write<uint8_t>(accepted ? 1 : 0);
 Read(trade_decision)
 	accepted = stream.read<uint8_t>() != 0;
+End
+
+Write(started_fishing)
+	stream.write(casted_to_tile);
+Read(started_fishing)
+	casted_to_tile = stream.read<no::vector2i>();
 End
 
 }

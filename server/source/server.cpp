@@ -12,6 +12,26 @@ server_world::server_world(const std::string& name) : combat(*this) {
 void server_world::update() {
 	world_state::update();
 	combat.update();
+	for (auto& fisher : fishers) {
+		if (fisher.last_progress.seconds() < 2 || fisher.finished) {
+			continue;
+		}
+		auto& object = objects.object(fisher.player_instance_id);
+		no::vector2i tile = object.tile();
+		bool left = (tile.x < fisher.bait_tile.x);
+		bool right = (tile.x > fisher.bait_tile.x);
+		bool up = (tile.y < fisher.bait_tile.y);
+		bool down = (tile.y > fisher.bait_tile.y);
+		fisher.bait_tile.x += (left ? -1 : (right ? 1 : 0));
+		fisher.bait_tile.y += (up ? -1 : (down ? 1 : 0));
+		if (fisher.bait_tile == tile) {
+			fisher.finished = true;
+		}
+		if (terrain.tiles().at(fisher.bait_tile.x, fisher.bait_tile.y).corners_of_type(world_tile::water) < 3) {
+			fisher.finished = true;
+		}
+		fisher.last_progress.start();
+	}
 }
 
 server_state::server_state() : persister(database), world("main") {
@@ -74,6 +94,25 @@ void server_state::update() {
 		world.combat.stop_all(event.target_id);
 		world.objects.remove(event.target_id);
 	});
+	for (int i = 0; i < (int)world.fishers.size(); i++) {
+		auto& fisher = world.fishers[i];
+		if (fisher.fished_for.seconds() % 2 == 1) {
+			continue;
+		}
+		auto& client = clients[fisher.client_index];
+		to_client::game::fishing_progress fishing_progress;
+		fishing_progress.new_bait_tile = fisher.bait_tile;
+		fishing_progress.instance_id = client.object.player_instance_id;
+		if (fisher.finished) {
+			to_client::game::fish_caught fish_caught;
+			fish_caught.item = { 2, 1 };
+			no::send_packet(fisher.client_index, fish_caught);
+			fishing_progress.finished = true;
+			world.fishers.erase(world.fishers.begin() + i);
+			i--;
+		}
+		no::broadcast(fishing_progress);
+	}
 }
 
 void server_state::draw() {
@@ -166,6 +205,7 @@ void server_state::on_receive_packet(int client_index, int16_t type, no::io_stre
 		on_packet_case(game, add_trade_item);
 		on_packet_case(game, remove_trade_item);
 		on_packet_case(game, trade_decision);
+		on_packet_case(game, started_fishing);
 		on_packet_case(lobby, login_attempt);
 		on_packet_case(lobby, connect_to_world);
 		on_packet_case(updates, update_query);
@@ -388,6 +428,32 @@ void server_state::on_trade_decision(int client_index, const to_server::game::tr
 		}
 		remove_trade(client_index);
 	}
+}
+
+void server_state::on_started_fishing(int client_index, const to_server::game::started_fishing& packet) {
+	auto& client = clients[client_index];
+	auto player = world.objects.character(client.object.player_instance_id);
+	if (!player) {
+		return;
+	}
+	if (player->is_fishing()) {
+		return;
+	}
+	auto object = world.objects.object(client.object.player_instance_id);
+	if (!world.can_fish_at(object.tile(), packet.casted_to_tile)) {
+		return;
+	}
+	auto& fisher = world.fishers.emplace_back();
+	fisher.fished_for.start();
+	fisher.last_progress.start();
+	fisher.bait_tile = packet.casted_to_tile;
+	fisher.client_index = client_index;
+	fisher.player_instance_id = client.object.player_instance_id;
+	player->events.start_fishing.emit();
+	to_client::game::started_fishing started_fishing;
+	started_fishing.instance_id = client.object.player_instance_id;
+	started_fishing.casted_to_tile = packet.casted_to_tile;
+	no::broadcast(started_fishing);
 }
 
 void server_state::on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet) {

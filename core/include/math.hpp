@@ -190,7 +190,7 @@ struct vector2 {
 	constexpr T distance_to(const vector2<T>& v) const {
 		const T dx = x - v.x;
 		const T dy = y - v.y;
-		return std::sqrt(dx * dx + dy * dy);
+		return (T)std::sqrt((double)(dx * dx + dy * dy));
 	}
 
 	void floor() {
@@ -209,7 +209,7 @@ struct vector2 {
 	}
 
 	constexpr T magnitude() const {
-		return std::sqrt(x * x + y * y);
+		return (T)std::sqrt((double)(x * x + y * y));
 	}
 
 	constexpr T squared_magnitude() const {
@@ -323,7 +323,7 @@ struct vector3 {
 		const T dx = x - v.x;
 		const T dy = y - v.y;
 		const T dz = z - v.z;
-		return std::sqrt(dx * dx + dy * dy + dz * dz);
+		return (T)std::sqrt((double)(dx * dx + dy * dy + dz * dz));
 	}
 
 	void floor() {
@@ -344,7 +344,7 @@ struct vector3 {
 	}
 
 	constexpr T magnitude() const {
-		return std::sqrt(x * x + y * y + z * z);
+		return (T)std::sqrt((double)(x * x + y * y + z * z));
 	}
 
 	constexpr T squared_magnitude() const {
@@ -477,7 +477,7 @@ struct vector4 {
 		const T dy = y - v.y;
 		const T dz = z - v.z;
 		const T dw = w - v.w;
-		return std::sqrt(dx * dx + dy * dy + dz * dz + dw * dw);
+		return (T)std::sqrt((double)(dx * dx + dy * dy + dz * dz + dw * dw));
 	}
 
 	void floor() {
@@ -500,7 +500,7 @@ struct vector4 {
 	}
 
 	constexpr T magnitude() const {
-		return std::sqrt(x * x + y * y + z * z + w * w);
+		return (T)std::sqrt((double)(x * x + y * y + z * z + w * w));
 	}
 
 	constexpr T squared_magnitude() const {

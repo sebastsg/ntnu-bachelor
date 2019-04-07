@@ -819,7 +819,13 @@ void user_interface_view::create_context() {
 	}
 	add_trading_context_options(*context);
 	if (!is_mouse_over_inventory()) {
+		auto player = game.world.my_player();
 		no::vector2i tile = game.hovered_tile();
+		if (game.world.can_fish_at(player.object.tile(), tile)) {
+			context->add_option("Cast fishing rod", [this, tile] {
+				game.send_start_fishing(tile);
+			});
+		}
 		auto& objects = game.world.objects;
 		objects.for_each([this, tile](game_object* object) {
 			if (object->tile() != tile) {

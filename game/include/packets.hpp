@@ -53,7 +53,7 @@ Packet(character_equips, 6)
 
 Packet(character_unequips, 7)
 	int32_t instance_id = -1;
-	equipment_slot slot;
+	equipment_slot slot = equipment_slot::none;
 
 Packet(character_follows, 8)
 	int32_t follower_id = -1;
@@ -70,6 +70,18 @@ Packet(remove_trade_item, 11)
 	
 Packet(trade_decision, 12)
 	bool accepted = false;
+
+Packet(started_fishing, 13)
+	int32_t instance_id = -1;
+	no::vector2i casted_to_tile;
+
+Packet(fishing_progress, 14)
+	int32_t instance_id = -1;
+	no::vector2i new_bait_tile;
+	bool finished = false;
+
+Packet(fish_caught, 15)
+	item_instance item;
 
 End
 
@@ -94,7 +106,7 @@ Packet(equip_from_inventory, 5)
 	no::vector2i slot;
 
 Packet(unequip_to_inventory, 6)
-	equipment_slot slot;
+	equipment_slot slot = equipment_slot::none;
 
 Packet(follow_character, 7)
 	int32_t target_id = -1;
@@ -110,6 +122,9 @@ Packet(remove_trade_item, 10)
 	
 Packet(trade_decision, 11)
 	bool accepted = false;
+
+Packet(started_fishing, 12)
+	no::vector2i casted_to_tile;
 
 End
 
