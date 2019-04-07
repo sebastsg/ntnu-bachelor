@@ -38,6 +38,17 @@ enum class equipment_type {
 	total_types
 };
 
+enum class item_stack_size {
+	none,
+	tiny,
+	small,
+	medium,
+	large,
+	total_sizes
+};
+
+item_stack_size stack_size_for_stack(long long stack);
+
 struct item_definition {
 
 	int id = -1;
@@ -48,6 +59,10 @@ struct item_definition {
 	bool attachment = false;
 	std::string name;
 	no::vector2f uv;
+	no::vector2f uv_tiny_stack;
+	no::vector2f uv_small_stack;
+	no::vector2f uv_medium_stack;
+	no::vector2f uv_large_stack;
 	std::string model;
 
 	void write(no::io_stream& stream) const;
@@ -61,6 +76,8 @@ struct item_instance {
 	long long stack = 0;
 
 	const item_definition& definition() const;
+
+	no::vector2f uv_for_stack() const;
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);

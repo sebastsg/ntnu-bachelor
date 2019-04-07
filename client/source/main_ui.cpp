@@ -336,7 +336,7 @@ void inventory_view::on_change(no::vector2i slot) {
 	} else {
 		slots[slot_index] = {};
 		slots[slot_index].item = item;
-		set_item_uv(slots[slot_index].rectangle, item.definition().uv);
+		set_item_uv(slots[slot_index].rectangle, item.uv_for_stack());
 	}
 }
 
@@ -444,7 +444,7 @@ void equipment_view::on_change(equipment_slot slot) {
 	} else {
 		slots[slot] = {};
 		slots[slot].item = item;
-		set_item_uv(slots[slot].rectangle, item.definition().uv);
+		set_item_uv(slots[slot].rectangle, item.uv_for_stack());
 	}
 }
 

@@ -90,10 +90,15 @@ void item_editor::ui_select_item() {
 	item_type_combo(selected.type, "Edit");
 	equipment_slot_combo(selected.slot, "Edit");
 	equipment_type_combo(selected.equipment, "Edit");
-	ImGui::InputFloat2("UV##EditItemUV", &selected.uv.x, 0);
-	no::vector2f uv_start = selected.uv / no::texture_size(ui_texture).to<float>();
-	no::vector2f uv_end = (selected.uv + 32.0f) / no::texture_size(ui_texture).to<float>();
-	ImGui::Image((ImTextureID)ui_texture, { 64.0f, 64.0f }, { uv_start }, { uv_end }, { 1.0f }, { 1.0f });
+	std::string uv_name[] = { "Default", "Tiny", "Small", "Medium", "Large" };
+	int i = 0;
+	for (no::vector2f* uv = &selected.uv; uv <= &selected.uv_large_stack; uv++) {
+		ImGui::InputFloat2(CSTRING("UV (" << uv_name[i] << ")##EditItemUV"), &uv->x, 0);
+		no::vector2f uv_start = *uv / no::texture_size(ui_texture).to<float>();
+		no::vector2f uv_end = (*uv + 32.0f) / no::texture_size(ui_texture).to<float>();
+		ImGui::Image((ImTextureID)ui_texture, { 64.0f, 64.0f }, { uv_start }, { uv_end }, { 1.0f }, { 1.0f });
+		i++;
+	}
 	imgui_input_text<64>("Model##EditItemModel", selected.model);
 	ImGui::Checkbox("Is attachment##EditIsAttachment", &selected.attachment);
 }

@@ -11,6 +11,19 @@ item_definition_list& item_definitions() {
 	return global::item_definitions;
 }
 
+item_stack_size stack_size_for_stack(long long stack) {
+	if (stack > 100000) {
+		return item_stack_size::large;
+	}
+	if (stack > 1000) {
+		return item_stack_size::medium;
+	}
+	if (stack > 100) {
+		return item_stack_size::small;
+	}
+	return item_stack_size::tiny;
+}
+
 void item_definition::write(no::io_stream& stream) const {
 	stream.write((int32_t)type);
 	stream.write((int32_t)slot);
@@ -19,6 +32,10 @@ void item_definition::write(no::io_stream& stream) const {
 	stream.write((int64_t)max_stack);
 	stream.write((int32_t)id);
 	stream.write(uv);
+	stream.write(uv_tiny_stack);
+	stream.write(uv_small_stack);
+	stream.write(uv_medium_stack);
+	stream.write(uv_large_stack);
 	stream.write(name);
 	stream.write(model);
 }
@@ -31,8 +48,22 @@ void item_definition::read(no::io_stream& stream) {
 	max_stack = stream.read<int64_t>();
 	id = stream.read<int32_t>();
 	uv = stream.read<no::vector2f>();
+	uv_tiny_stack = stream.read<no::vector2f>();
+	uv_small_stack = stream.read<no::vector2f>();
+	uv_medium_stack = stream.read<no::vector2f>();
+	uv_large_stack = stream.read<no::vector2f>();
 	name = stream.read<std::string>();
 	model = stream.read<std::string>();
+}
+
+no::vector2f item_instance::uv_for_stack() const {
+	switch (stack_size_for_stack(stack)) {
+	case item_stack_size::tiny: return definition().uv_tiny_stack;
+	case item_stack_size::small: return definition().uv_small_stack;
+	case item_stack_size::medium: return definition().uv_medium_stack;
+	case item_stack_size::large: return definition().uv_large_stack;
+	default: return definition().uv;
+	}
 }
 
 const item_definition& item_instance::definition() const {
