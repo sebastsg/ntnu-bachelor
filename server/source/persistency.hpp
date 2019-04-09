@@ -98,6 +98,9 @@ public:
 	quest_instance_list load_player_quests(int player_id);
 	void save_player_quests(int player_id, quest_instance_list& quests);
 
+	void load_player_stats(int player_id, character_object& character);
+	void save_player_stats(int player_id, character_object& character);
+
 private:
 
 	const database_connection& database;

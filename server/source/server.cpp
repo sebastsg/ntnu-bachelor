@@ -145,7 +145,10 @@ character_object* server_state::load_player(int client_index) {
 	object.transform.position.x = (float)tile.x;
 	object.transform.position.z = (float)tile.y;
 	object.transform.scale = 0.5f;
-	player->stat(stat_type::health).add_experience(player->stat(stat_type::health).experience_for_level(20));
+	persister.load_player_stats(client.player.id, *player);
+	if (player->stat(stat_type::health).real() == 0) {
+		player->stat(stat_type::health).add_experience(player->stat(stat_type::health).experience_for_level(20));
+	}
 	player->name = client.player.display_name;
 	return player;
 }
@@ -166,6 +169,7 @@ void server_state::save_player(int client_index) {
 	persister.save_player_quests(client.player.id, client.player.quests);
 	persister.save_player_items(client.player.id, inventory_container_type, player->inventory.items, player->inventory.slots);
 	persister.save_player_items(client.player.id, equipment_container_type, player->equipment.items, (int)equipment_slot::total_slots);
+	persister.save_player_stats(client.player.id, *player);
 	client.last_saved.start();
 }
 

@@ -223,3 +223,22 @@ void game_persister::save_player_quests(int player_id, quest_instance_list& ques
 		});
 	});
 }
+
+void game_persister::load_player_stats(int player_id, character_object& character) {
+	auto result = database.execute("select stat_type, experience from stat where player_id = $1", { std::to_string(player_id) });
+	for (int i = 0; i < result.count(); i++) {
+		auto row = result.row(i);
+		stat_type stat = (stat_type)row.integer("stat_type");
+		character.stat(stat).set_experience(row.integer("experience"));
+	}
+}
+
+void game_persister::save_player_stats(int player_id, character_object& character) {
+	for (int i = 0; i < (int)stat_type::total; i++) {
+		database.call("set_stat", {
+			std::to_string(player_id),
+			std::to_string(i),
+			std::to_string(character.stat((stat_type)i).experience())
+		});
+	}
+}
