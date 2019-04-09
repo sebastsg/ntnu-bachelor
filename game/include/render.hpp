@@ -183,7 +183,7 @@ private:
 
 	struct {
 		int grid = 52;
-		int border = 24;
+		int border = 34;
 		int per_row = 9;
 		int per_column = 9;
 		no::vector2i size;

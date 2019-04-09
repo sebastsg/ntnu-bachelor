@@ -406,10 +406,17 @@ void inventory_view::add_context_options(context_menu& context) {
 			player->inventory.events.change.emit(slot);
 		});
 	} else {
-		if (item.definition().type == item_type::equipment) {
+		switch (item.definition().type) {
+		case item_type::consumable:
+			context.add_option("Eat " + item.definition().name, [this, slot] {
+				game.consume_from_inventory(slot);
+			});
+			break;
+		case item_type::equipment:
 			context.add_option("Equip " + item.definition().name, [this, slot] {
 				game.equip_from_inventory(slot);
 			});
+			break;
 		}
 		context.add_option("Drop " + item.definition().name, [this, item, slot, player] {
 			item_instance ground_item;

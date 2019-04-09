@@ -137,6 +137,7 @@ private:
 	void on_remove_trade_item(int client_index, const to_server::game::remove_trade_item& packet);
 	void on_trade_decision(int client_index, const to_server::game::trade_decision& packet);
 	void on_started_fishing(int client_index, const to_server::game::started_fishing& packet);
+	void on_consume_from_inventory(int client_index, const to_server::game::consume_from_inventory& packet);
 
 	void on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet);
 	void on_connect_to_world(int client_index, const to_server::lobby::connect_to_world& packet);

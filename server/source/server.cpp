@@ -104,8 +104,11 @@ void server_state::update() {
 		fishing_progress.new_bait_tile = fisher.bait_tile;
 		fishing_progress.instance_id = client.object.player_instance_id;
 		if (fisher.finished) {
+			auto character = world.objects.character(client.object.player_instance_id);
+			item_instance fish{ 10, 1 };
+			character->inventory.add_from(fish);
 			to_client::game::fish_caught fish_caught;
-			fish_caught.item = { 2, 1 };
+			fish_caught.item = { 10, 1 };
 			no::send_packet(fisher.client_index, fish_caught);
 			fishing_progress.finished = true;
 			world.fishers.erase(world.fishers.begin() + i);
@@ -191,26 +194,27 @@ void server_state::connect(int index) {
 }
 
 void server_state::on_receive_packet(int client_index, int16_t type, no::io_stream& stream) {
-#define on_packet_case(NS, PACKET) case to_server::NS::PACKET::type: on_##PACKET(client_index, { stream }); break
+#define OnPacket(NS, PACKET) case to_server::NS::PACKET::type: on_##PACKET(client_index, { stream }); break
 	switch (type) {
-		on_packet_case(game, move_to_tile);
-		on_packet_case(game, start_dialogue);
-		on_packet_case(game, continue_dialogue);
-		on_packet_case(game, chat_message);
-		on_packet_case(game, start_combat);
-		on_packet_case(game, equip_from_inventory);
-		on_packet_case(game, unequip_to_inventory);
-		on_packet_case(game, follow_character);
-		on_packet_case(game, trade_request);
-		on_packet_case(game, add_trade_item);
-		on_packet_case(game, remove_trade_item);
-		on_packet_case(game, trade_decision);
-		on_packet_case(game, started_fishing);
-		on_packet_case(lobby, login_attempt);
-		on_packet_case(lobby, connect_to_world);
-		on_packet_case(updates, update_query);
+		OnPacket(game, move_to_tile);
+		OnPacket(game, start_dialogue);
+		OnPacket(game, continue_dialogue);
+		OnPacket(game, chat_message);
+		OnPacket(game, start_combat);
+		OnPacket(game, equip_from_inventory);
+		OnPacket(game, unequip_to_inventory);
+		OnPacket(game, follow_character);
+		OnPacket(game, trade_request);
+		OnPacket(game, add_trade_item);
+		OnPacket(game, remove_trade_item);
+		OnPacket(game, trade_decision);
+		OnPacket(game, started_fishing);
+		OnPacket(game, consume_from_inventory);
+		OnPacket(lobby, login_attempt);
+		OnPacket(lobby, connect_to_world);
+		OnPacket(updates, update_query);
 	}
-#undef on_packet_case
+#undef OnPacket
 }
 
 void server_state::on_disconnect(int client_index) {
@@ -454,6 +458,16 @@ void server_state::on_started_fishing(int client_index, const to_server::game::s
 	started_fishing.instance_id = client.object.player_instance_id;
 	started_fishing.casted_to_tile = packet.casted_to_tile;
 	no::broadcast(started_fishing);
+}
+
+void server_state::on_consume_from_inventory(int client_index, const to_server::game::consume_from_inventory& packet) {
+	auto& client = clients[client_index];
+	auto character = world.objects.character(client.object.player_instance_id);
+	auto item = character->inventory.get(packet.slot);
+	if (item.definition().type != item_type::consumable) {
+		return;
+	}
+	character->consume_from_inventory(packet.slot);
 }
 
 void server_state::on_login_attempt(int client_index, const to_server::lobby::login_attempt& packet) {

@@ -174,6 +174,14 @@ void character_object::unequip(equipment_slot slot) {
 	events.unequip.emit(slot);
 }
 
+void character_object::consume_from_inventory(no::vector2i slot) {
+	item_instance item = inventory.get(slot);
+	item.stack = 0;
+	inventory.remove_to(inventory.get(slot).stack, item);
+	stat(stat_type::health).add_effective(5);
+	equipment.add_from(item);
+}
+
 bool character_object::is_moving() const {
 	return target_path.size() > 0;
 }

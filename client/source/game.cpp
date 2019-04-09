@@ -342,6 +342,13 @@ void game_state::unequip_to_inventory(equipment_slot slot) {
 	no::send_packet(server(), packet);
 }
 
+void game_state::consume_from_inventory(no::vector2i slot) {
+	world.my_player().character.consume_from_inventory(slot);
+	to_server::game::consume_from_inventory packet;
+	packet.slot = slot;
+	no::send_packet(server(), packet);
+}
+
 void game_state::send_trade_request(int target_id) {
 	sent_trade_request_to_player_id = target_id;
 	to_server::game::trade_request packet;

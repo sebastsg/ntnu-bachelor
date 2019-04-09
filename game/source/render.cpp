@@ -546,7 +546,6 @@ void world_view::update_object_visibility() {
 }
 
 void world_view::add(const game_object& object) {
-	ASSERT(object.instance_id >= 0);
 	if (object.instance_id < 0) {
 		return;
 	}
@@ -578,7 +577,6 @@ void world_view::add(const game_object& object) {
 }
 
 void world_view::remove(const game_object& object) {
-	ASSERT(object.instance_id >= 0);
 	if (object.instance_id < 0) {
 		return;
 	}

@@ -126,6 +126,9 @@ Packet(trade_decision, 11)
 Packet(started_fishing, 12)
 	no::vector2i casted_to_tile;
 
+Packet(consume_from_inventory, 13)
+	no::vector2i slot;
+
 End
 
 Begin(to_client::lobby, 2000)

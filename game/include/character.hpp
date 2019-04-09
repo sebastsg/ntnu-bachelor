@@ -70,6 +70,7 @@ public:
 	void unequip_to_inventory(equipment_slot slot);
 	void equip(item_instance item);
 	void unequip(equipment_slot slot);
+	void consume_from_inventory(no::vector2i slot);
 
 	bool is_moving() const;
 	bool in_combat() const;

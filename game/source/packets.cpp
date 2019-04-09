@@ -214,6 +214,12 @@ Read(started_fishing)
 	casted_to_tile = stream.read<no::vector2i>();
 End
 
+Write(consume_from_inventory)
+	stream.write(slot);
+Read(consume_from_inventory)
+	slot = stream.read<no::vector2i>();
+End
+
 }
 
 namespace to_client::lobby {

@@ -59,6 +59,7 @@ public:
 
 	void equip_from_inventory(no::vector2i slot);
 	void unequip_to_inventory(equipment_slot slot);
+	void consume_from_inventory(no::vector2i slot);
 
 	void send_trade_request(int target_id);
 	void send_add_trade_item(const item_instance& item);
