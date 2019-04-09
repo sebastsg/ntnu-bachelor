@@ -149,3 +149,15 @@ button:hover {
     border: 1px solid lightsteelblue;
     transition: 0.15s ease all;
 }
+
+#leaderboard {
+
+}
+
+#leaderboard tr {
+
+}
+
+#leaderboard tr td {
+    padding: 12px 24px;
+}

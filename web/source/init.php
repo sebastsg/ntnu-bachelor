@@ -22,8 +22,20 @@ function array_keys_exist($array, $keys) {
     return true;
 }
 
+function experience_for_level($level) {
+    return $level * $level * 97;
+}
+
+function level_for_experience($experience) {
+    $level = 1;
+    while ($experience >= experience_for_level($level + 1)) {
+        $level++;
+    }
+    return $level;
+}
+
 function verify_login($email, $password) {
-    $players = execute_sql('select password_hash from account where email = ?', [$email]);
+    $players = execute_sql('select password_hash from player where email = ?', [$email]);
     if (count($players) !== 1) {
         return false;
     }
@@ -32,26 +44,30 @@ function verify_login($email, $password) {
 }
 
 function is_email_registered($email) {
-    return count(execute_sql('select email from account where email = ?', [$email])) === 1;
+    return count(execute_sql('select id from player where email = ?', [$email])) === 1;
 }
 
 function is_display_name_taken($display_name) {
     return count(execute_sql('select id from player where display_name = ?', [$display_name])) === 1;
 }
 
-function register_account($email, $password) {
-    if (strlen($password) < 8 || is_email_registered($email)) {
+function register_player($display_name, $email, $password) {
+    if (strlen($password) < 8) {
+        return false;
+    }
+    if (is_email_registered($email)) {
         return false;
     }
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
-    call_sql('register_account', [$email, $password_hash]);
+    call_sql('register_player', [$display_name, $email, $password_hash]);
     return true;
 }
 
-function register_player($email, $display_name) {
-    if (!is_email_registered($email)) {
-        return false;
+function find_top_players() {
+    $stats = execute_sql('select display_name, stat_type, experience from player join stat on stat.player_id = player.id');
+    $players = [];
+    foreach ($stats as $stat) {
+        $players[$stat['display_name']][] = ['stat' => $stat['stat_type'], 'level' => level_for_experience($stat['experience'])];
     }
-    call_sql('register_player', [$email, $display_name]);
-    return true;
+    return $players;
 }
