@@ -276,6 +276,7 @@ private:
 		no::rectangle inventory;
 		no::rectangle equipment;
 		no::rectangle quests;
+		no::rectangle stats;
 		int active = 0;
 	} tabs;
 

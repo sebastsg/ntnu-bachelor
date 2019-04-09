@@ -16,6 +16,7 @@ public:
 	query_result_row(PGresult* result, int row);
 
 	int integer(const std::string& column) const;
+	long long long_integer(const std::string& column) const;
 	std::string text(const std::string& column) const;
 	char* raw(const std::string& column) const;
 	int length(const std::string& column) const;

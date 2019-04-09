@@ -13,6 +13,7 @@ const no::vector2f tab_background_uv = { 128.0f, 24.0f };
 const no::vector2f tab_inventory_uv = { 160.0f, 24.0f };
 const no::vector2f tab_equipment_uv = { 224.0f, 24.0f };
 const no::vector2f tab_quests_uv = { 192.0f, 24.0f };
+const no::vector2f tab_stats_uv = { 256.0f, 24.0f };
 const no::vector2f tab_size = 24.0f;
 
 const no::vector4f hud_left_uv = { 8.0f, 528.0f, 40.0f, 68.0f };
@@ -633,6 +634,7 @@ user_interface_view::user_interface_view(game_state& game) :
 	set_ui_uv(tabs.inventory, tab_inventory_uv, tab_size);
 	set_ui_uv(tabs.equipment, tab_equipment_uv, tab_size);
 	set_ui_uv(tabs.quests, tab_quests_uv, tab_size);
+	set_ui_uv(tabs.stats, tab_stats_uv, tab_size);
 }
 
 user_interface_view::~user_interface_view() {
@@ -744,7 +746,7 @@ void user_interface_view::update() {
 	hud.set_fps(((const game_state&)game).frame_counter().current_fps());
 	hud.set_debug(STRING("Tile: " << game.world.my_player().object.tile()));
 	hud.update(game.ui_camera);
-	minimap.transform.position = { 104.0f, 8.0f };
+	minimap.transform.position = { 109.0f, 12.0f };
 	minimap.transform.position.x += game.ui_camera.width() - background_uv.z - 2.0f;
 	minimap.transform.scale = 64.0f;
 	minimap.transform.rotation = game.world_camera().transform.rotation.y;
@@ -756,6 +758,7 @@ void user_interface_view::draw() {
 	no::bind_shader(shader);
 	no::set_shader_view_projection(game.ui_camera);
 	color.set(no::vector4f{ 1.0f });
+	minimap.draw();
 	no::bind_texture(ui_texture);
 	no::transform2 transform;
 	transform.scale = background_uv.zw;
@@ -783,13 +786,13 @@ void user_interface_view::draw() {
 	if (context) {
 		context->draw(ui_texture);
 	}
-	minimap.draw();
 }
 
 void user_interface_view::draw_tabs() const {
 	draw_tab(0, tabs.inventory);
 	draw_tab(1, tabs.equipment);
 	draw_tab(2, tabs.quests);
+	draw_tab(3, tabs.stats);
 }
 
 void user_interface_view::draw_tab(int index, const no::rectangle& tab) const {

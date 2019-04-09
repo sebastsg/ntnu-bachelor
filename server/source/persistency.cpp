@@ -10,6 +10,10 @@ int query_result_row::integer(const std::string& column) const {
 	return std::stoi(raw(column));
 }
 
+long long query_result_row::long_integer(const std::string& column) const {
+	return std::stoll(raw(column));
+}
+
 std::string query_result_row::text(const std::string& column) const {
 	return PQgetvalue(result, row, column_index(column));
 }
@@ -229,7 +233,7 @@ void game_persister::load_player_stats(int player_id, character_object& characte
 	for (int i = 0; i < result.count(); i++) {
 		auto row = result.row(i);
 		stat_type stat = (stat_type)row.integer("stat_type");
-		character.stat(stat).set_experience(row.integer("experience"));
+		character.stat(stat).set_experience(row.long_integer("experience"));
 	}
 }
 
