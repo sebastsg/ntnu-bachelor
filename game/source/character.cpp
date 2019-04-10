@@ -29,6 +29,11 @@ long long character_stat::experience_for_level(int level) const {
 	return level * level * 97;
 }
 
+float character_stat::progress() const {
+	long long goal = experience_for_level(real_level + 1) - experience_for_level(real_level);
+	return 1.0f - (float)experience_left() / (float)goal;
+}
+
 void character_stat::add_effective(int amount) {
 	effective_level = std::max(0, std::min(real_level, effective_level + amount));
 }

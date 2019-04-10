@@ -1,6 +1,6 @@
 #pragma once
 
-#include "main_ui.hpp"
+#include "ui_main.hpp"
 
 class chat_view {
 public:

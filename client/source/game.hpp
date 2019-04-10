@@ -3,7 +3,7 @@
 #include "world.hpp"
 #include "render.hpp"
 #include "ui.hpp"
-#include "dialogue_ui.hpp"
+#include "ui_dialogue.hpp"
 #include "chat.hpp"
 #include "quest.hpp"
 
@@ -40,6 +40,7 @@ public:
 	game_variable_map variables;
 	quest_instance_list quests;
 	no::ortho_camera ui_camera;
+	user_interface_view ui;
 
 	game_state();
 	~game_state() override;
@@ -81,7 +82,6 @@ private:
 
 	world_view renderer;
 	no::font ui_font;
-	user_interface_view ui;
 	dialogue_view* dialogue = nullptr;
 
 	no::perspective_camera::drag_controller dragger;

@@ -206,6 +206,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 			to_client::game::fish_caught packet{ stream };
 			auto& player = world.my_player().character;
 			player.inventory.add_from(packet.item);
+			player.stat(stat_type::fishing).add_experience(270);
 			break;
 		}
 		default:

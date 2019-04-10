@@ -15,6 +15,7 @@ public:
 	long long experience() const;
 	long long experience_left() const;
 	long long experience_for_level(int level) const;
+	float progress() const;
 	
 	void add_effective(int amount);
 	int level_for_experience(long long experience) const;

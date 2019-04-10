@@ -107,6 +107,8 @@ void server_state::update() {
 			auto character = world.objects.character(client.object.player_instance_id);
 			item_instance fish{ 10, 1 };
 			character->inventory.add_from(fish);
+			character->stat(stat_type::fishing).add_experience(270);
+			character->events.stop_fishing.emit();
 			to_client::game::fish_caught fish_caught;
 			fish_caught.item = { 10, 1 };
 			no::send_packet(fisher.client_index, fish_caught);

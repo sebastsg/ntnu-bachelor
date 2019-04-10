@@ -1,12 +1,9 @@
 #include "trading.hpp"
 #include "game.hpp"
-#include "main_ui.hpp"
+#include "ui_main.hpp"
 
 const no::vector4f trade_background_uv{ 8.0f, 632.0f, 352.0f, 240.0f };
 const no::vector4f button_uv{ 8.0f, 992.0f, 264.0f, 24.0f };
-
-const no::vector2f item_size = 32.0f;
-const no::vector2f item_grid = item_size + 2.0f;
 
 struct trading_view {
 
