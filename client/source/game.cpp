@@ -113,6 +113,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 			auto attacker = world.objects.character(packet.attacker_id);
 			auto target = world.objects.character(packet.target_id);
 			target->stat(stat_type::health).add_effective(-packet.damage);
+			attacker->add_combat_experience(packet.damage);
 			attacker->events.attack.emit();
 			target->events.defend.emit();
 			attacker->follow_object_id = target->object_id;

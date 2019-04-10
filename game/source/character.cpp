@@ -202,3 +202,26 @@ bool character_object::is_fishing() const {
 character_stat& character_object::stat(stat_type stat) {
 	return stats[(size_t)stat];
 }
+
+void character_object::add_combat_experience(int damage) {
+	auto& right = equipment.get(equipment_slot::right_hand).definition();
+	auto& left = equipment.get(equipment_slot::left_hand).definition();
+	const long long attack_exp = damage * 12LL;
+	const long long defend_exp = damage * 9LL;
+	const long long health_exp = damage * 6LL;
+	switch (right.equipment) {
+	case equipment_type::axe:
+		stat(stat_type::axe).add_experience(attack_exp);
+		break;
+	case equipment_type::sword:
+		stat(stat_type::sword).add_experience(attack_exp);
+		break;
+	case equipment_type::spear:
+		stat(stat_type::spear).add_experience(attack_exp);
+		break;
+	}
+	if (left.equipment == equipment_type::shield) {
+		stat(stat_type::defensive).add_experience(defend_exp);
+	}
+	stat(stat_type::health).add_experience(health_exp);
+}

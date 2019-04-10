@@ -78,6 +78,7 @@ public:
 	bool is_fishing() const;
 
 	character_stat& stat(stat_type stat);
+	void add_combat_experience(int damage);
 
 private:
 

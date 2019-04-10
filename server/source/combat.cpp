@@ -27,6 +27,7 @@ int active_combat::hit() {
 	last_hit.start();
 	int damage = std::rand() % 4;
 	target->stat(stat_type::health).add_effective(-damage);
+	attacker->add_combat_experience(damage);
 	if (target->stat(stat_type::health).effective() < 1) {
 		world->events.kill.move_and_push({ attacker_id, target_id });
 	}
