@@ -524,6 +524,10 @@ void attachments_tool::update() {
 		if (ImGui::Button("[Pants]")) {
 			path = no::asset_path("models/pants.nom");
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("[Shirt]")) {
+			path = no::asset_path("models/shirt.nom");
+		}
 		if (!path.empty()) {
 			bool found = false;
 			for (auto& attachment : active_attachments) {

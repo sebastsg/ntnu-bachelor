@@ -393,6 +393,7 @@ std::ostream& operator<<(std::ostream& out, equipment_type type) {
 	case equipment_type::shield: return out << "Shield";
 	case equipment_type::pants: return out << "Pants";
 	case equipment_type::tool: return out << "Tool";
+	case equipment_type::shirt: return out << "Shirt";
 	default: return out << "Unknown";
 	}
 }

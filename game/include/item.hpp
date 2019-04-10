@@ -35,6 +35,7 @@ enum class equipment_type {
 	shield,
 	pants,
 	tool,
+	shirt,
 	total_types
 };
 
