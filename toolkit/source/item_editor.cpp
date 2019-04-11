@@ -101,6 +101,12 @@ void item_editor::ui_select_item() {
 	}
 	imgui_input_text<64>("Model##EditItemModel", selected.model);
 	ImGui::Checkbox("Is attachment##EditIsAttachment", &selected.attachment);
+
+	ImGui::InputInt("Accuracy##EditItemAccuracy", &selected.stats.accuracy);
+	ImGui::InputInt("Power##EditItemPower", &selected.stats.power);
+	ImGui::InputInt("Protection##EditItemProtection", &selected.stats.protection);
+	ImGui::InputInt("Weight##EditItemWeight", &selected.stats.weight);
+	ImGui::InputInt("Heals##EditItemHeals", &selected.stats.heals);
 }
 
 void item_editor::update() {

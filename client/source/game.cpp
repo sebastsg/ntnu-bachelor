@@ -9,6 +9,9 @@
 #include "network.hpp"
 #include "pathfinding.hpp"
 #include "trading.hpp"
+#include "ui_context.hpp"
+#include "hit_splats.hpp"
+#include "ui_hud.hpp"
 
 game_world::game_world() {
 	load(no::asset_path("worlds/main.ew"));
@@ -23,6 +26,8 @@ player_data game_world::my_player() {
 
 game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*this), ui_font(no::asset_path("fonts/leo.ttf"), 14) {
 	ui_camera.zoom = 2.0f;
+	start_hit_splats(*this);
+	show_hud(*this);
 	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
 		if (event.button != no::mouse::button::left) {
 			return;
@@ -109,7 +114,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 		case to_client::game::combat_hit::type:
 		{
 			to_client::game::combat_hit packet{ stream };
-			ui.hud.hit_splats.emplace_back(*this, packet.target_id, packet.damage);
+			add_hit_splat(packet.target_id, packet.damage);
 			auto attacker = world.objects.character(packet.attacker_id);
 			auto target = world.objects.character(packet.target_id);
 			target->stat(stat_type::health).add_effective(-packet.damage);
@@ -219,6 +224,8 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 
 game_state::~game_state() {
 	close_dialogue();
+	stop_hit_splats();
+	hide_hud();
 	mouse().press.ignore(mouse_press_id);
 	mouse().scroll.ignore(mouse_scroll_id);
 	keyboard().press.ignore(keyboard_press_id);
@@ -239,7 +246,13 @@ void game_state::update() {
 	rotater.update(renderer.camera, keyboard());
 	world.update();
 	renderer.camera.update();
+
+	set_hud_fps(frame_counter().current_fps());
+	set_hud_debug(STRING("Tile: " << world.my_player().object.tile()));
+	update_hud();
+
 	ui.update();
+	update_hit_splats();
 	chat.update();
 	if (dialogue) {
 		if (dialogue->is_open()) {
@@ -267,7 +280,7 @@ void game_state::draw() {
 	window().clear();
 	renderer.draw();
 	if (world.my_player_id != -1) {
-		if (hovered_pixel.x != -1 && !ui.is_context_open()) {
+		if (hovered_pixel.x != -1 && !is_context_menu_open()) {
 			renderer.draw_tile_highlights({ hovered_pixel.xy }, { 0.3f, 0.4f, 0.8f, 0.4f });
 			if (keyboard().is_key_down(no::key::num_8)) {
 				path_found = world.path_between(world.my_player().object.tile(), hovered_pixel.xy);
@@ -281,6 +294,8 @@ void game_state::draw() {
 		}
 	}
 	ui.draw();
+	draw_hud(ui.ui_texture);
+	draw_hit_splats(rectangle);
 	chat.draw();
 	if (dialogue) {
 		dialogue->draw();

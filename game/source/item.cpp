@@ -38,6 +38,11 @@ void item_definition::write(no::io_stream& stream) const {
 	stream.write(uv_large_stack);
 	stream.write(name);
 	stream.write(model);
+	stream.write<int32_t>(stats.accuracy);
+	stream.write<int32_t>(stats.power);
+	stream.write<int32_t>(stats.protection);
+	stream.write<int32_t>(stats.weight);
+	stream.write<int32_t>(stats.heals);
 }
 
 void item_definition::read(no::io_stream& stream) {
@@ -54,6 +59,11 @@ void item_definition::read(no::io_stream& stream) {
 	uv_large_stack = stream.read<no::vector2f>();
 	name = stream.read<std::string>();
 	model = stream.read<std::string>();
+	stats.accuracy = stream.read<int32_t>();
+	stats.power = stream.read<int32_t>();
+	stats.protection = stream.read<int32_t>();
+	stats.weight = stream.read<int32_t>();
+	stats.heals = stream.read<int32_t>();
 }
 
 no::vector2f item_instance::uv_for_stack() const {

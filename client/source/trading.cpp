@@ -1,6 +1,6 @@
 #include "trading.hpp"
 #include "game.hpp"
-#include "ui_main.hpp"
+#include "ui_context.hpp"
 
 const no::vector4f trade_background_uv{ 8.0f, 632.0f, 352.0f, 240.0f };
 const no::vector4f button_uv{ 8.0f, 992.0f, 264.0f, 24.0f };
@@ -36,7 +36,7 @@ struct trading_view {
 	no::vector2i hovered_slot(std::vector<item_slot>& slots, no::vector2f position) const;
 	void add_item(inventory_container& items, std::vector<item_slot>& slots, item_instance item);
 	void remove_item(inventory_container& items, std::vector<item_slot>& slots, no::vector2i slot);
-	void add_context_options(no::vector2f position, std::vector<item_slot>& slots, context_menu& context, bool mine);
+	void add_context_options(no::vector2f position, std::vector<item_slot>& slots, bool mine);
 	void finish();
 
 };
@@ -182,7 +182,7 @@ void trading_view::remove_item(inventory_container& items, std::vector<item_slot
 	waiting = false;
 }
 
-void trading_view::add_context_options(no::vector2f position, std::vector<item_slot>& slots, context_menu& context, bool mine) {
+void trading_view::add_context_options(no::vector2f position, std::vector<item_slot>& slots, bool mine) {
 	no::vector2i slot = hovered_slot(slots, position);
 	if (slot.x == -1) {
 		return;
@@ -193,13 +193,13 @@ void trading_view::add_context_options(no::vector2f position, std::vector<item_s
 		return;
 	}
 	if (mine) {
-		context.add_option("Remove " + item.definition().name, [this, item, slot] {
+		add_context_menu_option("Remove " + item.definition().name, [this, item, slot] {
 			item_instance temp{ item };
 			game.world.my_player().character.inventory.add_from(temp);
 			game.send_remove_trade_item(slot);
 		});
 	}
-	context.add_option("Examine " + item.definition().name, [this, item] {
+	add_context_menu_option("Examine " + item.definition().name, [this, item] {
 		game.chat.add("", std::to_string(item.stack) + "x " + item.definition().name);
 	});
 }
@@ -251,16 +251,16 @@ void remove_trade_item(int which, no::vector2i slot) {
 	}
 }
 
-void add_trading_context_options(context_menu& context) {
+void add_trading_context_options() {
 	if (!trading) {
 		return;
 	}
 	no::vector2f position;
 	position.x = trading->transform.position.x + 16.0f;
 	position.y = trading->transform.position.y + 16.0f;
-	trading->add_context_options(position, trading->left_slots, context, false);
+	trading->add_context_options(position, trading->left_slots, false);
 	position.x = trading->transform.position.x + trading->transform.scale.x - item_grid.x * 4.0f - 16.0f;
-	trading->add_context_options(position, trading->right_slots, context, true);
+	trading->add_context_options(position, trading->right_slots, true);
 }
 
 void update_trading_ui() {

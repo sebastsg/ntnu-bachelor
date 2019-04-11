@@ -41,6 +41,7 @@ public:
 	quest_instance_list quests;
 	no::ortho_camera ui_camera;
 	user_interface_view ui;
+	no::rectangle rectangle;
 
 	game_state();
 	~game_state() override;

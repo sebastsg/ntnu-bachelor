@@ -65,6 +65,13 @@ struct item_definition {
 	no::vector2f uv_medium_stack;
 	no::vector2f uv_large_stack;
 	std::string model;
+	struct {
+		int accuracy = 0;
+		int power = 0;
+		int protection = 0;
+		int weight = 0;
+		int heals = 0;
+	} stats;
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);

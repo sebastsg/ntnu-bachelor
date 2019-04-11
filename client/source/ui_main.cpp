@@ -1,30 +1,10 @@
 #include "ui_main.hpp"
+#include "ui_context.hpp"
 #include "game.hpp"
 #include "trading.hpp"
 
 #include "assets.hpp"
 #include "surface.hpp"
-
-const no::vector4f context_uv[] = {
-	{ 60.0f, 57.0f, 12.0f, 15.0f }, // top begin
-	{ 80.0f, 57.0f, 16.0f, 9.0f }, // top tile 1
-	{ 104.0f, 57.0f, 24.0f, 9.0f }, // top tile 2
-	{ 136.0f, 57.0f, 8.0f, 9.0f }, // top tile 3
-	{ 152.0f, 57.0f, 8.0f, 15.0f }, // top end
-	{ 88.0f, 96.0f, 10.0f, 16.0f }, // highlight begin
-	{ 104.0f, 96.0f, 8.0f, 16.0f }, // highlight tile
-	{ 120.0f, 96.0f, 10.0f, 16.0f }, // highlight end
-	{ 104.0f, 80.0f, 8.0f, 16.0f }, // item tile
-	{ 60.0f, 80.0f, 4.0f, 16.0f }, // left 1
-	{ 60.0f, 104.0f, 4.0f, 16.0f }, // left 2
-	{ 152.0f, 80.0f, 8.0f, 16.0f }, // right 1
-	{ 152.0f, 104.0f, 8.0f, 16.0f }, // right 2
-	{ 60.0f, 128.0f, 12.0f, 11.0f }, // bottom begin
-	{ 80.0f, 128.0f, 16.0f, 10.0f }, // bottom tile 1
-	{ 104.0f, 128.0f, 24.0f, 10.0f }, // bottom tile 2
-	{ 136.0f, 128.0f, 8.0f, 10.0f }, // bottom tile 3
-	{ 152.0f, 128.0f, 8.0f, 11.0f }, // bottom end
-};
 
 void set_ui_uv(no::rectangle& rectangle, no::vector2f uv, no::vector2f uv_size) {
 	rectangle.set_tex_coords(uv.x / ui_size.x, uv.y / ui_size.y, uv_size.x / ui_size.x, uv_size.y / ui_size.y);
@@ -36,264 +16,6 @@ void set_ui_uv(no::rectangle& rectangle, no::vector4f uv) {
 
 void set_item_uv(no::rectangle& rectangle, no::vector2f uv) {
 	set_ui_uv(rectangle, uv, item_size);
-}
-
-hit_splat::hit_splat(game_state& game, int target_id, int value) : game(&game), target_id(target_id) {
-	texture = no::create_texture(game.font().render(std::to_string(value)));
-	background = no::create_texture({ 2, 2, no::pixel_format::rgba, 0xFF0000FF });
-}
-
-hit_splat::hit_splat(hit_splat&& that) {
-	std::swap(game, that.game);
-	std::swap(transform, that.transform);
-	std::swap(target_id, that.target_id);
-	std::swap(texture, that.texture);
-	std::swap(fade_in, that.fade_in);
-	std::swap(stay, that.stay);
-	std::swap(fade_out, that.fade_out);
-	std::swap(alpha, that.alpha);
-	std::swap(background, that.background);
-}
-
-hit_splat::~hit_splat() {
-	no::delete_texture(texture);
-	no::delete_texture(background);
-}
-
-hit_splat& hit_splat::operator=(hit_splat&& that) {
-	std::swap(game, that.game);
-	std::swap(transform, that.transform);
-	std::swap(target_id, that.target_id);
-	std::swap(texture, that.texture);
-	std::swap(fade_in, that.fade_in);
-	std::swap(stay, that.stay);
-	std::swap(fade_out, that.fade_out);
-	std::swap(alpha, that.alpha);
-	std::swap(background, that.background);
-	return *this;
-}
-
-void hit_splat::update(const no::ortho_camera& camera) {
-	if (wait < 1.0f) {
-		wait += 0.04f;
-		alpha = 0.0f;
-	} else if (fade_in < 1.0f) {
-		fade_in += 0.02f;
-		alpha = fade_in;
-	} else if (stay < 1.0f) {
-		stay += 0.04f;
-		alpha = 1.0f;
-	} else if (fade_out < 1.0f) {
-		fade_out += 0.03f;
-		alpha = 1.0f - fade_out;
-	}
-	if (target_id != -1) {
-		auto& target = game->world.objects.object(target_id);
-		no::vector3f position = target.transform.position;
-		position.y += 2.0f; // todo: height of model
-		transform.position = game->world_camera().world_to_screen(position) / camera.zoom;
-		transform.position.y -= (fade_in * 0.5f + fade_out) * 32.0f;
-	}
-	transform.scale = no::texture_size(texture).to<float>();
-}
-
-void hit_splat::draw(no::shader_variable color, const no::rectangle& rectangle) const {
-	auto background_transform = transform;
-	background_transform.position -= 2.0f;
-	background_transform.scale.x += 2.0f;
-	no::bind_texture(background);
-	color.set({ 1.0f, 1.0f, 1.0f, alpha * 0.75f });
-	no::draw_shape(rectangle, background_transform);
-	auto shadow_transform = transform;
-	shadow_transform.position += 1.0f;
-	no::bind_texture(texture);
-	color.set({ 0.0f, 0.0f, 0.0f, alpha });
-	no::draw_shape(rectangle, shadow_transform);
-	color.set({ 1.0f, 1.0f, 1.0f, alpha });
-	no::draw_shape(rectangle, transform);
-}
-
-bool hit_splat::is_visible() const {
-	return fade_out < 1.0f;
-}
-
-context_menu::context_menu(const no::ortho_camera& camera_, no::vector2f position_, const no::font& font, no::mouse& mouse_)
-	: camera(camera_), mouse(mouse_), position(position_), font(font) {
-	position.floor();
-	for (int i = 0; i < total_tiles; i++) {
-		set_ui_uv(rectangles.emplace_back(), context_uv[i]);
-	}
-}
-
-context_menu::~context_menu() {
-	for (auto& option : options) {
-		no::delete_texture(option.texture);
-	}
-}
-
-void context_menu::add_option(const std::string& text, const std::function<void()>& action) {
-	auto& option = options.emplace_back();
-	option.text = text;
-	option.action = action;
-	option.texture = no::create_texture(font.render(text));
-	max_width = std::max(max_width, (float)no::texture_size(option.texture).x + context_uv[top_begin].z);
-}
-
-void context_menu::trigger(int index) {
-	if (options[index].action) {
-		options[index].action();
-	}
-}
-
-bool context_menu::is_mouse_over(int index) const {
-	return option_transform(index).collides_with(camera.mouse_position(mouse));
-}
-
-void context_menu::draw(int ui_texture) const {
-	if (!color.exists()) {
-		color = no::get_shader_variable("uni_Color");
-	}
-	draw_background();
-	draw_top_border();
-	draw_options(ui_texture);
-	draw_side_borders();
-	draw_bottom_border();
-}
-
-int context_menu::count() const {
-	return (int)options.size();
-}
-
-float context_menu::calculate_max_offset_x() const {
-	float x = context_uv[top_begin].z;
-	while (max_width > x) {
-		x += context_uv[top_tile_1].z;
-		if (max_width > x) {
-			x += context_uv[top_tile_3].z;
-		}
-	}
-	x += context_uv[top_tile_2].z;
-	return x;
-}
-
-no::transform2 context_menu::menu_transform() const {
-	no::transform2 transform;
-	transform.position = position;
-	transform.scale = {
-		calculate_max_offset_x(),
-		context_uv[top_begin].w + context_uv[item_tile].w * (float)options.size() + context_uv[bottom_begin].w
-	};
-	return transform;
-}
-
-no::transform2 context_menu::option_transform(int index) const {
-	no::transform2 transform;
-	transform.position = position;
-	transform.position.x += context_uv[left_1].z;
-	transform.position.y += context_uv[top_begin].w - 8.0f + (float)index * context_uv[item_tile].w;
-	transform.scale = { calculate_max_offset_x(), context_uv[item_tile].w };
-	return transform;
-}
-
-void context_menu::draw_border(int uv, no::vector2f offset) const {
-	no::draw_shape(rectangles[uv], no::transform2{ { position + offset }, context_uv[uv].zw });
-}
-
-void context_menu::draw_top_border() const {
-	no::vector2f offset;
-	draw_border(top_begin, offset);
-	offset.x += context_uv[top_begin].z;
-	while (max_width > offset.x) {
-		draw_border(top_tile_1, offset);
-		offset.x += context_uv[top_tile_1].z;
-		if (max_width > offset.x) {
-			draw_border(top_tile_3, offset);
-			offset.x += context_uv[top_tile_3].z;
-		}
-	}
-	draw_border(top_tile_2, offset);
-	offset.x += context_uv[top_tile_2].z;
-	draw_border(top_end, offset);
-}
-
-void context_menu::draw_background() const {
-	no::transform2 transform;
-	transform.position = position + no::vector2f{ context_uv[left_1].z, context_uv[top_tile_1].w };
-	float height = context_uv[top_begin].w + (float)(options.size() - 1) * context_uv[item_tile].w;
-	transform.scale = { calculate_max_offset_x(), height };
-	no::draw_shape(rectangles[item_tile], transform);
-}
-
-void context_menu::draw_side_borders() const {
-	no::vector2f offset;
-	offset.y = context_uv[top_begin].w;
-	float top_before_end_x = calculate_max_offset_x();
-	for (int i = 0; i < (int)options.size() - 1; i++) {
-		offset.x = 0.0f;
-		draw_border(left_1 + i % 1, offset);
-		draw_border(right_1 + i % 1, { top_before_end_x, offset.y });
-		offset.y += context_uv[right_1].z;
-	}
-}
-
-void context_menu::draw_bottom_border() const {
-	no::vector2f offset;
-	offset.y = context_uv[top_begin].w + (float)(options.size() - 1) * context_uv[item_tile].w;
-	draw_border(bottom_begin, offset);
-	offset.x = context_uv[bottom_begin].z;
-	while (max_width > offset.x) {
-		draw_border(bottom_tile_1, offset);
-		offset.x += context_uv[bottom_tile_1].z;
-		if (max_width > offset.x) {
-			draw_border(bottom_tile_3, offset);
-			offset.x += context_uv[bottom_tile_3].z;
-		}
-	}
-	draw_border(bottom_tile_2, offset);
-	offset.x += context_uv[bottom_tile_2].z;
-	draw_border(bottom_end, offset);
-}
-
-void context_menu::draw_options(int ui_texture) const {
-	for (int i = 0; i < (int)options.size(); i++) {
-		draw_option(i, ui_texture);
-	}
-	no::bind_texture(ui_texture);
-}
-
-void context_menu::draw_option(int option_index, int ui_texture) const {
-	no::vector2f offset;
-	offset.x = context_uv[left_1].z;
-	offset.y = context_uv[top_tile_1].w - 2.0f; // two padding pixels
-	auto& option = options[option_index];
-	if (is_mouse_over(option_index)) {
-		draw_highlighted_option(option_index, ui_texture);
-	}
-	no::transform2 transform;
-	transform.position = position + context_uv[top_tile_1].zw;
-	transform.position.x -= 6.0f;
-	transform.position.y += (float)option_index * context_uv[item_tile].w + 2.0f;
-	transform.scale = no::texture_size(option.texture).to<float>();
-	no::bind_texture(option.texture);
-	no::draw_shape(full, transform);
-	offset.y += context_uv[item_tile].w;
-	color.set(no::vector4f{ 1.0f });
-}
-
-void context_menu::draw_highlighted_option(int option, int ui_texture) const {
-	no::vector2f offset;
-	offset.x = context_uv[left_1].z;
-	offset.y = context_uv[top_tile_1].w + (float)option * context_uv[item_tile].w - 2.0f;
-	no::bind_texture(ui_texture);
-	draw_border(highlight_begin, offset);
-	offset.x += context_uv[highlight_begin].z;
-	float max_offset_x = calculate_max_offset_x();
-	while (max_offset_x > offset.x + 8.0f) {
-		draw_border(highlight_tile, offset);
-		offset.x += context_uv[highlight_tile].z;
-	}
-	draw_border(highlight_end, offset);
-	color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
 }
 
 inventory_view::inventory_view(game_state& game) : game(game) {
@@ -363,7 +85,7 @@ void inventory_view::draw() const {
 	}
 }
 
-void inventory_view::add_context_options(context_menu& context) {
+void inventory_view::add_context_options() {
 	if (!body_transform().collides_with(game.ui_camera.mouse_position(game.mouse()))) {
 		return;
 	}
@@ -377,7 +99,7 @@ void inventory_view::add_context_options(context_menu& context) {
 		return;
 	}
 	if (is_trading()) {
-		context.add_option("Offer " + item.definition().name, [this, item, slot, player] {
+		add_context_menu_option("Offer " + item.definition().name, [this, item, slot, player] {
 			game.send_add_trade_item(item);
 			player->inventory.items[slot.y * inventory_container::columns + slot.x] = {};
 			player->inventory.events.change.emit(slot);
@@ -385,17 +107,17 @@ void inventory_view::add_context_options(context_menu& context) {
 	} else {
 		switch (item.definition().type) {
 		case item_type::consumable:
-			context.add_option("Eat " + item.definition().name, [this, slot] {
+			add_context_menu_option("Eat " + item.definition().name, [this, slot] {
 				game.consume_from_inventory(slot);
 			});
 			break;
 		case item_type::equipment:
-			context.add_option("Equip " + item.definition().name, [this, slot] {
+			add_context_menu_option("Equip " + item.definition().name, [this, slot] {
 				game.equip_from_inventory(slot);
 			});
 			break;
 		}
-		context.add_option("Drop " + item.definition().name, [this, item, slot, player] {
+		add_context_menu_option("Drop " + item.definition().name, [this, item, slot, player] {
 			item_instance ground_item;
 			ground_item.definition_id = item.definition_id;
 			player->inventory.remove_to(item.stack, ground_item);
@@ -491,7 +213,7 @@ void equipment_view::draw() const {
 	}
 }
 
-void equipment_view::add_context_options(context_menu& context) {
+void equipment_view::add_context_options() {
 	if (!body_transform().collides_with(game.ui_camera.mouse_position(game.mouse()))) {
 		return;
 	}
@@ -505,7 +227,7 @@ void equipment_view::add_context_options(context_menu& context) {
 		return;
 	}
 	auto definition = item_definitions().get(item.definition_id);
-	context.add_option("Unequip", [this, slot] {
+	add_context_menu_option("Unequip", [this, slot] {
 		game.unequip_to_inventory(slot);
 	});
 }
@@ -517,87 +239,6 @@ equipment_slot equipment_view::hovered_slot() const {
 		}
 	}
 	return equipment_slot::none;
-}
-
-hud_view::hud_view() : font(no::asset_path("fonts/leo.ttf"), 10) {
-	fps_texture = no::create_texture();
-	debug_texture = no::create_texture();
-	set_ui_uv(hud_left, hud_left_uv);
-	set_ui_uv(hud_tile_1, hud_tile_1_uv);
-	set_ui_uv(hud_tile_2, hud_tile_2_uv);
-	set_ui_uv(hud_right, hud_right_uv);
-	set_ui_uv(health_background, hud_health_background, hud_health_size);
-	set_ui_uv(health_foreground, hud_health_foreground, hud_health_size);
-}
-
-void hud_view::update(const no::ortho_camera& camera) {
-	for (int i = 0; i < (int)hit_splats.size(); i++) {
-		hit_splats[i].update(camera);
-		if (!hit_splats[i].is_visible()) {
-			hit_splats.erase(hit_splats.begin() + i);
-			i--;
-		}
-	}
-}
-
-void hud_view::draw(no::shader_variable color, int ui_texture, character_object* player) const {
-	color.set(no::vector4f{ 1.0f });
-	no::transform2 transform;
-	transform.position = { 300.0f, 4.0f };
-	transform.scale = no::texture_size(fps_texture).to<float>();
-	no::bind_texture(fps_texture);
-	no::set_shader_model(transform);
-	rectangle.bind();
-	rectangle.draw();
-	transform.position.y = 24.0f;
-	transform.scale = no::texture_size(debug_texture).to<float>();
-	no::bind_texture(debug_texture);
-	no::set_shader_model(transform);
-	rectangle.draw();
-
-	for (auto& hit_splat : hit_splats) {
-		hit_splat.draw(color, rectangle);
-	}
-	color.set(no::vector4f{ 1.0f });
-
-	// background
-	no::bind_texture(ui_texture);
-	transform.position = 8.0f;
-	transform.scale = hud_left_uv.zw;
-	no::draw_shape(hud_left, transform);
-	transform.position.x += transform.scale.x;
-	transform.scale = hud_tile_1_uv.zw;
-	for (int i = 0; i <= player->stat(stat_type::health).real() / 2; i++) {
-		no::draw_shape(hud_tile_1, transform);
-		transform.position.x += transform.scale.x;
-	}
-	transform.scale = hud_right_uv.zw;
-	no::draw_shape(hud_right, transform);
-
-	// health
-	transform.scale = hud_health_size;
-	transform.position = 8.0f;
-	transform.position.x += 36.0f;
-	transform.position.y += 32.0f;
-	for (int i = 1; i <= player->stat(stat_type::health).real(); i++) {
-		if (player->stat(stat_type::health).effective() >= i) {
-			no::draw_shape(health_foreground, transform);
-		} else {
-			no::draw_shape(health_background, transform);
-		}
-		transform.position.x += transform.scale.x + 1.0f;
-	}
-}
-
-void hud_view::set_fps(long long fps) {
-	if (this->fps == fps) {
-		return;
-	}
-	no::load_texture(fps_texture, font.render("FPS: " + std::to_string(fps)));
-}
-
-void hud_view::set_debug(const std::string& debug) {
-	no::load_texture(debug_texture, font.render(debug));
 }
 
 user_interface_view::user_interface_view(game_state& game) : 
@@ -617,7 +258,7 @@ user_interface_view::user_interface_view(game_state& game) :
 user_interface_view::~user_interface_view() {
 	ignore();
 	no::delete_texture(ui_texture);
-	delete context;
+	close_context_menu();
 }
 
 bool user_interface_view::is_mouse_over() const {
@@ -625,10 +266,6 @@ bool user_interface_view::is_mouse_over() const {
 	transform.scale = background_uv.zw;
 	transform.position.x = game.ui_camera.width() - transform.scale.x - 2.0f;
 	return transform.collides_with(game.ui_camera.mouse_position(game.mouse()));
-}
-
-bool user_interface_view::is_mouse_over_context() const {
-	return context && context->menu_transform().collides_with(game.ui_camera.mouse_position(game.mouse()));
 }
 
 bool user_interface_view::is_mouse_over_inventory() const {
@@ -640,11 +277,7 @@ bool user_interface_view::is_tab_hovered(int index) const {
 }
 
 bool user_interface_view::is_mouse_over_any() const {
-	return is_mouse_over() || is_mouse_over_context();
-}
-
-bool user_interface_view::is_context_open() const {
-	return context != nullptr;
+	return is_mouse_over() || is_mouse_over_context_menu();
 }
 
 void user_interface_view::listen(int object_id_) {
@@ -655,18 +288,14 @@ void user_interface_view::listen(int object_id_) {
 	});
 	press_event_id = game.mouse().press.listen([this](const no::mouse::press_message& event) {
 		if (event.button == no::mouse::button::left) {
-			if (context) {
-				for (int i = 0; i < context->count(); i++) {
-					if (context->is_mouse_over(i)) {
-						context->trigger(i);
-						delete context;
-						context = nullptr;
-						return; // don't let through tab click
-					}
+			for (int i = 0; i < context_menu_option_count(); i++) {
+				if (is_mouse_over_context_menu_option(i)) {
+					trigger_context_menu_option(i);
+					close_context_menu();
+					return; // don't let through tab click
 				}
 			}
-			delete context;
-			context = nullptr;
+			close_context_menu();
 			for (int i = 0; i < 4; i++) {
 				if (is_tab_hovered(i)) {
 					tabs.active = i;
@@ -720,9 +349,6 @@ void user_interface_view::ignore() {
 }
 
 void user_interface_view::update() {
-	hud.set_fps(((const game_state&)game).frame_counter().current_fps());
-	hud.set_debug(STRING("Tile: " << game.world.my_player().object.tile()));
-	hud.update(game.ui_camera);
 	minimap.transform.position = { 109.0f, 12.0f };
 	minimap.transform.position.x += game.ui_camera.width() - background_uv.z - 2.0f;
 	minimap.transform.scale = 64.0f;
@@ -756,13 +382,10 @@ void user_interface_view::draw() {
 	}
 	no::bind_texture(ui_texture);
 	draw_tabs();
-	hud.draw(color, ui_texture, game.world.objects.character(object_id));
 	draw_trading_ui();
 	color.set(no::vector4f{ 1.0f });
 	no::bind_texture(ui_texture);
-	if (context) {
-		context->draw(ui_texture);
-	}
+	draw_context_menu(ui_texture);
 }
 
 void user_interface_view::draw_tabs() const {
@@ -798,18 +421,17 @@ no::transform2 user_interface_view::tab_transform(int index) const {
 }
 
 void user_interface_view::create_context() {
-	delete context;
-	context = new context_menu(game.ui_camera, game.ui_camera.mouse_position(game.mouse()), font, game.mouse());
+	open_context_menu(game);
 	switch (tabs.active) {
-	case 0: inventory.add_context_options(*context); break;
-	case 1: equipment.add_context_options(*context); break;
+	case 0: inventory.add_context_options(); break;
+	case 1: equipment.add_context_options(); break;
 	}
-	add_trading_context_options(*context);
+	add_trading_context_options();
 	if (!is_mouse_over_inventory()) {
 		auto player = game.world.my_player();
 		no::vector2i tile = game.hovered_tile();
 		if (game.world.can_fish_at(player.object.tile(), tile)) {
-			context->add_option("Cast fishing rod", [this, tile] {
+			add_context_menu_option("Cast fishing rod", [this, tile] {
 				game.send_start_fishing(tile);
 			});
 		}
@@ -827,12 +449,12 @@ void user_interface_view::create_context() {
 				}
 				int target_id = object->instance_id; // objects array can be resized
 				if (character->stat(stat_type::health).real() > 0) {
-					context->add_option("Attack " + name, [this, target_id] {
+					add_context_menu_option("Attack " + name, [this, target_id] {
 						game.start_combat(target_id);
 					});
 				}
 				if (definition.id == 1) {
-					context->add_option("Trade with " + name, [this, target_id] {
+					add_context_menu_option("Trade with " + name, [this, target_id] {
 						game.send_trade_request(target_id);
 					});
 				}
@@ -842,21 +464,20 @@ void user_interface_view::create_context() {
 				if (definition.type == game_object_type::character) {
 					option_name = "Talk to ";
 				}
-				context->add_option(option_name + name, [&] {
+				add_context_menu_option(option_name + name, [&] {
 					game.start_dialogue(definition.script_id.dialogue);
 				});
 			}
 			if (!definition.description.empty()) {
-				context->add_option("Examine " + name, [&] {
+				add_context_menu_option("Examine " + name, [&] {
 					game.chat.add("", definition.description);
 				});
 			}
 		});
 	}
-	if (context->count() == 0) {
-		delete context;
-		context = nullptr;
+	if (context_menu_option_count() == 0) {
+		close_context_menu();
 	} else {
-		context->add_option("Cancel", [] {});
+		add_context_menu_option("Cancel", [] {});
 	}
 }
