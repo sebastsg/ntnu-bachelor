@@ -1,7 +1,5 @@
 #pragma once
 
-#include "transform.hpp"
-
 #include <functional>
 
 class game_state;
@@ -13,5 +11,5 @@ void add_context_menu_option(const std::string& text, const std::function<void()
 void trigger_context_menu_option(int index);
 bool is_mouse_over_context_menu();
 bool is_mouse_over_context_menu_option(int index);
-void draw_context_menu(int ui_texture);
+void draw_context_menu();
 int context_menu_option_count();

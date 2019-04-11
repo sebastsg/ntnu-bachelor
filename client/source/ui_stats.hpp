@@ -21,7 +21,7 @@ public:
 	no::transform2 body_transform() const;
 	no::transform2 stat_transform(int index) const;
 
-	void draw(int texture);
+	void draw();
 
 private:
 
@@ -30,7 +30,6 @@ private:
 	game_state& game;
 
 	no::rectangle icons[stat_count];
-	no::rectangle rectangle;
 	no::rectangle blank;
 	std::vector<no::text_view> levels;
 

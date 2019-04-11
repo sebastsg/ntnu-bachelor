@@ -1,8 +1,8 @@
 #include "ui_dialogue.hpp"
 #include "game.hpp"
+#include "game_assets.hpp"
 
-dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera_, int id) 
-	: game(game_), camera(camera_), font(no::asset_path("fonts/leo.ttf"), 10), message_view(game, camera) {
+dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera_, int id) : game(game_), camera(camera_), message_view(game, camera) {
 	auto& player = game.world.my_player().character;
 	dialogue.quests = &game.quests;
 	dialogue.variables = &game.variables;
@@ -19,10 +19,10 @@ dialogue_view::dialogue_view(game_state& game_, const no::ortho_camera& camera_,
 	dialogue.events.choice.listen([this](const script_tree::choice_event& event) {
 		current_choice = 0;
 		current_choices = event.choices;
-		message_view.render(font, ((choice_node*)dialogue.nodes[dialogue.current_node()])->text);
+		message_view.render(fonts().leo_10, ((choice_node*)dialogue.nodes[dialogue.current_node()])->text);
 		choice_views.clear();
 		for (auto& choice : event.choices) {
-			choice_views.emplace_back(game, camera).render(font, choice.text);
+			choice_views.emplace_back(game, camera).render(fonts().leo_10, choice.text);
 		}
 	});
 	dialogue.process_entry_point();
@@ -86,11 +86,10 @@ void dialogue_view::draw() const {
 	}
 	const no::vector4f active{ 1.0f, 0.9f, 0.5f, 1.0f };
 	const no::vector4f inactive{ 0.8f };
-	const auto color = no::get_shader_variable("uni_Color");
-	message_view.draw(rectangle);
+	message_view.draw(shapes().rectangle);
 	for (int i = 0; i < (int)choice_views.size(); i++) {
-		color.set(current_choice == i ? active : inactive);
-		choice_views[i].draw(rectangle);
+		shaders().sprite.color.set(current_choice == i ? active : inactive);
+		choice_views[i].draw(shapes().rectangle);
 	}
 }
 

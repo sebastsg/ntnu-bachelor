@@ -1,6 +1,7 @@
 #include "trading.hpp"
 #include "game.hpp"
 #include "ui_context.hpp"
+#include "game_assets.hpp"
 
 const no::vector4f trade_background_uv{ 8.0f, 632.0f, 352.0f, 240.0f };
 const no::vector4f button_uv{ 8.0f, 992.0f, 264.0f, 24.0f };
@@ -14,9 +15,7 @@ struct trading_view {
 	no::button accept;
 	no::button cancel;
 	no::transform2 transform;
-	no::font font;
 
-	no::rectangle rectangle;
 	no::text_view waiting_label;
 	bool waiting = false;
 	no::text_view other_accepted_label;
@@ -46,7 +45,6 @@ trading_view::trading_view(game_state& game_, int trader_id) :
 	trader_id{ trader_id }, 
 	accept{ game_, game_.ui_camera }, 
 	cancel{ game_, game_.ui_camera },
-	font{ no::asset_path("fonts/leo.ttf"), 10 }, 
 	other_accepted_label{ game_, game_.ui_camera }, 
 	waiting_label{ game_, game_.ui_camera } {
 	set_ui_uv(background, trade_background_uv);
@@ -57,8 +55,8 @@ trading_view::trading_view(game_state& game_, int trader_id) :
 	cancel.transform.scale = button_uv.zw;
 	accept.transform.scale.x /= 3.0f;
 	cancel.transform.scale.x /= 3.0f;
-	accept.label.render(font, "Accept");
-	cancel.label.render(font, "Cancel");
+	accept.label.render(fonts().leo_10, "Accept");
+	cancel.label.render(fonts().leo_10, "Cancel");
 	accept.events.click.listen([this] {
 		game.send_finish_trading(true);
 		waiting = true;
@@ -67,8 +65,8 @@ trading_view::trading_view(game_state& game_, int trader_id) :
 	cancel.events.click.listen([this] {
 		game.send_finish_trading(false);
 	});
-	other_accepted_label.render(font, "Other player has accepted this trade");
-	waiting_label.render(font, "Waiting for other player...");
+	other_accepted_label.render(fonts().leo_10, "Other player has accepted this trade");
+	waiting_label.render(fonts().leo_10, "Waiting for other player...");
 }
 
 void trading_view::update() {
@@ -88,8 +86,8 @@ void trading_view::update() {
 }
 
 void trading_view::draw() {
-	accept.color = no::get_shader_variable("uni_Color");
-	cancel.color = no::get_shader_variable("uni_Color");
+	accept.color = shaders().sprite.color;
+	cancel.color = shaders().sprite.color;
 	no::draw_shape(background, transform);
 	int index = 0;
 	no::vector2f position = transform.position + 16.0f;
@@ -115,11 +113,11 @@ void trading_view::draw() {
 		accept.draw_label();
 	}
 	cancel.draw_label();
-	no::get_shader_variable("uni_Color").set(no::vector4f{ 1.0f });
+	shaders().sprite.color.set(no::vector4f{ 1.0f });
 	if (other_accepted) {
-		other_accepted_label.draw(rectangle);
+		other_accepted_label.draw(shapes().rectangle);
 	} else if (waiting) {
-		waiting_label.draw(rectangle);
+		waiting_label.draw(shapes().rectangle);
 	}
 }
 

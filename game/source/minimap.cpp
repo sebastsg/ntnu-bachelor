@@ -1,5 +1,6 @@
 #include "minimap.hpp"
 #include "world.hpp"
+#include "game_assets.hpp"
 
 world_minimap::world_minimap(const world_state& world) : world{ world }, surface{ 64, 64, no::pixel_format::rgba, 0 } {
 	texture = no::create_texture();
@@ -49,5 +50,5 @@ void world_minimap::update(no::vector2i tile) {
 
 void world_minimap::draw() const {
 	no::bind_texture(texture);
-	no::draw_shape(rectangle, transform);
+	no::draw_shape(shapes().rectangle, transform);
 }

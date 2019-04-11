@@ -1,6 +1,7 @@
 #include "ui_hud.hpp"
 #include "ui_main.hpp"
 #include "game.hpp"
+#include "game_assets.hpp"
 
 struct hud_view {
 
@@ -8,15 +9,12 @@ struct hud_view {
 
 	long long fps = 0;
 
-	no::rectangle rectangle;
 	no::rectangle left;
 	no::rectangle tile_1;
 	no::rectangle tile_2;
 	no::rectangle right;
 	no::rectangle health_background;
 	no::rectangle health_foreground;
-
-	no::shader_variable color;
 
 	int fps_texture = -1;
 	int debug_texture = -1;
@@ -54,26 +52,21 @@ void update_hud() {
 
 }
 
-void draw_hud(int ui_texture) {
+void draw_hud() {
 	auto& player = hud->game.world.my_player().character;
-	if (!hud->color.exists()) {
-		hud->color.set(no::vector4f{ 1.0f });
-	}
 	no::transform2 transform;
 	transform.position = { 300.0f, 4.0f };
 	transform.scale = no::texture_size(hud->fps_texture).to<float>();
 	no::bind_texture(hud->fps_texture);
-	no::set_shader_model(transform);
-	hud->rectangle.bind();
-	hud->rectangle.draw();
+	no::draw_shape(shapes().rectangle, transform);
 	transform.position.y = 24.0f;
 	transform.scale = no::texture_size(hud->debug_texture).to<float>();
 	no::bind_texture(hud->debug_texture);
 	no::set_shader_model(transform);
-	hud->rectangle.draw();
+	shapes().rectangle.draw();
 
 	// background
-	no::bind_texture(ui_texture);
+	no::bind_texture(sprites().ui);
 	transform.position = 8.0f;
 	transform.scale = hud_left_uv.zw;
 	no::draw_shape(hud->left, transform);
@@ -105,9 +98,9 @@ void set_hud_fps(long long fps) {
 	if (hud->fps == fps) {
 		return;
 	}
-	no::load_texture(hud->fps_texture, hud->game.ui.font.render("FPS: " + std::to_string(fps)));
+	no::load_texture(hud->fps_texture, fonts().leo_9.render("FPS: " + std::to_string(fps)));
 }
 
 void set_hud_debug(const std::string & debug) {
-	no::load_texture(hud->debug_texture, hud->game.ui.font.render(debug));
+	no::load_texture(hud->debug_texture, fonts().leo_9.render(debug));
 }

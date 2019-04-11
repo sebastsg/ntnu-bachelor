@@ -2,6 +2,7 @@
 #include "ui_context.hpp"
 #include "game.hpp"
 #include "trading.hpp"
+#include "game_assets.hpp"
 
 #include "assets.hpp"
 #include "surface.hpp"
@@ -242,11 +243,7 @@ equipment_slot equipment_view::hovered_slot() const {
 }
 
 user_interface_view::user_interface_view(game_state& game) : 
-	game(game), inventory{ game }, equipment{ game }, stats{ game },
-	font(no::asset_path("fonts/leo.ttf"), 9), minimap{ game.world } {
-	shader = no::create_shader(no::asset_path("shaders/sprite"));
-	color = no::get_shader_variable("uni_Color");
-	ui_texture = no::create_texture(no::surface(no::asset_path("sprites/ui.png")));
+	game(game), inventory{ game }, equipment{ game }, stats{ game }, minimap{ game.world } {
 	set_ui_uv(background, background_uv);
 	set_ui_uv(tabs.background, tab_background_uv, tab_size);
 	set_ui_uv(tabs.inventory, tab_inventory_uv, tab_size);
@@ -257,7 +254,6 @@ user_interface_view::user_interface_view(game_state& game) :
 
 user_interface_view::~user_interface_view() {
 	ignore();
-	no::delete_texture(ui_texture);
 	close_context_menu();
 }
 
@@ -358,11 +354,11 @@ void user_interface_view::update() {
 }
 
 void user_interface_view::draw() {
-	no::bind_shader(shader);
+	no::bind_shader(shaders().sprite.id);
 	no::set_shader_view_projection(game.ui_camera);
-	color.set(no::vector4f{ 1.0f });
+	shaders().sprite.color.set(no::vector4f{ 1.0f });
 	minimap.draw();
-	no::bind_texture(ui_texture);
+	no::bind_texture(sprites().ui);
 	no::transform2 transform;
 	transform.scale = background_uv.zw;
 	transform.position.x = game.ui_camera.width() - transform.scale.x - 2.0f;
@@ -377,15 +373,15 @@ void user_interface_view::draw() {
 	case 2:
 		break;
 	case 3:
-		stats.draw(ui_texture);
+		stats.draw();
 		break;
 	}
-	no::bind_texture(ui_texture);
+	no::bind_texture(sprites().ui);
 	draw_tabs();
 	draw_trading_ui();
-	color.set(no::vector4f{ 1.0f });
-	no::bind_texture(ui_texture);
-	draw_context_menu(ui_texture);
+	shaders().sprite.color.set(no::vector4f{ 1.0f });
+	no::bind_texture(sprites().ui);
+	draw_context_menu();
 }
 
 void user_interface_view::draw_tabs() const {
@@ -399,14 +395,14 @@ void user_interface_view::draw_tab(int index, const no::rectangle& tab) const {
 	no::set_shader_model(tab_transform(index));
 	bool hover = is_tab_hovered(index);
 	if (hover) {
-		color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
+		shaders().sprite.color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
 	}
 	if (tabs.active == index) {
-		color.set({ 1.0f, 0.2f, 0.2f, 1.0f });
+		shaders().sprite.color.set({ 1.0f, 0.2f, 0.2f, 1.0f });
 	}
 	tabs.background.bind();
 	tabs.background.draw();
-	color.set(no::vector4f{ 1.0f });
+	shaders().sprite.color.set(no::vector4f{ 1.0f });
 	tab.bind();
 	tab.draw();
 }

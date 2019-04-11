@@ -41,7 +41,6 @@ public:
 	quest_instance_list quests;
 	no::ortho_camera ui_camera;
 	user_interface_view ui;
-	no::rectangle rectangle;
 
 	game_state();
 	~game_state() override;
@@ -49,7 +48,6 @@ public:
 	void update() override;
 	void draw() override;
 
-	const no::font& font() const;
 	no::vector2i hovered_tile() const;
 	const no::perspective_camera& world_camera() const;
 
@@ -82,7 +80,6 @@ private:
 	int receive_packet_id = -1;
 
 	world_view renderer;
-	no::font ui_font;
 	dialogue_view* dialogue = nullptr;
 
 	no::perspective_camera::drag_controller dragger;

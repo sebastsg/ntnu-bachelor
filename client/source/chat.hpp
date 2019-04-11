@@ -37,7 +37,6 @@ private:
 
 	no::text_view input;
 	std::vector<no::text_view> history;
-	no::rectangle rectangle;
 
 	int visible_history_length = 10;
 

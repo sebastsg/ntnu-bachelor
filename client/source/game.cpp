@@ -12,6 +12,7 @@
 #include "ui_context.hpp"
 #include "hit_splats.hpp"
 #include "ui_hud.hpp"
+#include "game_assets.hpp"
 
 game_world::game_world() {
 	load(no::asset_path("worlds/main.ew"));
@@ -24,8 +25,9 @@ player_data game_world::my_player() {
 	};
 }
 
-game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*this), ui_font(no::asset_path("fonts/leo.ttf"), 14) {
+game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*this) {
 	ui_camera.zoom = 2.0f;
+	create_game_assets();
 	start_hit_splats(*this);
 	show_hud(*this);
 	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
@@ -230,6 +232,7 @@ game_state::~game_state() {
 	mouse().scroll.ignore(mouse_scroll_id);
 	keyboard().press.ignore(keyboard_press_id);
 	no::socket_event(server()).packet.ignore(receive_packet_id);
+	destroy_game_assets();
 }
 
 void game_state::update() {
@@ -294,16 +297,12 @@ void game_state::draw() {
 		}
 	}
 	ui.draw();
-	draw_hud(ui.ui_texture);
-	draw_hit_splats(rectangle);
+	draw_hud();
+	draw_hit_splats();
 	chat.draw();
 	if (dialogue) {
 		dialogue->draw();
 	}
-}
-
-const no::font& game_state::font() const {
-	return ui_font;
 }
 
 no::vector2i game_state::hovered_tile() const {

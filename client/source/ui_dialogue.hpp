@@ -34,10 +34,7 @@ private:
 	std::vector<node_choice_info> current_choices;
 	no::transform2 transform;
 
-	no::font font;
-
 	no::text_view message_view;
 	std::vector<no::text_view> choice_views;
-	no::rectangle rectangle;
 
 };

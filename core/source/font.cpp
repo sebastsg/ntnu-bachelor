@@ -137,8 +137,19 @@ font::font(const std::string& path, int size) {
 	face->set_size(size);
 }
 
+font::font(font&& that) noexcept {
+	std::swap(face, that.face);
+	std::swap(line_space, that.line_space);
+}
+
 font::~font() {
 	delete face;
+}
+
+font& font::operator=(font&& that) {
+	std::swap(face, that.face);
+	std::swap(line_space, that.line_space);
+	return *this;
 }
 
 bool font::exists(const std::string& path) {

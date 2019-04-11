@@ -17,13 +17,14 @@ public:
 		int rows = 1;
 	};
 
+	font() = default;
 	font(const std::string& path, int size);
 	font(const font&) = delete;
-	font(font&&) = delete;
+	font(font&&) noexcept;
 	~font();
 
 	font& operator=(const font&) = delete;
-	font& operator=(font&&) = delete;
+	font& operator=(font&&);
 
 	void render(surface& surface, const std::string& text, uint32_t color = 0x00FFFFFF) const;
 	surface render(const std::string& text, uint32_t color = 0x00FFFFFF) const;

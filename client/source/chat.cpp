@@ -1,6 +1,7 @@
 #include "chat.hpp"
 #include "game.hpp"
 #include "unicode.hpp"
+#include "game_assets.hpp"
 
 chat_view::chat_view(const game_state& game) : game{ game }, input{ game, game.ui_camera } {
 	enable();
@@ -22,13 +23,13 @@ void chat_view::update() {
 
 void chat_view::draw() const {
 	for (auto& message : history) {
-		message.draw(rectangle);
+		message.draw(shapes().rectangle);
 	}
-	input.draw(rectangle);
+	input.draw(shapes().rectangle);
 }
 
 void chat_view::add(const std::string& author, const std::string& message) {
-	history.emplace_back(game, game.ui_camera).render(game.font(), (author.empty() ? "" : (author + ": ")) + message);
+	history.emplace_back(game, game.ui_camera).render(fonts().leo_14, (author.empty() ? "" : (author + ": ")) + message);
 }
 
 void chat_view::enable() {
@@ -36,7 +37,7 @@ void chat_view::enable() {
 		if (event.key == no::key::enter && !input.text().empty()) {
 			events.message.emit(input.text());
 			add(game.player_name(), input.text());
-			input.render(game.font(), "");
+			input.render(fonts().leo_14, "");
 		}
 	});
 	key_input = game.keyboard().input.listen([this](const no::keyboard::input_message& event) {
@@ -45,10 +46,10 @@ void chat_view::enable() {
 		}
 		if (event.character == (unsigned int)no::key::backspace) {
 			if (!input.text().empty()) {
-				input.render(game.font(), input.text().substr(0, input.text().size() - 1));
+				input.render(fonts().leo_14, input.text().substr(0, input.text().size() - 1));
 			}
 		} else if (event.character < 0x7F) {
-			input.render(game.font(), input.text() + (char)event.character);
+			input.render(fonts().leo_14, input.text() + (char)event.character);
 		}
 	});
 }

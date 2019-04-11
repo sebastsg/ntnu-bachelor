@@ -1,7 +1,7 @@
 #pragma once
 
 #include "surface.hpp"
-#include "draw.hpp"
+#include "transform.hpp"
 
 class world_state;
 
@@ -21,6 +21,5 @@ private:
 
 	int texture = -1;
 	no::surface surface;
-	no::rectangle rectangle;
 
 };

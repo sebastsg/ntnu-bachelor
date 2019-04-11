@@ -2,7 +2,6 @@
 
 #include "world.hpp"
 #include "draw.hpp"
-#include "font.hpp"
 #include "character.hpp"
 #include "ui.hpp"
 #include "minimap.hpp"
@@ -119,8 +118,6 @@ class user_interface_view {
 public:
 
 	world_minimap minimap;
-	no::font font;
-	int ui_texture = -1;
 
 	user_interface_view(game_state& game);
 	user_interface_view(const user_interface_view&) = delete;
@@ -168,11 +165,8 @@ private:
 		int active = 0;
 	} tabs;
 
-	int shader = -1;
 	int object_id = -1;
 	int equipment_event = -1;
-
-	no::shader_variable color;
 
 	int press_event_id = -1;
 	int cursor_icon_id = -1;

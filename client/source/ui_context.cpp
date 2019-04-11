@@ -1,6 +1,7 @@
 #include "ui_context.hpp"
 #include "ui_main.hpp"
 #include "game.hpp"
+#include "game_assets.hpp"
 
 static const int top_begin = 0;
 static const int top_tile_1 = 1;
@@ -34,8 +35,6 @@ struct context_menu {
 	float max_width = 0.0f;
 	std::vector<context_menu_option> options;
 	std::vector<no::rectangle> rectangles;
-	no::rectangle full;
-	no::shader_variable color;
 	game_state& game;
 
 	context_menu(game_state& game) : game{ game } {}
@@ -161,11 +160,11 @@ static void draw_bottom_border() {
 	draw_border(bottom_end, offset);
 }
 
-static void draw_highlighted_option(int option, int ui_texture) {
+static void draw_highlighted_option(int option) {
 	no::vector2f offset;
 	offset.x = context_uv[left_1].z;
 	offset.y = context_uv[top_tile_1].w + (float)option * context_uv[item_tile].w - 2.0f;
-	no::bind_texture(ui_texture);
+	no::bind_texture(sprites().ui);
 	draw_border(highlight_begin, offset);
 	offset.x += context_uv[highlight_begin].z;
 	float max_offset_x = calculate_max_offset_x();
@@ -174,16 +173,16 @@ static void draw_highlighted_option(int option, int ui_texture) {
 		offset.x += context_uv[highlight_tile].z;
 	}
 	draw_border(highlight_end, offset);
-	context->color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
+	shaders().sprite.color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
 }
 
-static void draw_option(int option_index, int ui_texture) {
+static void draw_option(int option_index) {
 	no::vector2f offset;
 	offset.x = context_uv[left_1].z;
 	offset.y = context_uv[top_tile_1].w - 2.0f; // two padding pixels
 	auto& option = context->options[option_index];
 	if (is_mouse_over_context_menu_option(option_index)) {
-		draw_highlighted_option(option_index, ui_texture);
+		draw_highlighted_option(option_index);
 	}
 	no::transform2 transform;
 	transform.position = context->position + context_uv[top_tile_1].zw;
@@ -191,16 +190,15 @@ static void draw_option(int option_index, int ui_texture) {
 	transform.position.y += (float)option_index * context_uv[item_tile].w + 2.0f;
 	transform.scale = no::texture_size(option.texture).to<float>();
 	no::bind_texture(option.texture);
-	no::draw_shape(context->full, transform);
+	no::draw_shape(shapes().rectangle, transform);
 	offset.y += context_uv[item_tile].w;
-	context->color.set(no::vector4f{ 1.0f });
+	shaders().sprite.color.set(no::vector4f{ 1.0f });
 }
 
-static void draw_options(int ui_texture) {
+static void draw_options() {
 	for (int i = 0; i < context_menu_option_count(); i++) {
-		draw_option(i, ui_texture);
+		draw_option(i);
 	}
-	no::bind_texture(ui_texture);
 }
 
 void open_context_menu(game_state& game) {
@@ -229,7 +227,7 @@ void add_context_menu_option(const std::string& text, const std::function<void()
 	auto& option = context->options.emplace_back();
 	option.text = text;
 	option.action = action;
-	option.texture = no::create_texture(context->game.ui.font.render(text));
+	option.texture = no::create_texture(fonts().leo_9.render(text));
 	context->max_width = std::max(context->max_width, (float)no::texture_size(option.texture).x + context_uv[top_begin].z);
 }
 
@@ -247,16 +245,14 @@ bool is_mouse_over_context_menu() {
 	return context ? menu_transform().collides_with(context->game.ui_camera.mouse_position(context->game.mouse())) : false;
 }
 
-void draw_context_menu(int ui_texture) {
+void draw_context_menu() {
 	if (!context) {
 		return;
 	}
-	if (!context->color.exists()) {
-		context->color = no::get_shader_variable("uni_Color");
-	}
 	draw_background();
 	draw_top_border();
-	draw_options(ui_texture);
+	draw_options();
+	no::bind_texture(sprites().ui);
 	draw_side_borders();
 	draw_bottom_border();
 }

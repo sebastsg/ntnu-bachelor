@@ -1,5 +1,7 @@
 #include "hit_splats.hpp"
+#include "draw.hpp"
 #include "game.hpp"
+#include "game_assets.hpp"
 
 struct hit_splat {
 
@@ -20,17 +22,12 @@ struct hit_splat {
 
 static std::vector<hit_splat> splats;
 static game_state* game = nullptr;
-static int background_texture = -1;
-static no::shader_variable color;
 
 void start_hit_splats(game_state& game_) {
 	game = &game_;
-	background_texture = no::create_texture({ 2, 2, no::pixel_format::rgba, 0xFF0000FF });
 }
 
 void stop_hit_splats() {
-	no::delete_texture(background_texture);
-	background_texture = -1;
 	for (auto& splat : splats) {
 		no::delete_texture(splat.texture);
 	}
@@ -40,7 +37,7 @@ void stop_hit_splats() {
 void add_hit_splat(int target_id, int value) {
 	auto& splat = splats.emplace_back();
 	splat.target_id = target_id;
-	splat.texture = no::create_texture(game->font().render(std::to_string(value)));
+	splat.texture = no::create_texture(fonts().leo_14.render(std::to_string(value)));
 }
 
 void update_hit_splats() {
@@ -75,23 +72,20 @@ void update_hit_splats() {
 	}
 }
 
-void draw_hit_splats(const no::rectangle& rectangle) {
-	if (!color.exists()) {
-		color = no::get_shader_variable("uni_Color");
-	}
+void draw_hit_splats() {
 	for (auto& splat : splats) {
 		auto background_transform = splat.transform;
 		background_transform.position -= 2.0f;
 		background_transform.scale.x += 2.0f;
-		no::bind_texture(background_texture);
-		color.set({ 1.0f, 1.0f, 1.0f, splat.alpha * 0.75f });
-		no::draw_shape(rectangle, background_transform);
+		no::bind_texture(sprites().blank_red);
+		shaders().sprite.color.set({ 1.0f, 1.0f, 1.0f, splat.alpha * 0.75f });
+		no::draw_shape(shapes().rectangle, background_transform);
 		auto shadow_transform = splat.transform;
 		shadow_transform.position += 1.0f;
 		no::bind_texture(splat.texture);
-		color.set({ 0.0f, 0.0f, 0.0f, splat.alpha });
-		no::draw_shape(rectangle, shadow_transform);
-		color.set({ 1.0f, 1.0f, 1.0f, splat.alpha });
-		no::draw_shape(rectangle, splat.transform);
+		shaders().sprite.color.set({ 0.0f, 0.0f, 0.0f, splat.alpha });
+		no::draw_shape(shapes().rectangle, shadow_transform);
+		shaders().sprite.color.set({ 1.0f, 1.0f, 1.0f, splat.alpha });
+		no::draw_shape(shapes().rectangle, splat.transform);
 	}
 }

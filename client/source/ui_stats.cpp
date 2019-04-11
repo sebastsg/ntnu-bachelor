@@ -1,6 +1,7 @@
 #include "ui_stats.hpp"
 #include "ui_main.hpp"
 #include "game.hpp"
+#include "game_assets.hpp"
 
 const no::vector2f stat_icon_uvs[] = {
 	{ 8.0f, 192.0f }, // health
@@ -45,13 +46,13 @@ no::transform2 stats_view::stat_transform(int index) const {
 	return transform;
 }
 
-void stats_view::draw(int texture) {
+void stats_view::draw() {
 	bool show_exp_text = false;
 	auto& player = game.world.my_player().character;
 	for (int i = 0; i < stat_count; i++) {
 		auto& stat = player.stat((stat_type)i);
 		no::transform2 transform = stat_transform(i);
-		no::bind_texture(texture);
+		no::bind_texture(sprites().ui);
 		no::draw_shape(icons[i], transform);
 		transform.position.x += transform.scale.x + 2.0f;
 		transform.position.y += 6.0f;
@@ -65,11 +66,11 @@ void stats_view::draw(int texture) {
 		no::draw_shape(exp[i], transform);
 		auto& level = levels[i];
 		transform = stat_transform(i);
-		level.render(game.ui.font, STRING(stat.effective() << "/" << stat.real()));
+		level.render(fonts().leo_9, STRING(stat.effective() << "/" << stat.real()));
 		level.transform.position = transform.position + no::vector2f{ transform.scale.x + 4.0f, -4.0f };
-		level.draw(rectangle);
+		level.draw(shapes().rectangle);
 		if (mouse_over) {
-			exp_text.render(game.ui.font, STRING(stat.experience_left() << " exp remaining to next level"));
+			exp_text.render(fonts().leo_9, STRING(stat.experience_left() << " exp remaining to next level"));
 			exp_text.transform.position = mouse;
 			exp_text.transform.position.x -= exp_text.transform.scale.x / 2.0f;
 			exp_text.transform.position.y += exp_text.transform.scale.y + 2.0f;
@@ -85,9 +86,9 @@ void stats_view::draw(int texture) {
 		transform.scale += no::vector2f{ 4.0f };
 		auto color = no::get_shader_variable("uni_Color");
 		color.set(no::vector4f{ 0.0f, 0.0f, 0.0f, 0.7f });
-		no::bind_texture(texture);
+		no::bind_texture(sprites().ui);
 		no::draw_shape(blank, transform);
 		color.set(no::vector4f{ 1.0f });
-		exp_text.draw(rectangle);
+		exp_text.draw(shapes().rectangle);
 	}
 }
