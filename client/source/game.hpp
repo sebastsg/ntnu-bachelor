@@ -1,17 +1,10 @@
 #pragma once
 
+#include "client.hpp"
 #include "world.hpp"
 #include "render.hpp"
-#include "ui.hpp"
-#include "ui_dialogue.hpp"
-#include "ui_main.hpp"
-#include "chat.hpp"
 #include "quest.hpp"
 #include "gamevar.hpp"
-
-#include "client.hpp"
-#include "camera.hpp"
-#include "draw.hpp"
 
 struct player_data {
 	character_object& character;
@@ -40,7 +33,6 @@ public:
 	game_variable_map variables;
 	quest_instance_list quests;
 	no::ortho_camera ui_camera;
-	user_interface_view ui;
 
 	game_state();
 	~game_state() override;

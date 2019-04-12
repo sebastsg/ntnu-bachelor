@@ -1,7 +1,10 @@
-#include "trading.hpp"
-#include "game.hpp"
+#include "ui_trading.hpp"
 #include "ui_context.hpp"
+#include "game.hpp"
 #include "game_assets.hpp"
+#include "ui.hpp"
+#include "ui_tabs.hpp"
+#include "chat.hpp"
 
 const no::vector4f trade_background_uv{ 8.0f, 632.0f, 352.0f, 240.0f };
 const no::vector4f button_uv{ 8.0f, 992.0f, 264.0f, 24.0f };

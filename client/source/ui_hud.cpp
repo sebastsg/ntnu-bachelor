@@ -1,8 +1,16 @@
 #include "ui_hud.hpp"
-#include "ui_main.hpp"
+#include "ui_tabs.hpp"
 #include "game.hpp"
 #include "game_assets.hpp"
 #include "minimap.hpp"
+
+const no::vector4f hud_left_uv = { 8.0f, 528.0f, 40.0f, 68.0f };
+const no::vector4f hud_tile_1_uv = { 56.0f, 528.0f, 16.0f, 68.0f };
+const no::vector4f hud_tile_2_uv = { 80.0f, 528.0f, 16.0f, 68.0f };
+const no::vector4f hud_right_uv = { 104.0f, 528.0f, 16.0f, 68.0f };
+const no::vector2f hud_health_background = { 104.0f, 152.0f };
+const no::vector2f hud_health_foreground = { 112.0f, 152.0f };
+const no::vector2f hud_health_size = { 8.0f, 12.0f };
 
 struct hud_view {
 

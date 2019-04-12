@@ -1,7 +1,8 @@
 #include "ui_tab_stats.hpp"
-#include "ui_main.hpp"
+#include "ui_tabs.hpp"
 #include "game.hpp"
 #include "game_assets.hpp"
+#include "ui.hpp"
 
 const no::vector2f stat_icon_uvs[] = {
 	{ 8.0f, 192.0f }, // health
@@ -34,17 +35,9 @@ struct stats_view {
 
 static stats_view* stats = nullptr;
 
-static no::transform2 body_transform() {
-	no::transform2 transform;
-	transform.scale = inventory_uv.zw;
-	transform.position.x = stats->game.ui_camera.width() - background_uv.z - 2.0f + inventory_offset.x;
-	transform.position.y = inventory_offset.y;
-	return transform;
-}
-
 static no::transform2 stat_transform(int index) {
 	no::transform2 transform;
-	transform.position = body_transform().position;
+	transform.position = tab_body_transform().position;
 	transform.position.x += 4.0f;
 	transform.position.y += (float)index * 28.0f + 12.0f;
 	transform.scale = 16.0f;
@@ -123,11 +116,4 @@ void draw_stats_tab() {
 
 void add_stats_context_menu_options() {
 
-}
-
-bool is_mouse_over_stats() {
-	if (!stats) {
-		return false;
-	}
-	return body_transform().collides_with(stats->game.ui_camera.mouse_position(stats->game.mouse()));
 }

@@ -1,6 +1,7 @@
 #include "client.hpp"
 #include "window.hpp"
 #include "platform.hpp"
+#include "network.hpp"
 
 static int server_socket = -1;
 client_state::player_details_ client_state::player_details;

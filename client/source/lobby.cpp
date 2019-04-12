@@ -3,6 +3,8 @@
 #include "input.hpp"
 #include "window.hpp"
 #include "game.hpp"
+#include "network.hpp"
+#include "packets.hpp"
 
 lobby_state::lobby_state() : 
 	font(no::asset_path("fonts/leo.ttf"), 16),

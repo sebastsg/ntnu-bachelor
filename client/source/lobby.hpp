@@ -1,8 +1,6 @@
 #pragma once
 
 #include "client.hpp"
-#include "packets.hpp"
-#include "camera.hpp"
 #include "ui.hpp"
 
 class lobby_state : public client_state {

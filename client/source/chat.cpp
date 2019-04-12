@@ -2,6 +2,7 @@
 #include "game.hpp"
 #include "unicode.hpp"
 #include "game_assets.hpp"
+#include "ui.hpp"
 
 struct chat_view {
 

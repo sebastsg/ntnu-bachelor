@@ -1,9 +1,11 @@
 #include "ui_tab_inventory.hpp"
-#include "ui_main.hpp"
+#include "ui_tabs.hpp"
 #include "ui_context.hpp"
+#include "ui_trading.hpp"
 #include "game.hpp"
 #include "item.hpp"
-#include "trading.hpp"
+
+const no::vector4f inventory_uv = { 200.0f, 128.0f, 138.0f, 205.0f };
 
 struct item_slot {
 	no::rectangle rectangle;
@@ -36,14 +38,6 @@ static void on_change(no::vector2i slot) {
 		inventory->slots[slot_index].item = item;
 		set_item_uv(inventory->slots[slot_index].rectangle, item.uv_for_stack());
 	}
-}
-
-static no::transform2 body_transform() {
-	no::transform2 transform;
-	transform.scale = inventory_uv.zw;
-	transform.position.x = inventory->game.ui_camera.width() - background_uv.z - 2.0f + inventory_offset.x;
-	transform.position.y = inventory_offset.y;
-	return transform;
 }
 
 static no::transform2 slot_transform(int index) {
@@ -104,14 +98,14 @@ void draw_inventory_tab() {
 	if (!inventory) {
 		return;
 	}
-	no::draw_shape(inventory->background, body_transform());
+	no::draw_shape(inventory->background, tab_body_transform());
 	for (auto& slot : inventory->slots) {
 		no::draw_shape(slot.second.rectangle, slot_transform(slot.first));
 	}
 }
 
 void add_inventory_context_menu_options() {
-	if (!inventory || !is_mouse_over_inventory()) {
+	if (!inventory || !is_mouse_over_tab_body()) {
 		return;
 	}
 	no::vector2i slot = hovered_slot();
@@ -149,11 +143,4 @@ void add_inventory_context_menu_options() {
 			// todo: drop on ground
 		});
 	}
-}
-
-bool is_mouse_over_inventory() {
-	if (!inventory) {
-		return false;
-	}
-	return body_transform().collides_with(inventory->game.ui_camera.mouse_position(inventory->game.mouse()));
 }

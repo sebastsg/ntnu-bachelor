@@ -1,7 +1,9 @@
 #include "ui_tab_equipment.hpp"
-#include "ui_main.hpp"
+#include "ui_tabs.hpp"
 #include "ui_context.hpp"
 #include "game.hpp"
+
+const no::vector4f equipment_uv = { 199.0f, 336.0f, 138.0f, 205.0f };
 
 struct item_slot {
 	no::rectangle rectangle;
@@ -32,14 +34,6 @@ static void on_change(equipment_slot slot) {
 		equipment->slots[slot].item = item;
 		set_item_uv(equipment->slots[slot].rectangle, item.uv_for_stack());
 	}
-}
-
-static no::transform2 body_transform() {
-	no::transform2 transform;
-	transform.scale = inventory_uv.zw;
-	transform.position.x = equipment->game.ui_camera.width() - background_uv.z - 2.0f + inventory_offset.x;
-	transform.position.y = inventory_offset.y;
-	return transform;
 }
 
 static no::transform2 slot_transform(equipment_slot slot) {
@@ -117,14 +111,14 @@ void draw_equipment_tab() {
 	if (!equipment) {
 		return;
 	}
-	no::draw_shape(equipment->background, body_transform());
+	no::draw_shape(equipment->background, tab_body_transform());
 	for (auto& slot : equipment->slots) {
 		no::draw_shape(slot.second.rectangle, slot_transform(slot.first));
 	}
 }
 
 void add_equipment_context_menu_options() {
-	if (!equipment || !is_mouse_over_equipment()) {
+	if (!equipment || !is_mouse_over_tab_body()) {
 		return;
 	}
 	equipment_slot slot = hovered_slot();
@@ -140,11 +134,4 @@ void add_equipment_context_menu_options() {
 	add_context_menu_option("Unequip", [slot] {
 		equipment->game.unequip_to_inventory(slot);
 	});
-}
-
-bool is_mouse_over_equipment() {
-	if (!equipment) {
-		return false;
-	}
-	return body_transform().collides_with(equipment->game.ui_camera.mouse_position(equipment->game.mouse()));
 }

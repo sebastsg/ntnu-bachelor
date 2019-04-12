@@ -1,18 +1,16 @@
 #include "game.hpp"
 #include "window.hpp"
-#include "debug.hpp"
-#include "surface.hpp"
-#include "io.hpp"
 #include "platform.hpp"
-#include "commands.hpp"
 #include "packets.hpp"
 #include "network.hpp"
-#include "pathfinding.hpp"
-#include "trading.hpp"
-#include "ui_context.hpp"
 #include "hit_splats.hpp"
-#include "ui_hud.hpp"
 #include "game_assets.hpp"
+#include "ui_trading.hpp"
+#include "ui_context.hpp"
+#include "ui_dialogue.hpp"
+#include "ui_tabs.hpp"
+#include "ui_hud.hpp"
+#include "chat.hpp"
 
 game_world::game_world() {
 	load(no::asset_path("worlds/main.ew"));
@@ -25,19 +23,17 @@ player_data game_world::my_player() {
 	};
 }
 
-game_state::game_state() : renderer(world), dragger(mouse()), ui(*this) {
+game_state::game_state() : renderer(world), dragger(mouse()) {
 	ui_camera.zoom = 2.0f;
 	create_game_assets();
 	start_hit_splats(*this);
+	show_tabs(*this);
 	show_hud(*this);
 	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
 		if (event.button != no::mouse::button::left) {
 			return;
 		}
-		if (ui.is_mouse_over_any()) {
-			return;
-		}
-		if (is_trading()) {
+		if (is_mouse_over_tabs() || is_trading()) {
 			return;
 		}
 		no::vector2i tile = hovered_pixel.xy;
@@ -94,7 +90,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this) {
 			world.objects.add(objstream);
 			world.my_player_id = packet.object.instance_id;
 			world.my_player().object.pickable = false;
-			ui.listen(world.my_player_id);
+			enable_tabs();
 			variables = packet.variables;
 			quests = packet.quests;
 			break;
@@ -229,6 +225,7 @@ game_state::~game_state() {
 	hide_chat();
 	close_dialogue();
 	stop_hit_splats();
+	hide_tabs();
 	hide_hud();
 	mouse().press.ignore(mouse_press_id);
 	mouse().scroll.ignore(mouse_scroll_id);
@@ -254,6 +251,7 @@ void game_state::update() {
 
 	set_hud_fps(frame_counter().current_fps());
 	set_hud_debug(STRING("Tile: " << world.my_player().object.tile()));
+	update_tabs();
 	update_hud();
 	update_trading_ui();
 	update_hit_splats();
@@ -298,7 +296,7 @@ void game_state::draw() {
 	no::bind_texture(sprites().ui);
 
 	draw_hud();
-	ui.draw();
+	draw_tabs();
 	draw_hit_splats();
 	draw_chat();
 	draw_dialogue();

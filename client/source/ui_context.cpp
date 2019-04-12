@@ -1,5 +1,5 @@
 #include "ui_context.hpp"
-#include "ui_main.hpp"
+#include "ui_tabs.hpp"
 #include "game.hpp"
 #include "game_assets.hpp"
 

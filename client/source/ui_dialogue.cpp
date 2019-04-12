@@ -2,6 +2,7 @@
 #include "game.hpp"
 #include "game_assets.hpp"
 #include "script.hpp"
+#include "ui.hpp"
 
 struct dialogue_view {
 

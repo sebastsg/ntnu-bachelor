@@ -7,4 +7,3 @@ void hide_stats_tab();
 void update_stats_tab();
 void draw_stats_tab();
 void add_stats_context_menu_options();
-bool is_mouse_over_stats();
