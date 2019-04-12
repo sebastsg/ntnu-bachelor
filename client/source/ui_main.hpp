@@ -4,8 +4,6 @@
 #include "draw.hpp"
 #include "character.hpp"
 #include "ui.hpp"
-#include "minimap.hpp"
-#include "ui_stats.hpp"
 
 class game_state;
 
@@ -37,87 +35,8 @@ void set_ui_uv(no::rectangle& rectangle, no::vector2f uv, no::vector2f uv_size);
 void set_ui_uv(no::rectangle& rectangle, no::vector4f uv);
 void set_item_uv(no::rectangle& rectangle, no::vector2f uv);
 
-struct item_slot {
-	no::rectangle rectangle;
-	item_instance item;
-};
-
-class inventory_view {
-public:
-
-	inventory_view(game_state& game);
-	inventory_view(const inventory_view&) = delete;
-	inventory_view(inventory_view&&) = delete;
-
-	~inventory_view();
-
-	inventory_view& operator=(const inventory_view&) = delete;
-	inventory_view& operator=(inventory_view&&) = delete;
-
-	void listen(int object_id);
-	void ignore();
-
-	no::transform2 body_transform() const;
-	no::transform2 slot_transform(int index) const;
-	void draw() const;
-	void add_context_options();
-
-	no::vector2i hovered_slot() const;
-
-private:
-
-	void on_change(no::vector2i slot);
-
-	game_state& game;
-
-	int object_id = -1;
-
-	no::rectangle background;
-	std::unordered_map<int, item_slot> slots;
-	int change_event = -1;
-
-};
-
-class equipment_view {
-public:
-
-	equipment_view(game_state& game);
-	equipment_view(const equipment_view&) = delete;
-	equipment_view(equipment_view&&) = delete;
-
-	~equipment_view();
-
-	equipment_view& operator=(const equipment_view&) = delete;
-	equipment_view& operator=(equipment_view&&) = delete;
-
-	void listen(int object_id);
-	void ignore();
-
-	no::transform2 body_transform() const;
-	no::transform2 slot_transform(equipment_slot slot) const;
-	void draw() const;
-	void add_context_options();
-
-	equipment_slot hovered_slot() const;
-
-private:
-
-	void on_change(equipment_slot slot);
-
-	game_state& game;
-
-	int object_id = -1;
-
-	no::rectangle background;
-	std::unordered_map<equipment_slot, item_slot> slots;
-	int change_event = -1;
-
-};
-
 class user_interface_view {
 public:
-
-	world_minimap minimap;
 
 	user_interface_view(game_state& game);
 	user_interface_view(const user_interface_view&) = delete;
@@ -129,7 +48,6 @@ public:
 	user_interface_view& operator=(user_interface_view&&) = delete;
 
 	bool is_mouse_over() const;
-	bool is_mouse_over_inventory() const;
 	bool is_tab_hovered(int index) const;
 	bool is_mouse_over_any() const;
 
@@ -140,10 +58,6 @@ public:
 	void draw();
 
 private:
-
-	inventory_view inventory;
-	equipment_view equipment;
-	stats_view stats;
 	
 	void draw_tabs() const;
 	void draw_tab(int index, const no::rectangle& tab) const;
@@ -153,8 +67,6 @@ private:
 	void create_context();
 
 	game_state& game;
-
-	no::rectangle background;
 
 	struct {
 		no::rectangle background;
@@ -166,7 +78,6 @@ private:
 	} tabs;
 
 	int object_id = -1;
-	int equipment_event = -1;
 
 	int press_event_id = -1;
 	int cursor_icon_id = -1;

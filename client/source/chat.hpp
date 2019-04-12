@@ -1,43 +1,16 @@
 #pragma once
 
-#include "ui_main.hpp"
+#include "event.hpp"
 
-class chat_view {
-public:
+#include <string>
 
-	struct message_event {
-		std::string message;
-	};
+class game_state;
 
-	struct {
-		no::message_event<message_event> message;
-	} events;
-
-	chat_view(const game_state& game);
-	chat_view(const chat_view&) = delete;
-	chat_view(chat_view&&) = delete;
-
-	~chat_view();
-
-	chat_view& operator=(const chat_view&) = delete;
-	chat_view& operator=(chat_view&&) = delete;
-
-	void update();
-	void draw() const;
-
-	void add(const std::string& author, const std::string& message);
-	void enable();
-	void disable();
-
-private:
-
-	const game_state& game;
-	int key_press = -1;
-	int key_input = -1;
-
-	no::text_view input;
-	std::vector<no::text_view> history;
-
-	int visible_history_length = 10;
-
-};
+void show_chat(game_state& game);
+void hide_chat();
+void update_chat();
+void draw_chat();
+void add_chat_message(const std::string& author, const std::string& message);
+void enable_chat();
+void disable_chat();
+no::message_event<std::string>& chat_message_event();

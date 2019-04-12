@@ -4,14 +4,14 @@
 #include "render.hpp"
 #include "ui.hpp"
 #include "ui_dialogue.hpp"
+#include "ui_main.hpp"
 #include "chat.hpp"
 #include "quest.hpp"
+#include "gamevar.hpp"
 
 #include "client.hpp"
 #include "camera.hpp"
 #include "draw.hpp"
-#include "assets.hpp"
-#include "font.hpp"
 
 struct player_data {
 	character_object& character;
@@ -52,7 +52,6 @@ public:
 	const no::perspective_camera& world_camera() const;
 
 	void start_dialogue(int target_id);
-	void close_dialogue();
 
 	void start_combat(int target_id);
 	void follow_character(int target_id);
@@ -68,8 +67,6 @@ public:
 
 	void send_start_fishing(no::vector2i tile);
 
-	chat_view chat;
-
 private:
 
 	no::vector3i hovered_pixel;
@@ -80,7 +77,6 @@ private:
 	int receive_packet_id = -1;
 
 	world_view renderer;
-	dialogue_view* dialogue = nullptr;
 
 	no::perspective_camera::drag_controller dragger;
 	no::perspective_camera::rotate_controller rotater;

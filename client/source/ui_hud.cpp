@@ -2,10 +2,12 @@
 #include "ui_main.hpp"
 #include "game.hpp"
 #include "game_assets.hpp"
+#include "minimap.hpp"
 
 struct hud_view {
 
 	game_state& game;
+	world_minimap minimap;
 
 	long long fps = 0;
 
@@ -15,11 +17,12 @@ struct hud_view {
 	no::rectangle right;
 	no::rectangle health_background;
 	no::rectangle health_foreground;
+	no::rectangle background;
 
 	int fps_texture = -1;
 	int debug_texture = -1;
 
-	hud_view(game_state& game) : game{ game } {}
+	hud_view(game_state& game) : game{ game }, minimap{ game.world } {}
 
 	~hud_view() {
 		no::delete_texture(fps_texture);
@@ -41,6 +44,7 @@ void show_hud(game_state& game) {
 	set_ui_uv(hud->right, hud_right_uv);
 	set_ui_uv(hud->health_background, hud_health_background, hud_health_size);
 	set_ui_uv(hud->health_foreground, hud_health_foreground, hud_health_size);
+	set_ui_uv(hud->background, background_uv);
 }
 
 void hide_hud() {
@@ -49,10 +53,16 @@ void hide_hud() {
 }
 
 void update_hud() {
-
+	hud->minimap.transform.position = { 109.0f, 12.0f };
+	hud->minimap.transform.position.x += hud->game.ui_camera.width() - background_uv.z - 2.0f;
+	hud->minimap.transform.scale = 64.0f;
+	hud->minimap.transform.rotation = hud->game.world_camera().transform.rotation.y;
+	hud->minimap.update(hud->game.world.my_player().object.tile());
 }
 
 void draw_hud() {
+	hud->minimap.draw();
+
 	auto& player = hud->game.world.my_player().character;
 	no::transform2 transform;
 	transform.position = { 300.0f, 4.0f };
@@ -92,6 +102,12 @@ void draw_hud() {
 		}
 		transform.position.x += transform.scale.x + 1.0f;
 	}
+
+	// right background
+	transform.scale = background_uv.zw;
+	transform.position.x = hud->game.ui_camera.width() - transform.scale.x - 2.0f;
+	transform.position.y = 0.0f;
+	no::draw_shape(hud->background, transform);
 }
 
 void set_hud_fps(long long fps) {

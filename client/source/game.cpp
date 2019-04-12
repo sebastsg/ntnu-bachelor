@@ -25,7 +25,7 @@ player_data game_world::my_player() {
 	};
 }
 
-game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*this) {
+game_state::game_state() : renderer(world), dragger(mouse()), ui(*this) {
 	ui_camera.zoom = 2.0f;
 	create_game_assets();
 	start_hit_splats(*this);
@@ -62,9 +62,10 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 		
 	});
 
-	chat.events.message.listen([this](const chat_view::message_event& event) {
+	show_chat(*this);
+	chat_message_event().listen([this](const std::string& message) {
 		to_server::game::chat_message packet;
-		packet.message = event.message;
+		packet.message = message;
 		no::send_packet(server(), packet);
 	});
 
@@ -110,7 +111,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 		case to_client::game::chat_message::type:
 		{
 			to_client::game::chat_message packet{ stream };
-			chat.add(packet.author, packet.message);
+			add_chat_message(packet.author, packet.message);
 			break;
 		}
 		case to_client::game::combat_hit::type:
@@ -163,7 +164,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 			} else {
 				auto trader = world.objects.character(packet.trader_id);
 				if (trader) {
-					chat.add("", trader->name + " wants to trade with you.");
+					add_chat_message("", trader->name + " wants to trade with you.");
 				}
 			}
 			break;
@@ -225,6 +226,7 @@ game_state::game_state() : renderer(world), dragger(mouse()), ui(*this), chat(*t
 }
 
 game_state::~game_state() {
+	hide_chat();
 	close_dialogue();
 	stop_hit_splats();
 	hide_hud();
@@ -253,17 +255,10 @@ void game_state::update() {
 	set_hud_fps(frame_counter().current_fps());
 	set_hud_debug(STRING("Tile: " << world.my_player().object.tile()));
 	update_hud();
-
-	ui.update();
+	update_trading_ui();
 	update_hit_splats();
-	chat.update();
-	if (dialogue) {
-		if (dialogue->is_open()) {
-			dialogue->update();
-		} else {
-			close_dialogue();
-		}
-	}
+	update_chat();
+	update_dialogue();
 	no::vector2i previous_offset = world.terrain.offset();
 	world.terrain.shift_to_center_of(world.my_player().object.tile());
 	if (previous_offset != world.terrain.offset()) {
@@ -296,13 +291,17 @@ void game_state::draw() {
 			renderer.draw_tile_highlights(bait_tiles, { 1.0f, 0.0f, 0.5f, 0.5f });
 		}
 	}
-	ui.draw();
+
+	no::bind_shader(shaders().sprite.id);
+	no::set_shader_view_projection(ui_camera);
+	shaders().sprite.color.set(no::vector4f{ 1.0f });
+	no::bind_texture(sprites().ui);
+
 	draw_hud();
+	ui.draw();
 	draw_hit_splats();
-	chat.draw();
-	if (dialogue) {
-		dialogue->draw();
-	}
+	draw_chat();
+	draw_dialogue();
 }
 
 no::vector2i game_state::hovered_tile() const {
@@ -314,21 +313,15 @@ const no::perspective_camera& game_state::world_camera() const {
 }
 
 void game_state::start_dialogue(int target_id) {
-	close_dialogue();
 	to_server::game::start_dialogue packet;
 	packet.target_instance_id = target_id;
 	no::send_packet(server(), packet);
-	dialogue = new dialogue_view(*this, ui_camera, target_id);
-	dialogue->events.choose.listen([this](const dialogue_view::choose_event& event) {
+	open_dialogue(*this, target_id);
+	dialogue_choice_event().listen([this](int choice) {
 		to_server::game::continue_dialogue packet;
-		packet.choice = event.choice;
+		packet.choice = choice;
 		no::send_packet(server(), packet);
 	});
-}
-
-void game_state::close_dialogue() {
-	delete dialogue;
-	dialogue = nullptr;
 }
 
 void game_state::start_combat(int target_id) {

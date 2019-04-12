@@ -134,7 +134,7 @@ static void draw_side_borders() {
 	no::vector2f offset;
 	offset.y = context_uv[top_begin].w;
 	float top_before_end_x = calculate_max_offset_x();
-	for (int i = 0; i < context_menu_option_count() - 1; i++) {
+	for (int i = 0; i < context_menu_option_count(); i++) {
 		offset.x = 0.0f;
 		draw_border(left_1 + i % 1, offset);
 		draw_border(right_1 + i % 1, { top_before_end_x, offset.y });
@@ -195,12 +195,6 @@ static void draw_option(int option_index) {
 	shaders().sprite.color.set(no::vector4f{ 1.0f });
 }
 
-static void draw_options() {
-	for (int i = 0; i < context_menu_option_count(); i++) {
-		draw_option(i);
-	}
-}
-
 void open_context_menu(game_state& game) {
 	close_context_menu();
 	context = new context_menu{ game };
@@ -251,7 +245,9 @@ void draw_context_menu() {
 	}
 	draw_background();
 	draw_top_border();
-	draw_options();
+	for (int i = 0; i < context_menu_option_count(); i++) {
+		draw_option(i);
+	}
 	no::bind_texture(sprites().ui);
 	draw_side_borders();
 	draw_bottom_border();

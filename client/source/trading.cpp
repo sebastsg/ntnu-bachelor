@@ -6,6 +6,11 @@
 const no::vector4f trade_background_uv{ 8.0f, 632.0f, 352.0f, 240.0f };
 const no::vector4f button_uv{ 8.0f, 992.0f, 264.0f, 24.0f };
 
+struct item_slot {
+	no::rectangle rectangle;
+	item_instance item;
+};
+
 struct trading_view {
 
 	game_state& game;
@@ -198,7 +203,7 @@ void trading_view::add_context_options(no::vector2f position, std::vector<item_s
 		});
 	}
 	add_context_menu_option("Examine " + item.definition().name, [this, item] {
-		game.chat.add("", std::to_string(item.stack) + "x " + item.definition().name);
+		add_chat_message("", std::to_string(item.stack) + "x " + item.definition().name);
 	});
 }
 

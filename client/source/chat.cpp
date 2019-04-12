@@ -3,60 +3,95 @@
 #include "unicode.hpp"
 #include "game_assets.hpp"
 
-chat_view::chat_view(const game_state& game) : game{ game }, input{ game, game.ui_camera } {
-	enable();
+struct chat_view {
+
+	struct {
+		no::message_event<std::string> message;
+	} events;
+
+	game_state& game;
+	int key_press = -1;
+	int key_input = -1;
+	no::text_view input;
+	std::vector<no::text_view> history;
+	int visible_history_length = 10;
+
+	chat_view(game_state& game) : game{ game }, input{ game, game.ui_camera } {}
+
+};
+
+static chat_view* chat = nullptr;
+
+void show_chat(game_state& game) {
+	hide_chat();
+	chat = new chat_view{ game };
 }
 
-chat_view::~chat_view() {
-	disable();
-}
-
-void chat_view::update() {
-	input.transform.position = { 16.0f, game.ui_camera.height() - input.transform.scale.y - 48.0f };
-	const int lower = std::max(0, (int)history.size() - visible_history_length);
-	float y = game.ui_camera.height() - 96.0f;
-	for (int i = (int)history.size() - 1; i >= lower; i--) {
-		history[i].transform.position = { input.transform.position.x + 8.0f, y };
-		y -= history[i].transform.scale.y + 4.0f;
+void hide_chat() {
+	if (chat) {
+		disable_chat();
+		delete chat;
+		chat = nullptr;
 	}
 }
 
-void chat_view::draw() const {
-	for (auto& message : history) {
+void update_chat() {
+	if (!chat) {
+		return;
+	}
+	chat->input.transform.position = { 16.0f, chat->game.ui_camera.height() - chat->input.transform.scale.y - 48.0f };
+	const int lower = std::max(0, (int)chat->history.size() - chat->visible_history_length);
+	float y = chat->game.ui_camera.height() - 96.0f;
+	for (int i = (int)chat->history.size() - 1; i >= lower; i--) {
+		chat->history[i].transform.position = { chat->input.transform.position.x + 8.0f, y };
+		y -= chat->history[i].transform.scale.y + 4.0f;
+	}
+}
+
+void draw_chat() {
+	if (!chat) {
+		return;
+	}
+	for (auto& message : chat->history) {
 		message.draw(shapes().rectangle);
 	}
-	input.draw(shapes().rectangle);
+	chat->input.draw(shapes().rectangle);
 }
 
-void chat_view::add(const std::string& author, const std::string& message) {
-	history.emplace_back(game, game.ui_camera).render(fonts().leo_14, (author.empty() ? "" : (author + ": ")) + message);
+void add_chat_message(const std::string& author, const std::string& message) {
+	std::string text = (author.empty() ? "" : (author + ": ")) + message;
+	chat->history.emplace_back(chat->game, chat->game.ui_camera).render(fonts().leo_14, text);
 }
 
-void chat_view::enable() {
-	key_press = game.keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		if (event.key == no::key::enter && !input.text().empty()) {
-			events.message.emit(input.text());
-			add(game.player_name(), input.text());
-			input.render(fonts().leo_14, "");
+void enable_chat() {
+	chat->key_press = chat->game.keyboard().press.listen([](const no::keyboard::press_message & event) {
+		if (event.key == no::key::enter && !chat->input.text().empty()) {
+			chat->events.message.emit(chat->input.text());
+			add_chat_message(chat->game.player_name(), chat->input.text());
+			chat->input.render(fonts().leo_14, "");
 		}
 	});
-	key_input = game.keyboard().input.listen([this](const no::keyboard::input_message& event) {
+	chat->key_input = chat->game.keyboard().input.listen([](const no::keyboard::input_message & event) {
 		if (event.character == (unsigned int)no::key::enter) {
 			return;
 		}
 		if (event.character == (unsigned int)no::key::backspace) {
-			if (!input.text().empty()) {
-				input.render(fonts().leo_14, input.text().substr(0, input.text().size() - 1));
+			if (!chat->input.text().empty()) {
+				chat->input.render(fonts().leo_14, chat->input.text().substr(0, chat->input.text().size() - 1));
 			}
 		} else if (event.character < 0x7F) {
-			input.render(fonts().leo_14, input.text() + (char)event.character);
+			chat->input.render(fonts().leo_14, chat->input.text() + (char)event.character);
 		}
 	});
 }
 
-void chat_view::disable() {
-	game.keyboard().press.ignore(key_press);
-	game.keyboard().input.ignore(key_input);
-	key_press = -1;
-	key_input = -1;
+void disable_chat() {
+	chat->game.keyboard().press.ignore(chat->key_press);
+	chat->game.keyboard().input.ignore(chat->key_input);
+	chat->key_press = -1;
+	chat->key_input = -1;
+}
+
+no::message_event<std::string>& chat_message_event() {
+	return chat->events.message;
 }

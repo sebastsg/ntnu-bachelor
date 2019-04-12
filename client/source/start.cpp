@@ -2,6 +2,7 @@
 #include "lobby.hpp"
 #include "updater.hpp"
 #include "commands.hpp"
+#include "assets.hpp"
 
 void configure() {
 #if _DEBUG
