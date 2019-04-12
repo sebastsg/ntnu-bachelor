@@ -17,7 +17,7 @@ in ivec2 in_BonesExtra;
 
 out vec2 ex_TexCoords;
 out vec3 ex_Normal;
-out vec3 ex_ModelPosition;
+out vec3 ex_Position;
 
 void main() {
 	mat4 bone = uni_Bones[in_Bones.x] * in_Weights.x;
@@ -31,5 +31,5 @@ void main() {
 	gl_Position = uni_ModelViewProjection * animatedPosition;
 	ex_TexCoords = in_TexCoords;
 	ex_Normal = vec3(uni_Model * animatedNormal);
-	ex_ModelPosition = vec3(uni_Model * animatedPosition);
+	ex_Position = vec3(uni_Model * animatedPosition);
 }

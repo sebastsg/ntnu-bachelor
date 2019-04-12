@@ -127,6 +127,8 @@ void character_renderer::remove(character_object& object) {
 			object.events.attack.ignore(characters[i].events.attack);
 			object.events.defend.ignore(characters[i].events.defend);
 			object.events.run.ignore(characters[i].events.run);
+			object.events.start_fishing.ignore(characters[i].events.start_fishing);
+			object.events.stop_fishing.ignore(characters[i].events.stop_fishing);
 			for (int j = 0; j < (int)characters[i].equipments.size(); j++) {
 				const auto& item = item_definitions().get(characters[i].equipments[j].item_id);
 				auto& animator = equipment_animators.find(item.id)->second;
@@ -217,7 +219,7 @@ void character_renderer::draw() {
 }
 
 void character_renderer::on_equip(character_animation& character, const item_instance& item) {
-	equipment_slot slot = item_definitions().get(item.definition_id).slot;
+	equipment_slot slot = item.definition().slot;
 	on_unequip(character, slot);
 	auto equipment_model = equipment_models.find(item.definition_id);
 	if (equipment_model == equipment_models.end()) {
@@ -339,20 +341,8 @@ world_view::world_view(world_state& world) : world(world) {
 	mappings.load(no::asset_path("models/attachments.noma"));
 	camera.transform.scale.xy = 1.0f;
 	camera.transform.rotation.x = 90.0f;
-	animate_diffuse_shader = no::create_shader(no::asset_path("shaders/animatediffuse"));
-	light.var_position_animate = no::get_shader_variable("uni_LightPosition");
-	light.var_color_animate = no::get_shader_variable("uni_LightColor");
-	characters.shader.bones = no::get_shader_variable("uni_Bones");
-	pick_shader = no::create_shader(no::asset_path("shaders/pick"));
-	var_pick_color = no::get_shader_variable("uni_Color");
-	pick_objects.var_pick_color = var_pick_color;
-	static_diffuse_shader = no::create_shader(no::asset_path("shaders/staticdiffuse"));
-	light.var_position_static = no::get_shader_variable("uni_LightPosition");
-	light.var_color_static = no::get_shader_variable("uni_LightColor");
-	fog.var_start = no::get_shader_variable("uni_FogStart");
-	fog.var_distance = no::get_shader_variable("uni_FogDistance");
-	var_color = no::get_shader_variable("uni_Color");
-	no::surface temp_surface(no::asset_path("textures/tiles.png"));
+	reload_shaders();
+	no::surface temp_surface{ no::asset_path("textures/tiles.png") };
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 3, 1);
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 4, 2);
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 5, 1);
@@ -360,7 +350,7 @@ world_view::world_view(world_state& world) : world(world) {
 	
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, true);
-	no::surface surface = { 2, 2, no::pixel_format::rgba };
+	no::surface surface{ 2, 2, no::pixel_format::rgba };
 	surface.clear(0xFFFFFFFF);
 	highlight_texture = no::create_texture(surface);
 
@@ -416,7 +406,11 @@ world_view::~world_view() {
 }
 
 void world_view::draw() {
-	light.position = camera.transform.position + camera.offset();
+	no::bind_shader(static_diffuse_shader);
+	no::set_shader_view_projection(camera);
+	light.var_position_static.set(light.position);
+	light.var_color_static.set(light.color);
+	var_color.set(no::vector4f{ 1.0f });
 	draw_terrain();
 	decorations.draw(world.objects);
 	no::bind_shader(animate_diffuse_shader);
@@ -431,20 +425,11 @@ void world_view::draw_terrain() {
 	if (world.terrain.is_dirty()) {
 		refresh_terrain();
 	}
-	no::bind_shader(static_diffuse_shader);
-	no::set_shader_view_projection(camera);
-	light.var_position_static.set(light.position);
-	light.var_color_static.set(light.color);
-	fog.var_start.set(fog.start);
-	fog.var_distance.set(fog.distance);
-	var_color.set(no::vector4f{ 1.0f });
 	no::bind_texture(tileset.texture);
 	no::transform3 transform;
 	transform.position.x = (float)world.terrain.offset().x;
 	transform.position.z = (float)world.terrain.offset().y;
-	no::set_shader_model(transform);
-	height_map.bind();
-	height_map.draw();
+	no::draw_shape(height_map, transform);
 }
 
 void world_view::draw_for_picking() {
@@ -543,6 +528,25 @@ void world_view::update_object_visibility() {
 			add(*object);
 		}
 	});
+}
+
+void world_view::reload_shaders() {
+	no::delete_shader(animate_diffuse_shader);
+	animate_diffuse_shader = no::create_shader(no::asset_path("shaders/animatediffuse"));
+	light.var_position_animate = no::get_shader_variable("uni_LightPosition");
+	light.var_color_animate = no::get_shader_variable("uni_LightColor");
+	characters.shader.bones = no::get_shader_variable("uni_Bones");
+
+	no::delete_shader(pick_shader);
+	pick_shader = no::create_shader(no::asset_path("shaders/pick"));
+	var_pick_color = no::get_shader_variable("uni_Color");
+	pick_objects.var_pick_color = var_pick_color;
+
+	no::delete_shader(static_diffuse_shader);
+	static_diffuse_shader = no::create_shader(no::asset_path("shaders/staticdiffuse"));
+	light.var_position_static = no::get_shader_variable("uni_LightPosition");
+	light.var_color_static = no::get_shader_variable("uni_LightColor");
+	var_color = no::get_shader_variable("uni_Color");
 }
 
 void world_view::add(const game_object& object) {

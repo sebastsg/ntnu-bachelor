@@ -55,7 +55,9 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 	});
 
 	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		
+		if (event.key == no::key::num_7) {
+			renderer.reload_shaders();
+		}
 	});
 
 	show_chat(*this);
@@ -274,6 +276,9 @@ void game_state::draw() {
 	hovered_pixel.y--;
 	hovered_pixel.xy += world.terrain.offset();
 	window().clear();
+	renderer.light.position.x = world.my_player().object.transform.position.x;
+	renderer.light.position.y = 32.0f;
+	renderer.light.position.z = world.my_player().object.transform.position.z;
 	renderer.draw();
 	if (world.my_player_id != -1) {
 		if (hovered_pixel.x != -1 && !is_context_menu_open()) {

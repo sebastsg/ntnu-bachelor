@@ -301,7 +301,6 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()), el
 
 	});
 	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });
-	renderer.fog.start = 100.0f;
 	tool().enable();
 	tile_flag.refresh();
 }
@@ -395,6 +394,7 @@ void world_editor_state::draw() {
 	hovered_pixel.y--;
 	hovered_tile = hovered_pixel.xy + world.terrain.offset();
 
+	renderer.light.position = renderer.camera.transform.position + renderer.camera.offset();
 	renderer.draw();
 	renderer.draw_tile_highlights(brush_tiles, { 1.0f, 0.0f, 0.0f, 0.7f });
 	tool().draw();

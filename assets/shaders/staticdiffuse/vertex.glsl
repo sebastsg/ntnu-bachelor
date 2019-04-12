@@ -15,5 +15,5 @@ void main() {
 	gl_Position = uni_ModelViewProjection * vec4(in_Position, 1.0f);
 	ex_TexCoords = in_TexCoords;
 	ex_Normal = vec3(uni_Model * vec4(in_Normal, 0.0f));
-	ex_Position = vec3(uni_Model * vec4(in_Position, 0.0f));
+	ex_Position = vec3(uni_Model * vec4(in_Position, 1.0f));
 }

@@ -139,13 +139,6 @@ class world_view {
 public:
 
 	struct {
-		float start = 30.0f;
-		float distance = 70.0f;
-		no::shader_variable var_start;
-		no::shader_variable var_distance;
-	} fog;
-
-	struct {
 		no::vector3f position;
 		no::vector3f color = 1.0f;
 		no::shader_variable var_position_animate;
@@ -175,6 +168,7 @@ public:
 	void draw_tile_highlights(const std::vector<no::vector2i>& tiles, const no::vector4f& color);
 	void refresh_terrain();
 	void update_object_visibility();
+	void reload_shaders();
 
 private:
 
