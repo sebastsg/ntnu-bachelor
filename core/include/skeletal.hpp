@@ -2,9 +2,14 @@
 
 #include "draw.hpp"
 
+#include <thread>
+#include <mutex>
+#include <atomic>
+
 namespace no {
 
 struct bone_attachment {
+
 	int parent = -1;
 	glm::mat4 parent_bone;
 	glm::mat4 child_bone;
@@ -12,26 +17,62 @@ struct bone_attachment {
 	glm::quat rotation;
 
 	void update();
+
+};
+
+struct skeletal_animation_update {
+
+	bool is_attachment = false;
+	glm::mat4 root_transform{ 1.0f };
+	bone_attachment attachment;
+
+	int reference = -1;
+	bool reset = false;
+	int loops_if_reset = 0;
+
 };
 
 struct skeletal_animation {
+
 	bool active = true;
+	int id = -1;
+	int reference = -1;
+	bone_attachment attachment;
+	float time = 0.0f;
 	timer play_timer;
 	glm::mat4 bones[48];
 	glm::mat4 transforms[48];
 	glm::mat4 root_transform{ 1.0f };
 	bool is_attachment = false;
-	bone_attachment attachment;
 	int bone_count = 0;
 	int transform_count = 0;
 	int loops_completed = 0;
 	int loops_assigned = 0;
-	int reference = -1;
-	float time = 0.0f;
-	transform3 transform;
 	int next_p = 1;
 	int next_r = 1;
 	int next_s = 1;
+
+	skeletal_animation(int id);
+
+	void apply_update(skeletal_animation_update& update);
+
+};
+
+struct synced_skeletal_animation {
+
+	bool active = true;
+	int id = -1;
+	int reference = -1;
+	bone_attachment attachment;
+	glm::mat4 bones[48];
+	glm::mat4 transforms[48];
+	glm::mat4 root_transform{ 1.0f };
+	int bone_count = 0;
+	int transform_count = 0;
+	long long played_for_ms = 0;
+
+	synced_skeletal_animation(const skeletal_animation& animation);
+
 };
 
 class skeletal_animator {
@@ -42,19 +83,33 @@ public:
 	} shader;
 
 	skeletal_animator(const model& skeleton);
+	skeletal_animator(const skeletal_animator&) = delete;
+	skeletal_animator(skeletal_animator&&) = delete;
+
+	~skeletal_animator();
+
+	skeletal_animator& operator=(const skeletal_animator&) = delete;
+	skeletal_animator& operator=(skeletal_animator&&) = delete;
 
 	int add();
 	void erase(int id);
-	skeletal_animation& get(int id);
+	void set_transform(int id, const no::transform3& transform);
+	void set_is_attachment(int id, bool attachment);
+	void set_root_transform(int id, const glm::mat4& transform);
 	int count() const;
 	bool can_animate(int id) const;
 	void reset(int id);
 	bool will_be_reset(int id) const;
+	glm::mat4 get_transform(int id, int transform) const;
+	void set_attachment_bone(int id, const bone_attachment& attachment);
+	bone_attachment get_attachment_bone(int id) const;
+
+	void animate();
+	void sync();
 
 	void draw() const;
 	void play(int id, int animation_index, int loops);
 	void play(int id, const std::string& animation_name, int loops);
-	void animate();
 
 private:
 
@@ -63,8 +118,14 @@ private:
 	glm::mat4 next_interpolated_scale(skeletal_animation& animation, int node);
 	void animate_node(skeletal_animation& animation, int parent, int node_index);
 	void animate(skeletal_animation& animation);
+	
+	std::mutex animating;
+	mutable std::mutex reading_synced;
 
+	std::vector<transform3> model_transforms;
 	std::vector<skeletal_animation> animations;
+	std::vector<synced_skeletal_animation> synced_animations;
+	std::vector<skeletal_animation_update> animation_updates;
 	const model& skeleton;
 	int active_count = 0;
 

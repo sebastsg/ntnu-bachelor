@@ -1,54 +1,130 @@
 #include "skeletal.hpp"
+#include "platform.hpp"
 
 namespace no {
 
-static glm::mat4 interpolate_positions(float factor, const vector3f& begin, const vector3f& end) {
-	//ASSERT(factor >= 0.0f && factor <= 1.0f);
+static __forceinline glm::mat4 interpolate_positions(float factor, const vector3f& begin, const vector3f& end) {
 	const vector3f delta = end - begin;
 	const vector3f interpolated = factor * delta;
 	const vector3f translation = begin + interpolated;
 	return glm::translate(glm::mat4{ 1.0f }, { translation.x, translation.y, translation.z });
 }
 
-static glm::mat4 interpolate_rotations(float factor, const glm::quat& begin, const glm::quat& end) {
-	//ASSERT(factor >= 0.0f && factor <= 1.0f);
+static __forceinline glm::mat4 interpolate_rotations(float factor, const glm::quat& begin, const glm::quat& end) {
 	return glm::mat4_cast(glm::normalize(glm::slerp(begin, end, factor)));
 }
 
-static glm::mat4 interpolate_scales(float factor, const vector3f& begin, const vector3f& end) {
-	//ASSERT(factor >= 0.0f && factor <= 1.0f);
+static __forceinline glm::mat4 interpolate_scales(float factor, const vector3f& begin, const vector3f& end) {
 	const vector3f delta = end - begin;
 	const vector3f interpolated = factor * delta;
 	const vector3f scale = begin + interpolated;
 	return glm::scale(glm::mat4{ 1.0f }, { scale.x, scale.y, scale.z });
 }
 
-skeletal_animator::skeletal_animator(const model& skeleton) : skeleton(skeleton) {
+skeletal_animation::skeletal_animation(int id) : id{ id } {
+
+}
+
+void skeletal_animation::apply_update(skeletal_animation_update& update) {
+	is_attachment = update.is_attachment;
+	root_transform = update.root_transform;
+	attachment = update.attachment;
+	reference = update.reference;
+	if (update.reset) {
+		play_timer.start();
+		loops_completed = 0;
+		loops_assigned = update.loops_if_reset;
+		update.reset = false;
+	}
+}
+
+synced_skeletal_animation::synced_skeletal_animation(const skeletal_animation& animation) {
+	active = animation.active;
+	id = animation.id;
+	reference = animation.reference;
+	attachment = animation.attachment;
+	std::copy(std::begin(animation.bones), std::end(animation.bones), std::begin(bones));
+	std::copy(std::begin(animation.transforms), std::end(animation.transforms), std::begin(transforms));
+	root_transform = animation.root_transform;
+	bone_count = animation.bone_count;
+	transform_count = animation.transform_count;
+	played_for_ms = animation.play_timer.milliseconds();
+}
+
+skeletal_animator::skeletal_animator(const model& skeleton) : skeleton{ skeleton } {
+
+}
+
+void skeletal_animator::animate() {
+	std::lock_guard lock{ animating };
+	for (auto& animation : animations) {
+		animate(animation);
+	}
+}
+
+void skeletal_animator::sync() {
+	std::lock_guard lock{ animating };
+	std::lock_guard sync{ reading_synced };
+	for (auto& animation : animations) {
+		synced_animations[animation.id] = animation;
+		animation.apply_update(animation_updates[animation.id]);
+	}
+}
+
+skeletal_animator::~skeletal_animator() {
 
 }
 
 int skeletal_animator::add() {
+	std::lock_guard lock{ animating };
 	for (int i = 0; i < (int)animations.size(); i++) {
 		if (!animations[i].active) {
-			animations[i] = {};
+			animations[i] = { i };
+			synced_animations[i] = animations[i];
 			active_count++;
 			return i;
 		}
 	}
-	animations.emplace_back();
+	int id = (int)animations.size();
+	model_transforms.emplace_back();
+	animations.emplace_back(id);
+	synced_animations.emplace_back(id);
+	animation_updates.emplace_back();
 	active_count++;
 	return (int)animations.size() - 1;
 }
 
 void skeletal_animator::erase(int id) {
+	std::lock_guard lock{ animating };
 	if (id >= 0 && id < (int)animations.size()) {
 		animations[id].active = false;
+		synced_animations[id] = animations[id];
 		active_count--;
 	}
 }
 
-skeletal_animation& skeletal_animator::get(int id) {
-	return animations[id];
+void skeletal_animator::set_transform(int id, const no::transform3& transform) {
+	model_transforms[id] = transform;
+}
+
+void skeletal_animator::set_is_attachment(int id, bool attachment) {
+	animation_updates[id].is_attachment = attachment;
+}
+
+void skeletal_animator::set_root_transform(int id, const glm::mat4& transform) {
+	animation_updates[id].root_transform = transform;
+}
+
+glm::mat4 skeletal_animator::get_transform(int id, int transform) const {
+	return synced_animations[id].transforms[transform];
+}
+
+void skeletal_animator::set_attachment_bone(int id, const bone_attachment& attachment) {
+	animation_updates[id].attachment = attachment;
+}
+
+bone_attachment skeletal_animator::get_attachment_bone(int id) const {
+	return synced_animations[id].attachment;
 }
 
 int skeletal_animator::count() const {
@@ -56,64 +132,60 @@ int skeletal_animator::count() const {
 }
 
 bool skeletal_animator::can_animate(int id) const {
-	if (id < 0 || id >= (int)animations.size()) {
+	std::lock_guard lock{ reading_synced };
+	if (id < 0 || id >= (int)synced_animations.size()) {
 		return false;
 	}
-	if (animations[id].reference >= (int)skeleton.animations.size()) {
+	if (synced_animations[id].reference >= (int)skeleton.animations.size()) {
 		return false;
 	}
-	if (animations[id].reference < 0) {
+	if (synced_animations[id].reference < 0) {
 		return false;
 	}
 	return true;
 }
 
 void skeletal_animator::reset(int id) {
-	animations[id].play_timer.start();
+	std::lock_guard lock{ reading_synced };
+	animation_updates[id].reset = true;
 }
 
 bool skeletal_animator::will_be_reset(int id) const {
-	if (animations[id].reference < 0) {
+	std::lock_guard lock{ reading_synced };
+	if (synced_animations[id].reference < 0) {
 		return false;
 	}
-	auto& animation = skeleton.animations[animations[id].reference];
-	double seconds = (double)animations[id].play_timer.milliseconds() * 0.001;
+	auto& animation = skeleton.animations[synced_animations[id].reference];
+	double seconds = (double)synced_animations[id].played_for_ms * 0.001;
 	double play_duration = seconds * (double)animation.ticks_per_second;
 	return play_duration >= (double)animation.duration;
 }
 
 void skeletal_animator::draw() const {
+	std::lock_guard lock{ reading_synced };
 	skeleton.bind();
-	for (auto& animation : animations) {
+	for (auto& animation : synced_animations) {
 		if (!animation.active) {
 			continue;
 		}
-		no::set_shader_model(animation.transform);
+		no::set_shader_model(model_transforms[animation.id]);
 		shader.bones.set(animation.bones, animation.bone_count);
 		skeleton.draw();
 	}
 }
 
 void skeletal_animator::play(int id, int animation_index, int loops) {
-	auto& animation = animations[id];
-	if (animation.reference == animation_index) {
-		return;
+	std::lock_guard lock{ reading_synced };
+	auto& animation = animation_updates[id];
+	if (animation.reference != animation_index) {
+		animation.reset = true;
+		animation.loops_if_reset = loops;
+		animation.reference = animation_index;
 	}
-	//ASSERT(animation_index >= 0 && animation_index < skeleton.total_animations());
-	animation.play_timer.start();
-	animation.loops_completed = 0;
-	animation.loops_assigned = loops;
-	animation.reference = animation_index;
 }
 
 void skeletal_animator::play(int id, const std::string& animation_name, int loops) {
 	play(id, skeleton.index_of_animation(animation_name), loops);
-}
-
-void skeletal_animator::animate() {
-	for (auto& animation : animations) {
-		animate(animation);
-	}
 }
 
 glm::mat4 skeletal_animator::next_interpolated_position(skeletal_animation& animation, int node_index) {

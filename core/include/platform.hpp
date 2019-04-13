@@ -51,6 +51,7 @@ using platform_render_context = windows_gl_context;
 
 long long performance_frequency();
 long long performance_counter();
+void sleep(int ms);
 
 std::string environment_variable(const std::string& name);
 

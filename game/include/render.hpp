@@ -29,7 +29,7 @@ public:
 
 	character_renderer& operator=(const character_renderer&) = delete;
 	character_renderer& operator=(character_renderer&&) = delete;
-	
+
 	void update(const no::bone_attachment_mapping_list& mappings, const world_objects& objects);
 	void draw();
 	void add(world_objects& objects, int object_id);
@@ -71,13 +71,16 @@ private:
 	void on_equip(character_animation& object, const item_instance& item);
 	void on_unequip(character_animation& object, equipment_slot slot);
 
+	std::thread thread;
+	std::atomic<bool> joining_thread = false;
+
 	std::vector<character_animation> characters;
 
-	std::unordered_map<std::string, no::skeletal_animator> animators;
 	std::unordered_map<std::string, textured_model> character_models;
-
-	std::unordered_map<int, no::skeletal_animator> equipment_animators;
 	std::unordered_map<int, textured_model> equipment_models;
+
+	std::unordered_map<std::string, no::skeletal_animator> animators;
+	std::unordered_map<int, no::skeletal_animator> equipment_animators;
 
 };
 
@@ -161,6 +164,8 @@ public:
 
 	world_view& operator=(const world_view&) = delete;
 	world_view& operator=(world_view&&) = delete;
+
+	void update();
 
 	void draw();
 	void draw_terrain();

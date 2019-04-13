@@ -58,9 +58,24 @@ character_renderer::character_renderer() {
 	for (auto& item : items) {
 		equipment_animators.emplace(item.id, equipment_models[item.id].model);
 	}
+	thread = std::thread{ [this] {
+		while (!joining_thread) {
+			no::platform::sleep(17); // ~59fps
+			for (auto& animator : animators) {
+				animator.second.animate();
+			}
+			for (auto& animator : equipment_animators) {
+				animator.second.animate();
+			}
+		}
+	} };
 }
 
 character_renderer::~character_renderer() {
+	joining_thread = true;
+	if (thread.joinable()) {
+		thread.join();
+	}
 	for (auto& model : character_models) {
 		no::delete_texture(model.second.texture);
 	}
@@ -150,7 +165,6 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 		auto character_object = objects.character(character.object_id);
 		auto& animator = animators.find(object.definition().model)->second;
 		auto& model = character_models[object.definition().model].model;
-		auto& animation = animator.get(character.animation_id);
 		if (!character.new_animation && character.play_once) {
 			if (animator.will_be_reset(character.animation_id)) {
 				if (character.animation == "fishing_catching") {
@@ -182,37 +196,42 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 			}
 		}
 		character.new_animation = false;
-		animation.transform = object.transform;
+		animator.set_transform(character.animation_id, object.transform);
 		animator.play(character.animation_id, character.animation, -1);
 		for (auto& equipment : character.equipments) {
 			auto& equipment_animator = equipment_animators.find(equipment.item_id)->second;
-			auto& equipment_animation = equipment_animator.get(equipment.animation_id);
-			equipment_animation.transform = object.transform;
+			equipment_animator.set_transform(equipment.animation_id, object.transform);
 			if (item_definitions().get(equipment.item_id).attachment) {
 				// todo: proper mapping for root -> attach animation
 				equipment_animator.play(equipment.animation_id, "default", -1);
 				std::string equipment_name = equipment_models[equipment.item_id].model.name();
-				equipment_animation.is_attachment = true;
+				equipment_animator.set_is_attachment(equipment.animation_id, true);
 				int char_animation = model.index_of_animation(character.animation);
-				mappings.update(model, char_animation, equipment_name, equipment_animation.attachment);
-				equipment_animation.root_transform = animation.transforms[equipment_animation.attachment.parent];
+				no::bone_attachment attachment = equipment_animator.get_attachment_bone(equipment.animation_id);
+				mappings.update(model, char_animation, equipment_name, attachment);
+				equipment_animator.set_attachment_bone(equipment.animation_id, attachment);
+				equipment_animator.set_root_transform(equipment.animation_id, animator.get_transform(character.animation_id, attachment.parent));
 			} else {
 				equipment_animator.play(equipment.animation_id, character.animation, -1);
 			}
 		}
+	}
+	for (auto& animator : animators) {
+		animator.second.sync();
+	}
+	for (auto& animator : equipment_animators) {
+		animator.second.sync();
 	}
 }
 
 void character_renderer::draw() {
 	for (auto& animator : animators) {
 		animator.second.shader.bones = shader.bones;
-		animator.second.animate();
 		no::bind_texture(character_models[animator.first].texture);
 		animator.second.draw();
 	}
 	for (auto& equipment : equipment_animators) {
 		equipment.second.shader.bones = shader.bones;
-		equipment.second.animate();
 		no::bind_texture(equipment_models[equipment.first].texture);
 		equipment.second.draw();
 	}
@@ -411,6 +430,7 @@ void world_view::draw() {
 	light.var_position_static.set(light.position);
 	light.var_color_static.set(light.color);
 	var_color.set(no::vector4f{ 1.0f });
+	no::get_shader_variable("uni_LightDirection").set(no::vector3f{ -0.2f, -1.0f, -0.3f });
 	draw_terrain();
 	decorations.draw(world.objects);
 	no::bind_shader(animate_diffuse_shader);

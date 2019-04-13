@@ -44,6 +44,10 @@ long long performance_counter() {
 	return counter.QuadPart;
 }
 
+void sleep(int ms) {
+	Sleep(ms);
+}
+
 std::string environment_variable(const std::string& name) {
 	char buffer[2048];
 	GetEnvironmentVariableA(name.c_str(), buffer, 2048);

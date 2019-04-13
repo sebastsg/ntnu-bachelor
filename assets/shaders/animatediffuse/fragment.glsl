@@ -10,6 +10,13 @@ in vec3 ex_Position;
 
 out vec4 out_Color;
 
+float directional(float dist) {
+	vec3 ldir = vec3(0.0f, -1.0f, 0.0f);
+	vec3 dir = normalize(-ldir);
+	float att = 1.0f / (1.0f + (0.001f * dist * dist));
+	return max(dot(ex_Normal, dir), 0.0f) * att;
+}
+
 float diffuse(float dist) {
 	vec3 light = normalize(uni_LightPosition - ex_Position);
 	float att = 1.0f / (1.0f + (0.001f * dist * dist));
@@ -29,7 +36,7 @@ float fog(float dist) {
 void main() {
 	float ambient = 0.6f;
 	float dist = length(uni_LightPosition - ex_Position);
-	float intensity = min(1.0f, ambient + diffuse(dist));
+	float intensity = min(1.0f, ambient + directional(dist));
 	vec4 tex = texture(uni_Texture, ex_TexCoords).rgba;
 	vec4 final = vec4(uni_LightColor * intensity, fog(dist));
 	out_Color = tex * final;

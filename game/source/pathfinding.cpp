@@ -22,13 +22,16 @@ bool pathfinder::can_search(no::vector2i from, no::vector2i to) const {
 }
 
 std::vector<no::vector2i> pathfinder::find_path(no::vector2i from, no::vector2i to) {
-	if (!can_search(from, to) || from == to) {
+	if (!can_search(from, to) || from == to || terrain.is_out_of_bounds(to)) {
 		return {};
 	}
 	no::vector2i original_to{ to };
 	while (terrain.tiles().at(to.x, to.y).is_solid()) {
-		to.x += (from.x > original_to.x ? 1 : -1);
-		to.y += (from.y > original_to.y ? 1 : -1);
+		to.x += (from.x > to.x ? 1 : -1);
+		to.y += (from.y > to.y ? 1 : -1);
+		if (terrain.is_out_of_bounds(to)) {
+			return {};
+		}
 	}
 	min_area = from - max_search_area;
 	max_area = from + max_search_area;
