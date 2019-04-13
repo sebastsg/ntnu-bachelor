@@ -2,28 +2,6 @@
 #include "assets.hpp"
 #include "surface.hpp"
 
-static std::vector<unsigned short> filter_red_blue_indices(const no::model_data<no::animated_mesh_vertex>& data, float r, float b) {
-	std::vector<unsigned short> result;
-	result.reserve(data.shape.indices.size());
-	for (int i = 0; i < (int)data.shape.indices.size(); i += 3) {
-		bool keep = true;
-		for (int j = 0; j < 3; j++) {
-			int index = data.shape.indices[i + j];
-			auto& vertex = data.shape.vertices[index];
-			if (vertex.color.x > r && vertex.color.z < b) {
-				keep = false;
-				break;
-			}
-		}
-		if (keep) {
-			result.push_back(data.shape.indices[i]);
-			result.push_back(data.shape.indices[i + 1]);
-			result.push_back(data.shape.indices[i + 2]);
-		}
-	}
-	return result;
-}
-
 character_renderer::character_renderer() {
 	std::vector<game_object_definition> definitions = object_definitions().of_type(game_object_type::character);
 	for (auto& definition : definitions) {
@@ -36,18 +14,12 @@ character_renderer::character_renderer() {
 			model.texture = no::create_texture({ no::asset_path("textures/" + model_data.texture + ".png") });
 		}
 	}
+	filter_character_model();
 	for (auto& definition : definitions) {
 		if (animators.find(definition.model) == animators.end()) {
 			animators.emplace(definition.model, character_models[definition.model].model);
 		}
 	}
-
-	//model_legs_hidden.shape.indices = filter_red_blue_indices(model_data, 0.9f, 0.1f);
-	//model_body_hidden.shape.indices = filter_red_blue_indices(model_data, -0.1f, 0.9f);
-	//model_legs_and_body_hidden.shape.indices = filter_red_blue_indices(model_data, 0.1f, -0.1f);
-	//model_legs.load<no::animated_mesh_vertex>(model_legs_hidden);
-	//model_body.load<no::animated_mesh_vertex>(model_body_hidden);
-	//model_legs_and_body.load<no::animated_mesh_vertex>(model_legs_and_body_hidden);
 
 	std::vector<item_definition> items = item_definitions().of_type(item_type::equipment);
 	for (auto& item : items) {
@@ -126,12 +98,12 @@ void character_renderer::add(world_objects& objects, int object_id) {
 		characters[i].new_animation = true;
 		characters[i].play_once = true;
 	});
+	character.animation_id = animators.find(character.model)->second.add();
 	for (auto& item : object.equipment.items) {
 		if (item.definition_id != -1) {
 			on_equip(characters[i], item);
 		}
 	}
-	character.animation_id = animators.find(character.model)->second.add();
 }
 
 void character_renderer::remove(character_object& object) {
@@ -163,7 +135,7 @@ void character_renderer::update(const no::bone_attachment_mapping_list& mappings
 		}
 		auto& object = objects.object(character.object_id);
 		auto character_object = objects.character(character.object_id);
-		auto& animator = animators.find(object.definition().model)->second;
+		auto& animator = animators.find(character.model)->second;
 		auto& model = character_models[object.definition().model].model;
 		if (!character.new_animation && character.play_once) {
 			if (animator.will_be_reset(character.animation_id)) {
@@ -246,6 +218,11 @@ void character_renderer::on_equip(character_animation& character, const item_ins
 	}
 	auto& equipment_animator = equipment_animators.find(item.definition_id);
 	character.equipments.push_back({ equipment_animator->second.add(), item.definition_id });
+	if (slot == equipment_slot::legs) {
+		hide_legs(character);
+	} else if (slot == equipment_slot::body) {
+		hide_body(character);
+	}
 }
 
 void character_renderer::on_unequip(character_animation& character, equipment_slot slot) {
@@ -255,9 +232,104 @@ void character_renderer::on_unequip(character_animation& character, equipment_sl
 			auto& animator = equipment_animators.find(item.id)->second;
 			animator.erase(character.equipments[i].animation_id);
 			character.equipments.erase(character.equipments.begin() + i);
+			if (slot == equipment_slot::legs) {
+				show_legs(character);
+			} else if (slot == equipment_slot::body) {
+				show_body(character);
+			}
 			break;
 		}
 	}
+}
+
+void character_renderer::hide_legs(character_animation& character) {
+	if (!character.showing_legs) {
+		return;
+	}
+	character.showing_legs = false;
+	animators.find(character.model)->second.erase(character.animation_id);
+	character.model = (character.showing_body ? "character_no_legs" : "character_no_legs_body");
+	character.animation_id = animators.find(character.model)->second.add();
+}
+
+void character_renderer::hide_body(character_animation& character) {
+	if (!character.showing_body) {
+		return;
+	}
+	character.showing_body = false;
+	animators.find(character.model)->second.erase(character.animation_id);
+	character.model = (character.showing_legs ? "character_no_body" : "character_no_legs_body");
+	character.animation_id = animators.find(character.model)->second.add();
+}
+
+void character_renderer::show_legs(character_animation& character) {
+	if (character.showing_legs) {
+		return;
+	}
+	character.showing_legs = true;
+	animators.find(character.model)->second.erase(character.animation_id);
+	character.model = (character.showing_body ? "character" : "character_no_body");
+	character.animation_id = animators.find(character.model)->second.add();
+}
+
+void character_renderer::show_body(character_animation& character) {
+	if (character.showing_body) {
+		return;
+	}
+	character.showing_body = true;
+	animators.find(character.model)->second.erase(character.animation_id);
+	character.model = (character.showing_legs ? "character" : "character_no_legs");
+	character.animation_id = animators.find(character.model)->second.add();
+}
+
+static std::vector<unsigned short> filter_indices(const no::model_data<no::animated_mesh_vertex>& data, const std::function<bool(no::vector3f)>& filter) {
+	std::vector<unsigned short> result;
+	result.reserve(data.shape.indices.size());
+	for (int i = 0; i < (int)data.shape.indices.size(); i += 3) {
+		bool keep = true;
+		for (int j = 0; j < 3; j++) {
+			int index = data.shape.indices[i + j];
+			if (filter(data.shape.vertices[index].color.xyz)) {
+				keep = false;
+				break;
+			}
+		}
+		if (keep) {
+			result.push_back(data.shape.indices[i]);
+			result.push_back(data.shape.indices[i + 1]);
+			result.push_back(data.shape.indices[i + 2]);
+		}
+	}
+	return result;
+}
+
+void character_renderer::filter_character_model() {
+	no::model_data<no::animated_mesh_vertex> character_model;
+	no::import_model(no::asset_path("models/character.nom"), character_model);
+	no::model_data<no::animated_mesh_vertex> hidden_legs_data{ character_model };
+	no::model_data<no::animated_mesh_vertex> hidden_body_data{ character_model };
+	no::model_data<no::animated_mesh_vertex> hidden_legs_and_body_data{ character_model };
+	hidden_legs_data.shape.indices = filter_indices(character_model, [](no::vector3f color) {
+		return color.x > 0.9f&& color.y < 0.1f&& color.z < 0.1f;
+	});
+	hidden_body_data.shape.indices = filter_indices(character_model, [](no::vector3f color) {
+		return color.x < 0.1f&& color.y < 0.1f&& color.z > 0.9f;
+	});
+	hidden_legs_and_body_data.shape.indices = filter_indices(character_model, [](no::vector3f color) {
+		return (color.x > 0.9f && color.y < 0.1f && color.z < 0.1f) || (color.x < 0.1f && color.y < 0.1f && color.z > 0.9f);
+	});
+	character_models["character_no_legs"] = {};
+	character_models["character_no_body"] = {};
+	character_models["character_no_legs_body"] = {};
+	character_models["character_no_legs"].model.load<no::animated_mesh_vertex>(hidden_legs_data);
+	character_models["character_no_body"].model.load<no::animated_mesh_vertex>(hidden_body_data);
+	character_models["character_no_legs_body"].model.load<no::animated_mesh_vertex>(hidden_legs_and_body_data);
+	character_models["character_no_legs"].texture = no::create_texture({ no::asset_path("textures/character.png") });
+	character_models["character_no_body"].texture = no::create_texture({ no::asset_path("textures/character.png") });
+	character_models["character_no_legs_body"].texture = no::create_texture({ no::asset_path("textures/character.png") });
+	animators.emplace("character_no_legs", character_models["character_no_legs"].model);
+	animators.emplace("character_no_body", character_models["character_no_body"].model);
+	animators.emplace("character_no_legs_body", character_models["character_no_legs_body"].model);
 }
 
 decoration_renderer::decoration_renderer() {

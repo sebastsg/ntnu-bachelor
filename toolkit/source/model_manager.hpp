@@ -91,9 +91,11 @@ private:
 	struct active_attachment_data {
 		bool alive = true;
 		no::model model;
-		no::skeletal_animator animator;
+		std::unique_ptr<no::skeletal_animator> animator;
 		int texture = -1;
-		active_attachment_data() : animator{ model } {}
+		active_attachment_data() : animator{ std::make_unique<no::skeletal_animator>(model) } {
+			
+		}
 	};
 
 	std::vector<active_attachment_data> active_attachments;

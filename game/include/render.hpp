@@ -61,6 +61,8 @@ private:
 		std::vector<character_equipment> equipments;
 		bool new_animation = true;
 		bool play_once = false;
+		bool showing_legs = true;
+		bool showing_body = true;
 	};
 
 	struct textured_model {
@@ -70,6 +72,13 @@ private:
 
 	void on_equip(character_animation& object, const item_instance& item);
 	void on_unequip(character_animation& object, equipment_slot slot);
+
+	// these functions are kind of a hack, and only apply to the character model
+	void hide_legs(character_animation& object);
+	void hide_body(character_animation& object);
+	void show_legs(character_animation& object);
+	void show_body(character_animation& object);
+	void filter_character_model();
 
 	std::thread thread;
 	std::atomic<bool> joining_thread = false;

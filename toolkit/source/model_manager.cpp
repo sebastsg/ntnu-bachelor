@@ -453,13 +453,13 @@ void attachments_tool::update() {
 		} else {
 			exists = true;
 		}
-		if (attachment.animator.count() == 0) {
+		if (attachment.animator->count() == 0) {
 			if (!exists) {
 				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
 			}
 			if (ImGui::Button(CSTRING("Attach##AttachToModel" << i))) {
-				attachment.animator.add();
+				attachment.animator->add();
 			}
 			if (!exists) {
 				ImGui::PopStyleVar();
@@ -468,20 +468,21 @@ void attachments_tool::update() {
 			ImGui::SameLine();
 		} else if (exists) {
 			if (attachment.model.index_of_animation("default") != -1) {
-				auto& attachment_animation = attachment.animator.get(0);
-				attachment.animator.play(0, "default", -1);
-				attachment_animation.is_attachment = true;
-				mappings.update(root_model, animation, attachment.model.name(), attachment_animation.attachment);
-				attachment_animation.root_transform = animator.get(0).transforms[attachment_animation.attachment.parent];
+				attachment.animator->play(0, "default", -1);
+				attachment.animator->set_is_attachment(0, true);
+				auto bone = attachment.animator->get_attachment_bone(0);
+				mappings.update(root_model, animation, attachment.model.name(), bone);
+				attachment.animator->set_attachment_bone(0, bone);
+				attachment.animator->set_root_transform(0, animator.get_transform(0, bone.parent));
 			} else {
-				attachment.animator.play(0, animation, -1);
+				attachment.animator->play(0, animation, -1);
 			}
 			if (ImGui::Button(CSTRING("Detach##DetachFromModel" << i))) {
-				attachment.animator.erase(0);
+				attachment.animator->erase(0);
 			}
 			ImGui::SameLine();
 		}
-		if (attachment.animator.count() > 0) {
+		if (attachment.animator->count() > 0) {
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
 		}
@@ -489,7 +490,7 @@ void attachments_tool::update() {
 			active_attachments[i].alive = false;
 			continue;
 		}
-		if (attachment.animator.count() > 0) {
+		if (attachment.animator->count() > 0) {
 			ImGui::PopStyleVar();
 			ImGui::PopItemFlag();
 		}
@@ -532,7 +533,7 @@ void attachments_tool::update() {
 			bool found = false;
 			for (auto& attachment : active_attachments) {
 				if (!attachment.alive) {
-					attachment.animator.erase(0);
+					attachment.animator->erase(0);
 					attachment.model.load<no::animated_mesh_vertex>(path);
 					no::delete_texture(attachment.texture);
 					attachment.texture = no::create_texture({ no::asset_path("textures/" + attachment.model.texture_name() + ".png") });
@@ -571,13 +572,13 @@ void attachments_tool::draw() {
 	animator.shader.bones = no::get_shader_variable("uni_Bones");
 	animator.draw();
 	for (auto& attachment : active_attachments) {
-		if (attachment.alive && attachment.animator.can_animate(0)) {
+		if (attachment.alive && attachment.animator->can_animate(0)) {
 			if (attachment.texture != -1) {
 				no::bind_texture(attachment.texture);
 			}
-			attachment.animator.shader.bones = no::get_shader_variable("uni_Bones");
-			attachment.animator.animate();
-			attachment.animator.draw();
+			attachment.animator->shader.bones = no::get_shader_variable("uni_Bones");
+			attachment.animator->animate();
+			attachment.animator->draw();
 		}
 	}
 }
