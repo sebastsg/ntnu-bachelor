@@ -79,7 +79,11 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 			auto player = world.objects.character(packet.player_instance_id);
 			if (player) {
 				auto& object = world.objects.object(packet.player_instance_id);
-				player->start_path_movement(world.path_between(object.tile(), packet.tile));
+				auto path = world.path_between(object.tile(), packet.tile);
+				if (!path.empty() && object.tile() == path.back()) {
+					path.pop_back();
+				}
+				player->start_path_movement(path);
 			} else {
 				WARNING("player not found: " << packet.player_instance_id);
 			}
