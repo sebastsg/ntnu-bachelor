@@ -28,8 +28,8 @@ public:
 	void update();
 	int count() const;
 
-	void load(const std::string& path);
-	void save(const std::string& path) const;
+	void load();
+	void save() const;
 
 private:
 

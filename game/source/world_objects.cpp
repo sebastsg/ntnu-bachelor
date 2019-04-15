@@ -1,6 +1,7 @@
 #include "world_objects.hpp"
 #include "world.hpp"
 #include "character.hpp"
+#include "assets.hpp"
 
 world_objects::world_objects(world_state& world) : world(world) {
 
@@ -113,9 +114,12 @@ int world_objects::count() const {
 	return (int)objects.size();
 }
 
-void world_objects::load(const std::string& path) {
+void world_objects::load() {
 	no::io_stream stream;
-	no::file::read(path, stream);
+	no::file::read(no::asset_path("worlds/" + world.name + ".ewo"), stream);
+	if (stream.size_left_to_read() == 0) {
+		return;
+	}
 	int count = stream.read<int32_t>();
 	for (int i = 0; i < count; i++) {
 		int definition_id = stream.read<int32_t>();
@@ -133,7 +137,7 @@ void world_objects::load(const std::string& path) {
 	}
 }
 
-void world_objects::save(const std::string& path) const {
+void world_objects::save() const {
 	no::io_stream stream;
 	stream.write((int32_t)objects.size());
 	for (auto& object : objects) {
@@ -143,5 +147,5 @@ void world_objects::save(const std::string& path) const {
 			character(object.instance_id)->write(stream);
 		}
 	}
-	no::file::write(path, stream);
+	no::file::write(no::asset_path("worlds/" + world.name + ".ewo"), stream);
 }

@@ -6,7 +6,9 @@
 #include "packets.hpp"
 
 server_world::server_world(const std::string& name) : combat(*this) {
-	load(no::asset_path("worlds/" + name + ".ew"));
+	this->name = name;
+	objects.load();
+	terrain.load(1);
 }
 
 void server_world::update() {
@@ -27,7 +29,7 @@ void server_world::update() {
 		if (fisher.bait_tile == tile) {
 			fisher.finished = true;
 		}
-		if (terrain.tiles().at(fisher.bait_tile.x, fisher.bait_tile.y).corners_of_type(world_tile::water) < 3) {
+		if (!terrain.tile_at(fisher.bait_tile).is_water()) {
 			fisher.finished = true;
 		}
 		fisher.last_progress.start();

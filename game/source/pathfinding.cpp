@@ -26,7 +26,7 @@ std::vector<no::vector2i> pathfinder::find_path(no::vector2i from, no::vector2i 
 		return {};
 	}
 	no::vector2i original_to{ to };
-	while (terrain.tiles().at(to.x, to.y).is_solid()) {
+	while (terrain.tile_at(to).is_solid()) {
 		to.x += (from.x > to.x ? 1 : -1);
 		to.y += (from.y > to.y ? 1 : -1);
 		if (terrain.is_out_of_bounds(to)) {
@@ -51,7 +51,7 @@ std::vector<no::vector2i> pathfinder::find_path(no::vector2i from, no::vector2i 
 }
 
 void pathfinder::search_neighbours(no::vector2i to) {
-	terrain.tiles().for_each_neighbour(nodes[current].tile, [&](no::vector2i tile_index, const world_tile& tile) {
+	terrain.for_each_neighbour(nodes[current].tile, [&](no::vector2i tile_index, const world_tile& tile) {
 		if (tile.is_solid() || target_reached) {
 			return;
 		}

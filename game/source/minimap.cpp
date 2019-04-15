@@ -7,14 +7,13 @@ world_minimap::world_minimap(const world_state& world) : world{ world }, surface
 }
 
 void world_minimap::update(no::vector2i tile) {
-	auto& tiles = world.terrain.tiles();
 	no::vector2i begin = tile - 32;
 	no::vector2i end = tile + 32;
 	begin.x = std::max(0, begin.x);
 	begin.y = std::max(0, begin.y);
 	for (int x = begin.x; x < end.x; x++) {
 		for (int y = begin.y; y < end.y; y++) {
-			if (tiles.is_out_of_bounds(x, y)) {
+			if (world.terrain.is_out_of_bounds({ x, y })) {
 				continue;
 			}
 			if (x < begin.x + 10 && (y < begin.y + 10 || y > end.y - 10)) {
@@ -23,9 +22,10 @@ void world_minimap::update(no::vector2i tile) {
 			if (x > end.x - 10 && (y < begin.y + 10 || y > end.y - 10)) {
 				continue;
 			}
-			int grass = tiles.at(x, y).corners_of_type(world_tile::grass);
-			int dirt = tiles.at(x, y).corners_of_type(world_tile::dirt);
-			int water = tiles.at(x, y).corners_of_type(world_tile::water);
+			auto& tile = world.terrain.tile_at({ x, y });
+			int grass = tile.corners_of_type(world_tile::grass);
+			int dirt = tile.corners_of_type(world_tile::dirt);
+			int water = tile.is_water();
 			uint32_t color = 0xFFFFFFFF;
 			if (grass > dirt) {
 				color = 0xFF00FF00;

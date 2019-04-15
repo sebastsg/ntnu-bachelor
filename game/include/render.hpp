@@ -147,6 +147,11 @@ private:
 
 };
 
+struct water_vertex {
+	static constexpr no::vertex_attribute_specification attributes[] = { 3 };
+	no::vector3f position;
+};
+
 class world_view {
 public:
 
@@ -157,6 +162,8 @@ public:
 		no::shader_variable var_color_animate;
 		no::shader_variable var_position_static;
 		no::shader_variable var_color_static;
+		no::shader_variable var_position_water;
+		no::shader_variable var_color_water;
 	} light;
 
 	no::shader_variable var_color;
@@ -174,10 +181,9 @@ public:
 	world_view& operator=(const world_view&) = delete;
 	world_view& operator=(world_view&&) = delete;
 
-	void update();
-
 	void draw();
 	void draw_terrain();
+	void draw_water();
 	void draw_for_picking();
 	void draw_tile_highlights(const std::vector<no::vector2i>& tiles, const no::vector4f& color);
 	void refresh_terrain();
@@ -188,6 +194,10 @@ private:
 
 	void add(const game_object& object);
 	void remove(const game_object& object);
+
+	void build_chunk(int chunk);
+	void refresh_chunk(int chunk);
+	void swap_chunks(int first, int second);
 
 	struct {
 		int grid = 52;
@@ -212,9 +222,16 @@ private:
 	int animate_diffuse_shader = -1;
 	int static_diffuse_shader = -1;
 	int pick_shader = -1;
+	int water_shader = -1;
 
-	no::tiled_quad_array<static_object_vertex> height_map;
-	no::tiled_quad_array<no::pick_vertex> height_map_pick;
+	no::tiled_quad_array<static_object_vertex> height_map[9];
+	no::tiled_quad_array<no::pick_vertex> height_map_pick[9];
+	std::vector<no::quad<water_vertex>> water_quads[9];
+
+	int shift_left_event = -1;
+	int shift_right_event = -1;
+	int shift_up_event = -1;
+	int shift_down_event = -1;
 
 	no::quad<static_object_vertex> highlight_quad;
 	int highlight_texture = -1;

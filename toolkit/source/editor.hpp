@@ -88,6 +88,7 @@ private:
 	int flag = world_tile::solid_flag;
 	bool value = false;
 	std::vector<no::vector2i> tiles_with_flag;
+	float water_elevation = 1.0f;
 
 };
 

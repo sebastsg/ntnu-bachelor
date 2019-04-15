@@ -2,7 +2,6 @@
 
 uniform sampler2D uni_Texture;
 uniform vec3 uni_LightPosition;
-uniform vec3 uni_LightDirection;
 uniform vec3 uni_LightColor;
 uniform vec4 uni_Color;
 

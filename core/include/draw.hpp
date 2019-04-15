@@ -354,7 +354,14 @@ public:
 	}
 
 	tiled_quad_array& operator=(const tiled_quad_array&) = delete;
-	tiled_quad_array& operator=(tiled_quad_array&&) = delete;
+	tiled_quad_array& operator=(tiled_quad_array&& that) {
+		std::swap(shape, that.shape);
+		std::swap(quad_count, that.quad_count);
+		std::swap(per_quad, that.per_quad);
+		std::swap(vertices, that.vertices);
+		std::swap(indices, that.indices);
+		return *this;
+	}
 
 	void build(int vertices_per_quad, vector2i size, const std::function<void(int, int, std::vector<V>&, std::vector<unsigned short>&)>& builder) {
 		per_quad = vertices_per_quad;

@@ -13,7 +13,9 @@
 #include <filesystem>
 
 editor_world::editor_world() {
-	load(no::asset_path("worlds/main.ew"));
+	name = "main";
+	objects.load();
+	terrain.load(1);
 }
 
 void editor_world::update() {
@@ -80,7 +82,6 @@ void tiling_tool::update() {
 void tiling_tool::update_imgui() {
 	ImGui::RadioButton("Grass", &current_type, world_tile::grass);
 	ImGui::RadioButton("Dirt", &current_type, world_tile::dirt);
-	ImGui::RadioButton("Water", &current_type, world_tile::water);
 }
 
 void tiling_tool::draw() {
@@ -102,10 +103,14 @@ void tile_flag_tool::update() {
 void tile_flag_tool::update_imgui() {
 	int before = flag;
 	ImGui::RadioButton("Solid", &flag, world_tile::solid_flag);
+	ImGui::RadioButton("Water", &flag, world_tile::water_flag);
 	if (before != flag) {
 		refresh();
 	}
 	ImGui::Checkbox("Enable flag", &value);
+	if (flag == world_tile::water_flag) {
+		ImGui::InputFloat("Water height", &water_elevation);
+	}
 }
 
 void tile_flag_tool::draw() {
@@ -114,13 +119,15 @@ void tile_flag_tool::draw() {
 
 void tile_flag_tool::refresh() {
 	auto& terrain = editor.world.terrain;
-	auto& tiles = terrain.tiles();
 	no::vector2i offset = terrain.offset();
 	no::vector2i size = terrain.size();
 	tiles_with_flag.clear();
 	for (int x = offset.x; x < size.x; x++) {
 		for (int y = offset.y; y < size.y; y++) {
-			if (flag == 0 && tiles.at(x, y).is_solid()) {
+			if (flag == world_tile::solid_flag && editor.world.terrain.tile_at({ x, y }).is_solid()) {
+				tiles_with_flag.emplace_back(x, y);
+			}
+			if (flag == world_tile::water_flag && editor.world.terrain.tile_at({ x, y }).is_water()) {
 				tiles_with_flag.emplace_back(x, y);
 			}
 		}
@@ -129,7 +136,10 @@ void tile_flag_tool::refresh() {
 
 void tile_flag_tool::apply() {
 	for (auto& tile : editor.brush_tiles) {
-		bool before = editor.world.terrain.tiles().at(tile.x, tile.y).flag(flag);
+		bool before = editor.world.terrain.tile_at(tile).flag(flag);
+		if (value) {
+			editor.world.terrain.tile_at(tile).water_height = water_elevation;
+		}
 		if (value != before) {
 			editor.world.terrain.set_tile_flag(tile, flag, value);
 			if (before) {
@@ -374,11 +384,20 @@ void world_editor_state::update_imgui() {
 		tool().enable();
 	}
 
+	for (int i = 0; i < 9; i += 3) {
+		ImGui::Text(CSTRING("[" << world.terrain.chunks[i].index() << "]"));
+		ImGui::SameLine();
+		ImGui::Text(CSTRING("[" << world.terrain.chunks[i + 1].index() << "]"));
+		ImGui::SameLine();
+		ImGui::Text(CSTRING("[" << world.terrain.chunks[i + 2].index() << "]"));
+	}
+
 	ImGui::Separator();
 	tool().update_imgui();
 	ImGui::Separator();
 	if (ImGui::Button("Save")) {
-		world.save(no::asset_path("worlds/main.ew"));
+		world.objects.save();
+		world.terrain.save();
 	}
 	ImGui::Separator();
 
@@ -401,7 +420,7 @@ void world_editor_state::draw() {
 
 	if (show_wireframe) {
 		no::set_polygon_render_mode(no::polygon_render_mode::wireframe);
-		renderer.draw_for_picking();
+		renderer.draw_terrain();
 		no::set_polygon_render_mode(no::polygon_render_mode::fill);
 	}
 	no::imgui::draw();

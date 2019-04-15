@@ -13,7 +13,9 @@
 #include "chat.hpp"
 
 game_world::game_world() {
-	load(no::asset_path("worlds/main.ew"));
+	name = "main";
+	objects.load();
+	terrain.load(1);
 }
 
 player_data game_world::my_player() {
