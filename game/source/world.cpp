@@ -100,16 +100,19 @@ bool world_terrain::is_out_of_bounds(no::vector2i tile) const {
 	if (chunks[top_left].offset.x > tile.x || chunks[top_left].offset.y > tile.y) {
 		return true;
 	}
-	if (chunks[bottom_right].offset.x + world_tile_chunk::width < tile.x) {
+	if (chunks[bottom_right].offset.x + world_tile_chunk::width <= tile.x) {
 		return true;
 	}
-	if (chunks[bottom_right].offset.y + world_tile_chunk::width < tile.y) {
+	if (chunks[bottom_right].offset.y + world_tile_chunk::width <= tile.y) {
 		return true;
 	}
 	return false;
 }
 
 float world_terrain::elevation_at(no::vector2i tile) const {
+	if (is_out_of_bounds(tile)) {
+		return 0.0f;
+	}
 	return tile_at(tile).height;
 }
 
@@ -125,12 +128,15 @@ float world_terrain::average_elevation_at(no::vector2i tile) const {
 }
 
 void world_terrain::set_elevation_at(no::vector2i tile, float elevation) {
+	if (is_out_of_bounds(tile) || is_out_of_bounds(tile + 1)) {
+		return;
+	}
 	tile_at(tile).height = elevation;
 	chunk_at_tile(tile).dirty = true;
 }
 
 void world_terrain::elevate_tile(no::vector2i tile, float amount) {
-	if (is_out_of_bounds(tile)) {
+	if (is_out_of_bounds(tile) || is_out_of_bounds(tile + 1)) {
 		return;
 	}
 	tile_at(tile).height += amount;
@@ -218,18 +224,18 @@ world_tile& world_terrain::tile_at(no::vector2i tile) {
 	int x = (tile.x - chunks[top_left].offset.x) / world_tile_chunk::width;
 	int y = (tile.y - chunks[top_left].offset.y) / world_tile_chunk::width;
 	auto& chunk = chunks[y * 3 + x];
-	tile.x -= x * world_tile_chunk::width;
-	tile.y -= y * world_tile_chunk::width;
-	return chunk.tiles[tile.y * world_tile_chunk::width + tile.x];
+	x = tile.x - chunk.offset.x;
+	y = tile.y - chunk.offset.y;
+	return chunk.tiles[y * world_tile_chunk::width + x];
 }
 
 const world_tile& world_terrain::tile_at(no::vector2i tile) const {
 	int x = (tile.x - chunks[top_left].offset.x) / world_tile_chunk::width;
 	int y = (tile.y - chunks[top_left].offset.y) / world_tile_chunk::width;
-	auto& chunk = chunks[y * 3 + x];
-	tile.x -= x * world_tile_chunk::width;
-	tile.y -= y * world_tile_chunk::width;
-	return chunk.tiles[tile.y * world_tile_chunk::width + tile.x];
+	auto & chunk = chunks[y * 3 + x];
+	x = tile.x - chunk.offset.x;
+	y = tile.y - chunk.offset.y;
+	return chunk.tiles[y * world_tile_chunk::width + x];
 }
 
 world_tile& world_terrain::local_tile_at(no::vector2i tile) {

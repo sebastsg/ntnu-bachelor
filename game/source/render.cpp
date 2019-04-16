@@ -533,12 +533,10 @@ void world_view::draw() {
 
 void world_view::draw_terrain() {
 	no::bind_texture(tileset.texture);
-	bool refreshed = false;
 	for (int i = 0; i < 9; i++) {
 		auto& chunk = world.terrain.chunks[i];
-		if (chunk.dirty && !refreshed) {
+		if (chunk.dirty) {
 			refresh_chunk(i);
-			refreshed = true;
 		}
 		no::transform3 transform;
 		transform.position.x = (float)chunk.offset.x;
