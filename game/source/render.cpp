@@ -438,12 +438,14 @@ world_view::world_view(world_state& world) : world(world) {
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 4, 2);
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 5, 1);
 	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 6, 2);
-	
+
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, true);
 	no::surface surface{ 2, 2, no::pixel_format::rgba };
 	surface.clear(0xFFFFFFFF);
 	highlight_texture = no::create_texture(surface);
+
+	water_quad.set({ { 0.0f, 0.0f, 0.0f } }, { { 1.0f, 0.0f, 0.0f } }, { { 0.0f, 0.0f, 1.0f } }, { { 1.0f, 0.0f, 1.0f } });
 
 	for (int i = 0; i < 9; i++) {
 		build_chunk(i);
@@ -550,9 +552,14 @@ void world_view::draw_water() {
 	no::set_shader_view_projection(camera);
 	light.var_position_water.set(light.position);
 	light.var_color_water.set(light.color);
+	water_quad.bind();
 	for (int i = 0; i < 9; i++) {
-		for (auto& water : water_quads[i]) {
-			no::draw_shape(water, no::transform3{});
+		for (auto& water : world.terrain.chunks[i].water_areas) {
+			no::transform3 transform;
+			transform.position = { (float)water.position.x + 0.5f, water.height, (float)water.position.y + 0.5f };
+			transform.scale = { (float)water.size.x + 0.5f, 1.0f, (float)water.size.y + 0.5f };
+			no::set_shader_model(transform);
+			water_quad.draw();
 		}
 	}
 }
@@ -591,10 +598,10 @@ void world_view::draw_tile_highlights(const std::vector<no::vector2i>& tiles, co
 		}
 		float x = (float)tile.x;
 		float z = (float)tile.y;
-		top_left.position = { x, world.terrain.elevation_at(tile) + 0.01f, z };
-		top_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1, 0 }) + 0.01f, z };
-		bottom_left.position = { x, world.terrain.elevation_at(tile + no::vector2i{ 0, 1 }) + 0.01f, z + 1.0f };
-		bottom_right.position = { x + 1.0f, world.terrain.elevation_at(tile + no::vector2i{ 1 }) + 0.01f, z + 1.0f };
+		top_left.position = { x, world.terrain.pick_elevation_at(tile) + 0.01f, z };
+		top_right.position = { x + 1.0f, world.terrain.pick_elevation_at(tile + no::vector2i{ 1, 0 }) + 0.01f, z };
+		bottom_left.position = { x, world.terrain.pick_elevation_at(tile + no::vector2i{ 0, 1 }) + 0.01f, z + 1.0f };
+		bottom_right.position = { x + 1.0f, world.terrain.pick_elevation_at(tile + no::vector2i{ 1 }) + 0.01f, z + 1.0f };
 		highlight_quad.set(top_left, top_right, bottom_left, bottom_right);
 		highlight_quad.bind();
 		highlight_quad.draw();
@@ -662,40 +669,20 @@ void world_view::refresh_chunk(int index) {
 	});
 	height_map_pick[index].for_each([&](int i, int x, int y, std::vector<no::pick_vertex>& vertices) {
 		auto& tile = terrain.local_tile_at({ cx + x, cy + y });
-		vertices[i].position.y = tile.height;
+		vertices[i].position.y = tile.pick_height();
 		vertices[i].color.xy = { (float)(cx + x) / 255.0f, (float)(cy + y) / 255.0f };
 		if (i + 3 >= (int)vertices.size() || cx + x + 1 >= world_tile_chunk::width * 3 || cy + y + 1 >= world_tile_chunk::width * 3) {
 			return;
 		}
-		vertices[i + 1].position.y = terrain.local_tile_at({ cx + x + 1, cy + y }).height;
-		vertices[i + 2].position.y = terrain.local_tile_at({ cx + x + 1, cy + y + 1 }).height;
-		vertices[i + 3].position.y = terrain.local_tile_at({ cx + x, cy + y + 1 }).height;
+		vertices[i + 1].position.y = terrain.local_tile_at({ cx + x + 1, cy + y }).pick_height();
+		vertices[i + 2].position.y = terrain.local_tile_at({ cx + x + 1, cy + y + 1 }).pick_height();
+		vertices[i + 3].position.y = terrain.local_tile_at({ cx + x, cy + y + 1 }).pick_height();
 		vertices[i + 1].color.xy = { (float)(cx + x + 1) / 255.0f, (float)(cy + y) / 255.0f };
 		vertices[i + 2].color.xy = { (float)(cx + x + 1) / 255.0f, (float)(cy + y + 1) / 255.0f };
 		vertices[i + 3].color.xy = { (float)(cx + x) / 255.0f, (float)(cy + y + 1) / 255.0f };
 	});
 	height_map[index].refresh();
 	height_map_pick[index].refresh();
-	water_quads[index].clear();
-	for (int i = 0; i < world_tile_chunk::total; i++) {
-		auto& tile = world.terrain.chunks[index].tiles[i];
-		if (!tile.is_water()) {
-			continue;
-		}
-		no::vector2i start = { i % world_tile_chunk::width, i / world_tile_chunk::width };
-		start += world.terrain.chunks[index].offset;
-		no::vector2i end = start + 1;
-		auto& quad = water_quads[index].emplace_back();
-		water_vertex top_left{ { tile_index_to_world_position(start)} };
-		water_vertex top_right{ { tile_index_to_world_position(end.x, start.y)} };
-		water_vertex bottom_left{ { tile_index_to_world_position(start.x, end.y)} };
-		water_vertex bottom_right{ { tile_index_to_world_position(end)} };
-		top_left.position.y = tile.water_height;
-		top_right.position.y = tile.water_height;
-		bottom_left.position.y = tile.water_height;
-		bottom_right.position.y = tile.water_height;
-		quad.set(top_left, top_right, bottom_left, bottom_right);
-	}
 }
 
 void world_view::swap_chunks(int first, int second) {

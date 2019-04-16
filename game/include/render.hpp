@@ -226,7 +226,7 @@ private:
 
 	no::tiled_quad_array<static_object_vertex> height_map[9];
 	no::tiled_quad_array<no::pick_vertex> height_map_pick[9];
-	std::vector<no::quad<water_vertex>> water_quads[9];
+	no::quad<water_vertex> water_quad;
 
 	int shift_left_event = -1;
 	int shift_right_event = -1;

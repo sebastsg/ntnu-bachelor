@@ -65,6 +65,8 @@ public:
 
 private:
 
+	void update_water_imgui();
+
 	int current_type = 0;
 
 };
@@ -88,7 +90,6 @@ private:
 	int flag = world_tile::solid_flag;
 	bool value = false;
 	std::vector<no::vector2i> tiles_with_flag;
-	float water_elevation = 1.0f;
 
 };
 

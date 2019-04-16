@@ -45,6 +45,10 @@ void world_tile::set_flag(int index, bool value) {
 	corners[index] = corner(index) | (value ? flag_bits : 0);
 }
 
+float world_tile::pick_height() const {
+	return is_water() ? water_height : height;
+}
+
 world_autotiler::world_autotiler() {
 	add_main(world_tile::grass);
 	add_main(world_tile::dirt);
@@ -114,6 +118,13 @@ float world_terrain::elevation_at(no::vector2i tile) const {
 		return 0.0f;
 	}
 	return tile_at(tile).height;
+}
+
+float world_terrain::pick_elevation_at(no::vector2i tile) const {
+	if (is_out_of_bounds(tile)) {
+		return 0.0f;
+	}
+	return tile_at(tile).pick_height();
 }
 
 float world_terrain::average_elevation_at(no::vector2i tile) const {
@@ -248,13 +259,15 @@ world_tile& world_terrain::local_tile_at(no::vector2i tile) {
 }
 
 void world_terrain::load_chunk(no::vector2i chunk_index, int index) {
+	auto& chunk = chunks[index];
 	no::io_stream stream;
 	no::file::read(chunk_path(chunk_index), stream);
-	chunks[index].dirty = true;
-	chunks[index].offset = chunk_index * world_tile_chunk::width;
+	chunk.dirty = true;
+	chunk.offset = chunk_index * world_tile_chunk::width;
+	chunk.water_areas.clear();
 	if (stream.size_left_to_read() > 0) {
 		for (int i = 0; i < world_tile_chunk::total; i++) {
-			auto& tile = chunks[index].tiles[i];
+			auto& tile = chunk.tiles[i];
 			tile.height = stream.read<float>();
 			tile.water_height = stream.read<float>();
 			tile.corners[0] = stream.read<uint8_t>();
@@ -262,22 +275,36 @@ void world_terrain::load_chunk(no::vector2i chunk_index, int index) {
 			tile.corners[2] = stream.read<uint8_t>();
 			tile.corners[3] = stream.read<uint8_t>();
 		}
+		int32_t count = stream.read<int32_t>();
+		for (int32_t i = 0; i < count; i++) {
+			auto& water = chunk.water_areas.emplace_back();
+			water.position = stream.read<no::vector2i>();
+			water.size = stream.read<no::vector2i>();
+			water.height = stream.read<float>();
+		}
 	} else {
 		for (int i = 0; i < world_tile_chunk::total; i++) {
-			chunks[index].tiles[i] = {};
+			chunk.tiles[i] = {};
 		}
 	}
 }
 
 void world_terrain::save_chunk(no::vector2i chunk_index, int index) const {
+	auto& chunk = chunks[index];
 	no::io_stream stream;
-	for (auto& tile : chunks[index].tiles) {
+	for (auto& tile : chunk.tiles) {
 		stream.write(tile.height);
 		stream.write(tile.water_height);
 		stream.write(tile.corners[0]);
 		stream.write(tile.corners[1]);
 		stream.write(tile.corners[2]);
 		stream.write(tile.corners[3]);
+	}
+	stream.write((int32_t)chunk.water_areas.size());
+	for (auto& water : chunk.water_areas) {
+		stream.write(water.position);
+		stream.write(water.size);
+		stream.write(water.height);
 	}
 	no::file::write(chunk_path(chunk_index), stream);
 }

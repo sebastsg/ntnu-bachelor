@@ -41,6 +41,8 @@ struct world_tile {
 	bool flag(int index) const;
 	void set_flag(int index, bool value);
 
+	float pick_height() const;
+
 };
 
 class world_autotiler {
@@ -61,6 +63,12 @@ private:
 
 };
 
+struct water_area {
+	no::vector2i position;
+	no::vector2i size;
+	float height = 0.0f;
+};
+
 struct world_tile_chunk {
 
 	static const int width = 64;
@@ -68,6 +76,7 @@ struct world_tile_chunk {
 
 	no::vector2i offset;
 	world_tile tiles[total];
+	std::vector<water_area> water_areas;
 	bool dirty = false;
 
 	inline no::vector2i index() const {
@@ -108,6 +117,7 @@ public:
 
 	bool is_out_of_bounds(no::vector2i tile) const;
 	float elevation_at(no::vector2i tile) const;
+	float pick_elevation_at(no::vector2i tile) const;
 	void set_elevation_at(no::vector2i tile, float elevation);
 	void elevate_tile(no::vector2i tile, float amount);
 	float average_elevation_at(no::vector2i tile) const;

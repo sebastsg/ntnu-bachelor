@@ -65,23 +65,72 @@ void elevate_tool::draw() {
 
 }
 
-tiling_tool::tiling_tool(world_editor_state& editor) : world_editor_tool(editor) {
-
+tiling_tool::tiling_tool(world_editor_state& editor_) : world_editor_tool{ editor_ } {
+	
 }
 
 void tiling_tool::update() {
-	if (editor.keyboard().is_key_down(no::key::space)) {
-		if (editor.mouse().is_button_down(no::mouse::button::left)) {
-			for (auto& tile : editor.brush_tiles) {
-				editor.world.terrain.set_tile_type(tile, current_type);
-			}
-		}
+	if (!editor.keyboard().is_key_down(no::key::space)) {
+		return;
+	}
+	if (!editor.mouse().is_button_down(no::mouse::button::left)) {
+		return;
+	}
+	for (auto& tile : editor.brush_tiles) {
+		editor.world.terrain.set_tile_type(tile, current_type);
 	}
 }
 
 void tiling_tool::update_imgui() {
 	ImGui::RadioButton("Grass", &current_type, world_tile::grass);
 	ImGui::RadioButton("Dirt", &current_type, world_tile::dirt);
+	ImGui::Separator();
+	update_water_imgui();
+}
+
+void tiling_tool::update_water_imgui() {
+	no::vector2i camera_tile = world_position_to_tile_index(editor.renderer.camera.transform.position);
+	if (editor.world.terrain.is_out_of_bounds(camera_tile)) {
+		return;
+	}
+	auto& chunk = editor.world.terrain.chunk_at_tile(camera_tile);
+	if (ImGui::Button("Add water area")) {
+		auto& water = chunk.water_areas.emplace_back();
+		water.position = chunk.offset;
+		water.size = 4;
+		water.height = chunk.tiles[0].height + 0.5f;
+	}
+	for (int i = 0; i < (int)chunk.water_areas.size(); i++) {
+		auto& water = chunk.water_areas[i];
+		ImGui::PushID(CSTRING("Water" << i));
+		bool changed = false;
+		changed |= ImGui::InputInt2("Position", &water.position.x);
+		changed |= ImGui::InputInt2("Size", &water.size.x);
+		changed |= ImGui::InputFloat("Height", &water.height);
+		if (changed) {
+			for (auto& tile : chunk.tiles) {
+				tile.water_height = 0.0f;
+				tile.set_water(false);
+			}
+			for (int x = 0; x < water.size.x; x++) {
+				for (int y = 0; y < water.size.y; y++) {
+					no::vector2i tile_position = { water.position.x + x, water.position.y + y };
+					if (editor.world.terrain.is_out_of_bounds(tile_position)) {
+						continue;
+					}
+					auto& tile = editor.world.terrain.tile_at(tile_position);
+					tile.water_height = water.height;
+					tile.set_water(tile.water_height > tile.height);
+				}
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Delete")) {
+			chunk.water_areas.erase(chunk.water_areas.begin() + i);
+			i--;
+		}
+		ImGui::PopID();
+	}
 }
 
 void tiling_tool::draw() {
@@ -103,14 +152,10 @@ void tile_flag_tool::update() {
 void tile_flag_tool::update_imgui() {
 	int before = flag;
 	ImGui::RadioButton("Solid", &flag, world_tile::solid_flag);
-	ImGui::RadioButton("Water", &flag, world_tile::water_flag);
 	if (before != flag) {
 		refresh();
 	}
 	ImGui::Checkbox("Enable flag", &value);
-	if (flag == world_tile::water_flag) {
-		ImGui::InputFloat("Water height", &water_elevation);
-	}
 }
 
 void tile_flag_tool::draw() {
@@ -127,9 +172,6 @@ void tile_flag_tool::refresh() {
 			if (flag == world_tile::solid_flag && editor.world.terrain.tile_at({ x, y }).is_solid()) {
 				tiles_with_flag.emplace_back(x, y);
 			}
-			if (flag == world_tile::water_flag && editor.world.terrain.tile_at({ x, y }).is_water()) {
-				tiles_with_flag.emplace_back(x, y);
-			}
 		}
 	}
 }
@@ -137,9 +179,6 @@ void tile_flag_tool::refresh() {
 void tile_flag_tool::apply() {
 	for (auto& tile : editor.brush_tiles) {
 		bool before = editor.world.terrain.tile_at(tile).flag(flag);
-		if (value) {
-			editor.world.terrain.tile_at(tile).water_height = water_elevation;
-		}
 		if (value != before) {
 			editor.world.terrain.set_tile_flag(tile, flag, value);
 			if (before) {
