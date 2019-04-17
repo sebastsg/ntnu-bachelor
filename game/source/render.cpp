@@ -644,28 +644,27 @@ void world_view::refresh_chunk(int index) {
 	auto& terrain = world.terrain;
 	no::vector2f step = uv_step();
 	height_map[index].for_each([&](int i, int x, int y, std::vector<static_object_vertex>& vertices) {
-		auto& tile = terrain.local_tile_at({ cx + x, cy + y });
+		int lx = cx + x;
+		int ly = cy + y;
+		auto& tile = terrain.local_tile_at({ lx, ly });
 		auto packed = terrain.autotiler.packed_corners(tile.corner(0), tile.corner(1), tile.corner(2), tile.corner(3));
 		no::vector2f uv = uv_for_type(world.terrain.autotiler.uv_index(packed));
 		vertices[i].position.y = tile.height;
 		vertices[i].tex_coords = uv;
-		if (i + 3 >= (int)vertices.size() || cx + x + 1 >= world_tile_chunk::width * 3 || cy + y + 1 >= world_tile_chunk::width * 3) {
+		if (i + 3 >= (int)vertices.size() || lx + 1 >= world_tile_chunk::width * 3 || ly + 1 >= world_tile_chunk::width * 3) {
 			return;
 		}
-		vertices[i + 1].position.y = terrain.local_tile_at({ cx + x + 1, cy + y }).height;
-		vertices[i + 2].position.y = terrain.local_tile_at({ cx + x + 1, cy + y + 1 }).height;
-		vertices[i + 3].position.y = terrain.local_tile_at({ cx + x, cy + y + 1 }).height;
+		vertices[i + 1].position.y = terrain.local_tile_at({ lx + 1, ly }).height;
+		vertices[i + 2].position.y = terrain.local_tile_at({ lx + 1, ly + 1 }).height;
+		vertices[i + 3].position.y = terrain.local_tile_at({ lx, ly + 1 }).height;
 		vertices[i + 1].tex_coords = uv + no::vector2f{ step.x, 0.0f };
 		vertices[i + 2].tex_coords = uv + step;
 		vertices[i + 3].tex_coords = uv + no::vector2f{ 0.0f, step.y };
 
-		no::vector3f a_to_c = vertices[i + 2].position - vertices[i].position;
-		no::vector3f b_to_d = vertices[i + 1].position - vertices[i + 3].position;
-		no::vector3f normal = a_to_c.cross(b_to_d).normalized();
-		vertices[i].normal = normal;
-		vertices[i + 1].normal = normal;
-		vertices[i + 2].normal = normal;
-		vertices[i + 3].normal = normal;
+		vertices[i].normal = terrain.calculate_normal({ lx, ly }, 0);
+		vertices[i + 1].normal = terrain.calculate_normal({ lx, ly }, 1);
+		vertices[i + 2].normal = terrain.calculate_normal({ lx, ly }, 2);
+		vertices[i + 3].normal = terrain.calculate_normal({ lx, ly }, 3);
 	});
 	height_map_pick[index].for_each([&](int i, int x, int y, std::vector<no::pick_vertex>& vertices) {
 		auto& tile = terrain.local_tile_at({ cx + x, cy + y });

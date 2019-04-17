@@ -117,6 +117,7 @@ public:
 
 	bool is_out_of_bounds(no::vector2i tile) const;
 	float elevation_at(no::vector2i tile) const;
+	float local_elevation_at(no::vector2i tile) const;
 	float pick_elevation_at(no::vector2i tile) const;
 	void set_elevation_at(no::vector2i tile, float elevation);
 	void elevate_tile(no::vector2i tile, float amount);
@@ -131,6 +132,10 @@ public:
 	world_tile& tile_at(no::vector2i tile);
 	const world_tile& tile_at(no::vector2i tile) const;
 	world_tile& local_tile_at(no::vector2i tile);
+	const world_tile& local_tile_at(no::vector2i tile) const;
+
+	no::vector3f calculate_normal(no::vector2i tile, int corner) const; // vertex normal
+	no::vector3f calculate_normal(no::vector2i tile) const; // face normal
 
 	void load_chunk(no::vector2i chunk_index, int index);
 	void save_chunk(no::vector2i chunk_index, int index) const;

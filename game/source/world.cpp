@@ -120,6 +120,13 @@ float world_terrain::elevation_at(no::vector2i tile) const {
 	return tile_at(tile).height;
 }
 
+float world_terrain::local_elevation_at(no::vector2i tile) const {
+	if (is_out_of_bounds(tile)) {
+		return 0.0f;
+	}
+	return local_tile_at(tile).height;
+}
+
 float world_terrain::pick_elevation_at(no::vector2i tile) const {
 	if (is_out_of_bounds(tile)) {
 		return 0.0f;
@@ -256,6 +263,62 @@ world_tile& world_terrain::local_tile_at(no::vector2i tile) {
 	tile.x -= x * world_tile_chunk::width;
 	tile.y -= y * world_tile_chunk::width;
 	return chunk.tiles[tile.y * world_tile_chunk::width + tile.x];
+}
+
+const world_tile& world_terrain::local_tile_at(no::vector2i tile) const {
+	int x = tile.x / world_tile_chunk::width;
+	int y = tile.y / world_tile_chunk::width;
+	auto& chunk = chunks[y * 3 + x];
+	tile.x -= x * world_tile_chunk::width;
+	tile.y -= y * world_tile_chunk::width;
+	return chunk.tiles[tile.y * world_tile_chunk::width + tile.x];
+}
+
+no::vector3f world_terrain::calculate_normal(no::vector2i tile, int corner) const {
+	const auto h = [&](int x, int y) {
+		return local_elevation_at({ tile.x + x, tile.y + y });
+	};
+	float left = 0.0f;
+	float right = 0.0f;
+	float down = 0.0f;
+	float up = 0.0f;
+	switch (corner) {
+	case 0: // top left (0, 0)
+		left = h(-1, 0);
+		right = h(1, 0);
+		down = h(0, 1);
+		up = h(0, -1);
+		break;
+	case 1: // top right (1, 0)
+		left = h(0, 0);
+		right = h(2, 0);
+		down = h(1, 1);
+		up = h(1, -1);
+		break;
+	case 2: // bottom right (1, 1)
+		left = h(0, 1);
+		right = h(2, 1);
+		down = h(1, 2);
+		up = h(1, 0);
+		break;
+	case 3: // bottom left (0, 1)
+		left = h(-1, 1);
+		right = h(1, 1);
+		down = h(0, 2);
+		up = h(0, 0);
+		break;
+	}
+	return no::vector3f{ left - right, 1.5f, down - up }.normalized();
+}
+
+no::vector3f world_terrain::calculate_normal(no::vector2i tile) const {
+	no::vector3f top_left = { (float)tile.x, local_elevation_at(tile), (float)tile.y };
+	no::vector3f top_right = { (float)tile.x + 1.0f, local_elevation_at({ tile.x + 1, tile.y }), (float)tile.y };
+	no::vector3f bottom_right = { (float)tile.x + 1.0f, local_elevation_at(tile + 1), (float)tile.y + 1.0f };
+	no::vector3f bottom_left = { (float)tile.x, local_elevation_at({ tile.x, tile.y + 1 }), (float)tile.y + 1.0f };
+	no::vector3f a_to_c = bottom_right - top_left;
+	no::vector3f b_to_d = top_right - bottom_left;
+	return a_to_c.cross(b_to_d).normalized();
 }
 
 void world_terrain::load_chunk(no::vector2i chunk_index, int index) {

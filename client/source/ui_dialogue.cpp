@@ -47,7 +47,7 @@ void open_dialogue(game_state& game, int id) {
 		close_dialogue();
 		return;
 	}
-	tree.events.choice.listen([&tree](const script_tree::choice_event & event) {
+	tree.events.choice.listen([&tree](const script_tree::choice_event& event) {
 		dialogue->current_choice = 0;
 		dialogue->current_choices = event.choices;
 		dialogue->message_view.render(fonts().leo_10, ((choice_node*)tree.nodes[tree.current_node()])->text);
@@ -57,7 +57,7 @@ void open_dialogue(game_state& game, int id) {
 		}
 	});
 	tree.process_entry_point();
-	dialogue->key_listener = game.keyboard().press.listen([&tree](const no::keyboard::press_message & event) {
+	dialogue->key_listener = game.keyboard().press.listen([&tree](const no::keyboard::press_message& event) {
 		// todo: 1, 2, 3, 4, 5... etc to select choice
 		switch (event.key) {
 		case no::key::w:
