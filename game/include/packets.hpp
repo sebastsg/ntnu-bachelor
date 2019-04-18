@@ -55,9 +55,9 @@ Packet(character_unequips, 7)
 	int32_t instance_id = -1;
 	equipment_slot slot = equipment_slot::none;
 
-Packet(character_follows, 8)
-	int32_t follower_id = -1;
-	int32_t target_id = -1;
+Packet(update_character_path, 8)
+	int32_t instance_id = -1;
+	std::vector<no::vector2i> path;
 
 Packet(trade_request, 9)
 	int32_t trader_id = -1;
@@ -82,6 +82,10 @@ Packet(fishing_progress, 14)
 
 Packet(fish_caught, 15)
 	item_instance item;
+
+Packet(rotate_object, 16)
+	int instance_id = -1;
+	no::vector3f rotation;
 
 End
 

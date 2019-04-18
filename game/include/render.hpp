@@ -202,8 +202,8 @@ private:
 	struct {
 		int grid = 52;
 		int border = 34;
-		int per_row = 9;
-		int per_column = 9;
+		int per_row = 10;
+		int per_column = 20;
 		no::vector2i size;
 		int texture = -1;
 	} tileset;

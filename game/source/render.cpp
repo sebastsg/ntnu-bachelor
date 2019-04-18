@@ -434,10 +434,15 @@ world_view::world_view(world_state& world) : world(world) {
 	camera.transform.rotation.x = 90.0f;
 	reload_shaders();
 	no::surface temp_surface{ no::asset_path("textures/tiles.png") };
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 3, 1);
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 1, 4, 2);
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 5, 1);
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), 2, 6, 2);
+	// grass/dirt
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 5, 1);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 6, 2);
+	// stone/grass
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::grass, 7, 3);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::grass, 8, 4);
+	// stone/dirt
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 9, 3);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 10, 4);
 
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, true);

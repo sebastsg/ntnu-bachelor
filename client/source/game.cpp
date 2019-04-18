@@ -35,7 +35,7 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 		if (event.button != no::mouse::button::left) {
 			return;
 		}
-		if (is_mouse_over_tabs() || is_trading()) {
+		if (is_mouse_over_tabs() || is_trading() || is_mouse_over_context_menu()) {
 			return;
 		}
 		no::vector2i tile = hovered_pixel.xy;
@@ -128,17 +128,11 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 			attacker->add_combat_experience(packet.damage);
 			attacker->events.attack.emit();
 			target->events.defend.emit();
-			attacker->follow_object_id = target->object_id;
-			target->follow_object_id = attacker->object_id;
-			attacker->follow_distance = 1;
-			target->follow_distance = 2;
 			if (attacker->stat(stat_type::health).effective() < 1) {
 				world.objects.remove(packet.attacker_id);
-				target->follow_object_id = -1;
 			}
 			if (target->stat(stat_type::health).effective() < 1) {
 				world.objects.remove(packet.target_id);
-				attacker->follow_object_id = -1;
 			}
 			break;
 		}
@@ -151,12 +145,12 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 			}
 			break;
 		}
-		case to_client::game::character_follows::type:
+		case to_client::game::update_character_path::type:
 		{
-			to_client::game::character_follows packet{ stream };
-			auto follower = world.objects.character(packet.follower_id);
-			if (follower) {
-				follower->follow_object_id = packet.target_id;
+			to_client::game::update_character_path packet{ stream };
+			auto character = world.objects.character(packet.instance_id);
+			if (character) {
+				character->start_path_movement(packet.path);
 			}
 			break;
 		}
@@ -220,6 +214,13 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 			auto& player = world.my_player().character;
 			player.inventory.add_from(packet.item);
 			player.stat(stat_type::fishing).add_experience(270);
+			break;
+		}
+		case to_client::game::rotate_object::type:
+		{
+			to_client::game::rotate_object packet{ stream };
+			auto& object = world.objects.object(packet.instance_id);
+			object.transform.rotation = packet.rotation;
 			break;
 		}
 		default:

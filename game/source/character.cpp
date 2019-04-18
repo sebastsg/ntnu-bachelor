@@ -2,6 +2,19 @@
 #include "world.hpp"
 #include "pathfinding.hpp"
 
+std::ostream& operator<<(std::ostream& out, stat_type stat) {
+	switch (stat) {
+	case stat_type::health: return out << "Health";
+	case stat_type::stamina: return out << "Stamina";
+	case stat_type::sword: return out << "Swordsmanship";
+	case stat_type::defensive: return out << "Defensive";
+	case stat_type::axe: return out << "Axe";
+	case stat_type::spear: return out << "Spear";
+	case stat_type::fishing: return out << "Fishing";
+	default: return out << "Unknown";
+	}
+}
+
 void character_stat::set_experience(long long experience) {
 	current_experience = 0;
 	real_level = 0;
@@ -96,37 +109,12 @@ void character_object::update(world_state& world, game_object& object) {
 	if (path_count > (int)target_path.size()) {
 		tiles_moved++;
 	}
-	if (follow_object_id != -1 && (tiles_moved > 1 || target_path.empty())) {
-		auto& target = world.objects.object(follow_object_id);
-		no::vector2i target_tile = target_tile_at_distance(target, object, follow_distance);
-		bool new_path_x = std::abs(object.tile().x - target_tile.x) > follow_distance;
-		bool new_path_y = std::abs(object.tile().y - target_tile.y) > follow_distance;
-		if (new_path_x || new_path_y) {
-			start_path_movement(world.path_between(object.tile(), target_tile));
-		} else {
-			float new_angle = angle_to_goal(object.tile(), target_tile);
-			if (new_angle >= 0.0f) {
-				object.transform.rotation.y = new_angle;
-			}
-		}
-	} else if (walking_around && target_path.empty()) {
-		walk_around(world, object);
-	}
 }
 
 void character_object::start_path_movement(const std::vector<no::vector2i>& path) {
 	target_path = path;
 	tiles_moved = 0;
 	walk_around_timer.start();
-}
-
-void character_object::walk_around(world_state& world, game_object& object) {
-	no::random_number_generator random;
-	if (walk_around_timer.has_started() && walk_around_timer.milliseconds() < random.next(4000, 5000)) {
-		return;
-	}
-	no::vector2i distance{ random.next(-8, 8), random.next(-8, 8) };
-	start_path_movement(world.path_between(object.tile(), walking_around_center + distance));
 }
 
 void character_object::write(no::io_stream& stream) const {
@@ -203,6 +191,10 @@ character_stat& character_object::stat(stat_type stat) {
 	return stats[(size_t)stat];
 }
 
+const character_stat& character_object::stat(stat_type stat) const {
+	return stats[(size_t)stat];
+}
+
 void character_object::add_combat_experience(int damage) {
 	auto& right = equipment.get(equipment_slot::right_hand).definition();
 	auto& left = equipment.get(equipment_slot::left_hand).definition();
@@ -224,4 +216,10 @@ void character_object::add_combat_experience(int damage) {
 		stat(stat_type::defensive).add_experience(defend_exp);
 	}
 	stat(stat_type::health).add_experience(health_exp);
+}
+
+int character_object::combat_level() const {
+	float base = 0.3f * (float)(stat(stat_type::defensive).real() + stat(stat_type::health).real());
+	float melee = 0.5f * (float)(stat(stat_type::axe).real() + stat(stat_type::sword).real() + stat(stat_type::spear).real());
+	return (int)(base + melee);
 }

@@ -25,6 +25,7 @@ public:
 	void remove(int instance_id);
 	void for_each(const std::function<void(game_object*)>& handler);
 	void for_each(const std::function<void(const game_object*)>& handler) const;
+	void for_each(const std::function<void(character_object*)>& handler);
 	void update();
 	int count() const;
 

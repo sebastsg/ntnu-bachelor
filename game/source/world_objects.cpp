@@ -104,6 +104,12 @@ void world_objects::for_each(const std::function<void(const game_object*)>& hand
 	}
 }
 
+void world_objects::for_each(const std::function<void(character_object*)>& handler) {
+	for (auto& character : characters) {
+		handler(&character);
+	}
+}
+
 void world_objects::update() {
 	for (auto& character : characters) {
 		character.update(world, object(character.object_id));

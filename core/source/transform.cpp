@@ -15,14 +15,14 @@ transform2::transform2(vector2f position, float rotation, vector2f scale)
 }
 
 glm::mat4 transform2::to_matrix4() const {
-	const vector2f origin = position + scale / 2.0f;
-	glm::mat4 matrix(1.0f);
-	matrix = glm::translate(matrix, { origin.x, origin.y, 0.0f });
-	matrix = glm::rotate(matrix, deg_to_rad(-rotation), { 0.0f, 0.0f, 1.0f });
-	matrix = glm::translate(matrix, { -origin.x, -origin.y, 0.0f });
-
+	glm::mat4 matrix{ 1.0f };
+	if (rotation != 0.0f) {
+		const vector2f origin = position + scale / 2.0f;
+		matrix = glm::translate(matrix, { origin.x, origin.y, 0.0f });
+		matrix = glm::rotate(matrix, deg_to_rad(-rotation), { 0.0f, 0.0f, 1.0f });
+		matrix = glm::translate(matrix, { -origin.x, -origin.y, 0.0f });
+	}
 	matrix = glm::translate(matrix, { position.x, position.y, 0.0f });
-
 	matrix = glm::scale(matrix, { scale.x, scale.y, 1.0f });
 	return matrix;
 }
@@ -197,11 +197,15 @@ transform3::transform3(vector3f position, vector3f rotation, vector3f scale)
 glm::mat4 transform3::to_matrix4() const {
 	glm::mat4 matrix(1.0f);
 	matrix = glm::translate(matrix, { position.x, position.y, position.z });
-
-	matrix = glm::rotate(matrix, deg_to_rad(rotation.x), { 1.0f, 0.0f, 0.0f });
-	matrix = glm::rotate(matrix, deg_to_rad(rotation.y), { 0.0f, 1.0f, 0.0f });
-	matrix = glm::rotate(matrix, deg_to_rad(rotation.z), { 0.0f, 0.0f, 1.0f });
-	
+	if (rotation.x != 0.0f) {
+		matrix = glm::rotate(matrix, deg_to_rad(rotation.x), { 1.0f, 0.0f, 0.0f });
+	}
+	if (rotation.y != 0.0f) {
+		matrix = glm::rotate(matrix, deg_to_rad(rotation.y), { 0.0f, 1.0f, 0.0f });
+	}
+	if (rotation.z != 0.0f) {
+		matrix = glm::rotate(matrix, deg_to_rad(rotation.z), { 0.0f, 0.0f, 1.0f });
+	}
 	matrix = glm::scale(matrix, { scale.x, scale.y, scale.z });
 	return matrix;
 }
@@ -210,9 +214,15 @@ glm::mat4 transform3::to_matrix4_origin() const {
 	glm::mat4 matrix(1.0f);
 	no::vector3f origin = position + scale / 2.0f;
 	matrix = glm::translate(matrix, { origin.x, origin.y, origin.z });
-	matrix = glm::rotate(matrix, deg_to_rad(rotation.x), { 1.0f, 0.0f, 0.0f });
-	matrix = glm::rotate(matrix, deg_to_rad(rotation.y), { 0.0f, 1.0f, 0.0f });
-	matrix = glm::rotate(matrix, deg_to_rad(rotation.z), { 0.0f, 0.0f, 1.0f });
+	if (rotation.x != 0.0f) {
+		matrix = glm::rotate(matrix, deg_to_rad(rotation.x), { 1.0f, 0.0f, 0.0f });
+	}
+	if (rotation.y != 0.0f) {
+		matrix = glm::rotate(matrix, deg_to_rad(rotation.y), { 0.0f, 1.0f, 0.0f });
+	}
+	if (rotation.z != 0.0f) {
+		matrix = glm::rotate(matrix, deg_to_rad(rotation.z), { 0.0f, 0.0f, 1.0f });
+	}
 	matrix = glm::translate(matrix, { -origin.x, -origin.y, -origin.z });
 
 	matrix = glm::translate(matrix, { position.x, position.y, position.z });

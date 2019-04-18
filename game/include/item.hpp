@@ -155,6 +155,10 @@ struct equipment_container {
 	void clear();
 	long long can_hold_more(int id) const;
 
+	int accuracy() const;
+	int power() const;
+	int protection() const;
+
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);
 

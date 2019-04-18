@@ -22,6 +22,7 @@ struct world_tile {
 	// max is 64 - the two leftmost bits are reserved for flags
 	static const uint8_t grass = 0;
 	static const uint8_t dirt = 1;
+	static const uint8_t stone = 2;
 
 	float height = 0.0f;
 	float water_height = 0.0f;

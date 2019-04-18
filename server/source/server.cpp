@@ -5,38 +5,7 @@
 #include "assets.hpp"
 #include "packets.hpp"
 
-server_world::server_world(const std::string& name) : combat(*this) {
-	this->name = name;
-	objects.load();
-	terrain.load(1);
-}
-
-void server_world::update() {
-	world_state::update();
-	combat.update();
-	for (auto& fisher : fishers) {
-		if (fisher.last_progress.seconds() < 2 || fisher.finished) {
-			continue;
-		}
-		auto& object = objects.object(fisher.player_instance_id);
-		no::vector2i tile = object.tile();
-		bool left = (tile.x < fisher.bait_tile.x);
-		bool right = (tile.x > fisher.bait_tile.x);
-		bool up = (tile.y < fisher.bait_tile.y);
-		bool down = (tile.y > fisher.bait_tile.y);
-		fisher.bait_tile.x += (left ? -1 : (right ? 1 : 0));
-		fisher.bait_tile.y += (up ? -1 : (down ? 1 : 0));
-		if (fisher.bait_tile == tile) {
-			fisher.finished = true;
-		}
-		if (!terrain.tile_at(fisher.bait_tile).is_water()) {
-			fisher.finished = true;
-		}
-		fisher.last_progress.start();
-	}
-}
-
-server_state::server_state() : persister(database), world("main") {
+server_state::server_state() : persister{ database }, world{ *this, "main" } {
 	listener = no::open_socket();
 	no::bind_socket(listener, "10.0.0.130", 7524); // todo: config file
 	no::listen_socket(listener);
@@ -95,6 +64,18 @@ void server_state::update() {
 		}
 		world.combat.stop_all(event.target_id);
 		world.objects.remove(event.target_id);
+	});
+	world.events.move.all([&](const server_world::move_event& event) {
+		to_client::game::update_character_path packet;
+		packet.instance_id = event.object_id;
+		packet.path = event.path;
+		no::broadcast(packet);
+	});
+	world.events.rotate.all([&](const server_world::rotate_event& event) {
+		to_client::game::rotate_object packet;
+		packet.instance_id = event.object_id;
+		packet.rotation = event.rotation;
+		no::broadcast(packet);
 	});
 	for (int i = 0; i < (int)world.fishers.size(); i++) {
 		auto& fisher = world.fishers[i];
@@ -242,18 +223,14 @@ void server_state::on_move_to_tile(int client_index, const to_server::game::move
 	new_packet.player_instance_id = client.object.player_instance_id;
 	auto player = world.objects.character(new_packet.player_instance_id);
 	if (player) {
-		// todo: pathfinding
 		auto& object = world.objects.object(player->object_id);
-		object.transform.position.x = (float)packet.tile.x;
-		object.transform.position.z = (float)packet.tile.y;
+		auto path = world.path_between(object.tile(), packet.tile);
+		if (!path.empty() && object.tile() == path.back()) {
+			path.pop_back();
+		}
+		player->start_path_movement(path);
+		no::broadcast(new_packet);
 	}
-	no::broadcast(new_packet);
-
-	// todo: this should be its own function, just testing now
-	to_client::game::character_follows client_packet;
-	client_packet.follower_id = client.object.player_instance_id;
-	client_packet.target_id = -1;
-	no::broadcast(client_packet);
 }
 
 void server_state::on_start_dialogue(int client_index, const to_server::game::start_dialogue& packet) {
@@ -328,7 +305,7 @@ void server_state::on_unequip_to_inventory(int client_index, const to_server::ga
 }
 
 void server_state::on_follow_character(int client_index, const to_server::game::follow_character& packet) {
-	auto& client = clients[client_index];
+	/*auto& client = clients[client_index];
 	auto follower = world.objects.character(client.object.player_instance_id);
 	if (follower) {
 		follower->follow_object_id = packet.target_id;
@@ -337,7 +314,7 @@ void server_state::on_follow_character(int client_index, const to_server::game::
 		client_packet.target_id = packet.target_id;
 		no::broadcast(client_packet, client_index);
 		no::send_packet(client_index, client_packet);
-	}
+	}*/
 }
 
 void server_state::on_trade_request(int client_index, const to_server::game::trade_request& packet) {

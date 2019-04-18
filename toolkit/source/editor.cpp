@@ -84,6 +84,7 @@ void tiling_tool::update() {
 void tiling_tool::update_imgui() {
 	ImGui::RadioButton("Grass", &current_type, world_tile::grass);
 	ImGui::RadioButton("Dirt", &current_type, world_tile::dirt);
+	ImGui::RadioButton("Stone", &current_type, world_tile::stone);
 	ImGui::Separator();
 	update_water_imgui();
 }
@@ -288,11 +289,13 @@ void object_tool::update_imgui() {
 
 	if (object.definition().type == game_object_type::character) {
 		auto character = editor.world.objects.character(object.instance_id);
-		auto& health = character->stat(stat_type::health);
-		int health_level = health.real();
-		ImGui::InputInt("Health", &health_level);
-		if (health_level != health.real()) {
-			health.set_experience(health.experience_for_level(health_level));
+		for (int i = 0; i < (int)stat_type::total; i++) {
+			auto& stat = character->stat((stat_type)i);
+			int stat_level = stat.real();
+			ImGui::InputInt(CSTRING((stat_type)i), &stat_level);
+			if (stat_level != stat.real()) {
+				stat.set_experience(stat.experience_for_level(stat_level));
+			}
 		}
 		ImGui::Separator();
 		ImGui::Checkbox("Walking around", &character->walking_around);

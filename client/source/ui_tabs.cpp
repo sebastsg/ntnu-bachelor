@@ -140,6 +140,9 @@ void add_tabs_context_menu_options() {
 				if (!character->name.empty()) {
 					name = character->name;
 				}
+				if (character->stat(stat_type::health).real() > 0) {
+					name += " (Lv. " + std::to_string(character->combat_level()) + ")";
+				}
 				int target_id = object->instance_id; // objects array can be resized
 				if (character->stat(stat_type::health).real() > 0) {
 					add_context_menu_option("Attack " + name, [target_id] {

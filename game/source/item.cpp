@@ -357,6 +357,30 @@ long long equipment_container::can_hold_more(int id) const {
 	return can_hold;
 }
 
+int equipment_container::accuracy() const {
+	int stat = 0;
+	for (auto& item : items) {
+		stat += (item.definition_id != -1 ? item.definition().stats.accuracy : 0);
+	}
+	return stat;
+}
+
+int equipment_container::power() const {
+	int stat = 0;
+	for (auto& item : items) {
+		stat += (item.definition_id != -1 ? item.definition().stats.power : 0);
+	}
+	return stat;
+}
+
+int equipment_container::protection() const {
+	int stat = 0;
+	for (auto& item : items) {
+		stat += (item.definition_id != -1 ? item.definition().stats.protection : 0);
+	}
+	return stat;
+}
+
 void equipment_container::write(no::io_stream& stream) const {
 	for (auto& item : items) {
 		item.write(stream);

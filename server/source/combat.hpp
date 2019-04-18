@@ -2,6 +2,7 @@
 
 #include "event.hpp"
 #include "timer.hpp"
+#include "math.hpp"
 
 class server_world;
 class character_object;
@@ -23,6 +24,7 @@ private:
 
 	server_world* world = nullptr;
 	no::timer last_hit;
+	no::random_number_generator random;
 
 };
 
@@ -52,6 +54,9 @@ public:
 	void add(int attacker_id, int target_id);
 
 	void stop_all(int object_id);
+	bool is_in_combat(int object_id) const;
+	int find_target(int object_id) const;
+	int find_attacker(int object_id) const;
 
 private:
 

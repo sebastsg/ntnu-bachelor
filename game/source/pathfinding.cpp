@@ -178,17 +178,17 @@ no::vector2i target_tile_at_distance(const game_object& target, const game_objec
 	no::vector2i target_tile = target.tile();
 	no::vector2i delta = follower.tile() - target_tile;
 	for (int i = 0; i < distance; i++) {
-		if (delta.x > 1) {
+		if (delta.x >= 1) {
 			target_tile.x++; // to west of target
 			delta.x--;
-		} else if (delta.x < -1) {
+		} else if (delta.x <= -1) {
 			target_tile.x--; // to east of target
 			delta.x++;
 		}
-		if (delta.y > 1) {
+		if (delta.y >= 1) {
 			target_tile.y++; // to south of target
 			delta.y--;
-		} else if (delta.y < -1) {
+		} else if (delta.y <= -1) {
 			target_tile.y--; // to north of target
 			delta.y++;
 		}

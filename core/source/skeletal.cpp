@@ -48,7 +48,7 @@ synced_skeletal_animation::synced_skeletal_animation(const skeletal_animation& a
 	root_transform = animation.root_transform;
 	bone_count = animation.bone_count;
 	transform_count = animation.transform_count;
-	played_for_ms = animation.play_timer.milliseconds();
+	played_for = animation.play_timer;
 }
 
 skeletal_animator::skeletal_animator(const model& skeleton) : skeleton{ skeleton } {
@@ -66,8 +66,8 @@ void skeletal_animator::sync() {
 	std::lock_guard lock{ animating };
 	std::lock_guard sync{ reading_synced };
 	for (auto& animation : animations) {
-		synced_animations[animation.id] = animation;
 		animation.apply_update(animation_updates[animation.id]);
+		synced_animations[animation.id] = animation;
 	}
 }
 
@@ -91,7 +91,7 @@ int skeletal_animator::add() {
 	synced_animations.emplace_back(id);
 	animation_updates.emplace_back();
 	active_count++;
-	return (int)animations.size() - 1;
+	return id;
 }
 
 void skeletal_animator::erase(int id) {
@@ -156,7 +156,7 @@ bool skeletal_animator::will_be_reset(int id) const {
 		return false;
 	}
 	auto& animation = skeleton.animations[synced_animations[id].reference];
-	double seconds = (double)synced_animations[id].played_for_ms * 0.001;
+	double seconds = (double)synced_animations[id].played_for.milliseconds() * 0.001;
 	double play_duration = seconds * (double)animation.ticks_per_second;
 	return play_duration >= (double)animation.duration;
 }

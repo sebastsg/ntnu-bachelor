@@ -7,6 +7,8 @@
 
 enum class stat_type { health, stamina, sword, defensive, axe, spear, fishing, total };
 
+std::ostream& operator<<(std::ostream& out, stat_type stat);
+
 class character_stat {
 public:
 
@@ -37,8 +39,6 @@ class character_object {
 public:
 
 	int object_id = -1;
-	int follow_object_id = -1;
-	int follow_distance = 1;
 	bool walking_around = false;
 	no::vector2i walking_around_center;
 	std::string name; // to override definition name
@@ -62,7 +62,6 @@ public:
 
 	void update(world_state& world, game_object& object);
 	void start_path_movement(const std::vector<no::vector2i>& path);
-	void walk_around(world_state& world, game_object& object);
 
 	void write(no::io_stream& stream) const;
 	void read(no::io_stream& stream);
@@ -78,9 +77,9 @@ public:
 	bool is_fishing() const;
 
 	character_stat& stat(stat_type stat);
+	const character_stat& stat(stat_type stat) const;
 	void add_combat_experience(int damage);
-
-private:
+	int combat_level() const;
 
 	std::vector<no::vector2i> target_path;
 	int tiles_moved = 0;

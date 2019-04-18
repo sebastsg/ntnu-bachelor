@@ -11,7 +11,7 @@ in vec3 ex_Position;
 out vec4 out_Color;
 
 float directional(float dist) {
-	vec3 ldir = vec3(0.3f, -1.0f, -0.3f);
+	vec3 ldir = vec3(-0.5f, -1.0f, 0.4f);
 	vec3 dir = normalize(-ldir);
 	float att = 1.0f / (1.0f + (0.001f * dist * dist));
 	return max(dot(ex_Normal, dir), 0.0f) * att;

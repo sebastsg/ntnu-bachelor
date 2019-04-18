@@ -52,9 +52,13 @@ float world_tile::pick_height() const {
 world_autotiler::world_autotiler() {
 	add_main(world_tile::grass);
 	add_main(world_tile::dirt);
-	row++;
-	row += 2;
+	add_main(world_tile::stone);
+	row = 5;
 	add_group(world_tile::grass, world_tile::dirt);
+	row = 7;
+	add_group(world_tile::stone, world_tile::grass);
+	row = 9;
+	add_group(world_tile::stone, world_tile::dirt);
 }
 
 void world_autotiler::add_main(int tile) {

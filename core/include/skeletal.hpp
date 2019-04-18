@@ -69,7 +69,7 @@ struct synced_skeletal_animation {
 	glm::mat4 root_transform{ 1.0f };
 	int bone_count = 0;
 	int transform_count = 0;
-	long long played_for_ms = 0;
+	no::timer played_for;
 
 	synced_skeletal_animation(const skeletal_animation& animation);
 

@@ -76,12 +76,12 @@ Read(character_unequips)
 	slot = (equipment_slot)stream.read<int32_t>();
 End
 
-Write(character_follows)
-	stream.write(follower_id);
-	stream.write(target_id);
-Read(character_follows)
-	follower_id = stream.read<int32_t>();
-	target_id = stream.read<int32_t>();
+Write(update_character_path)
+	stream.write(instance_id);
+	stream.write_array<no::vector2i>(path);
+Read(update_character_path)
+	instance_id = stream.read<int32_t>();
+	path = stream.read_array<no::vector2i>();
 End
 
 Write(trade_request)
@@ -130,6 +130,14 @@ Write(fish_caught)
 	item.write(stream);
 Read(fish_caught)
 	item.read(stream);
+End
+
+Write(rotate_object)
+	stream.write(instance_id);
+	stream.write(rotation);
+Read(rotate_object)
+	instance_id = stream.read<int32_t>();
+	rotation = stream.read<no::vector3f>();
 End
 
 }

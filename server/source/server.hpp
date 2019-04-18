@@ -4,12 +4,11 @@
 #include "persistency.hpp"
 #include "loop.hpp"
 #include "network.hpp"
-#include "world.hpp"
 #include "character.hpp"
 #include "packets.hpp"
 #include "script.hpp"
 #include "quest.hpp"
-#include "combat.hpp"
+#include "server_world.hpp"
 
 const int inventory_container_type = 0;
 const int equipment_container_type = 1;
@@ -51,37 +50,6 @@ public:
 	bool is_connected() const {
 		return connected;
 	}
-
-};
-
-class server_world : public world_state {
-public:
-
-	struct kill_event {
-		int attacker_id = -1;
-		int target_id = -1;
-	};
-
-	struct {
-		no::event_message_queue<kill_event> kill;
-	} events;
-
-	combat_system combat;
-
-	struct fishing_state {
-		no::timer fished_for;
-		no::timer last_progress;
-		int client_index = -1;
-		int player_instance_id = -1;
-		no::vector2i bait_tile;
-		bool finished = false;
-	};
-
-	std::vector<fishing_state> fishers;
-
-	server_world(const std::string& name);
-
-	void update() override;
 
 };
 
