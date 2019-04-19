@@ -390,7 +390,7 @@ model_data<V> merge_model_animations(const std::vector<model_data<V>>& models) {
 		}
 		if (model.shape != output.shape) {
 			WARNING("Mesh not identical. Skipping.");
-			continue;
+			//continue;
 		}
 		for (auto& animation : model.animations) {
 			bool skip = false;

@@ -38,19 +38,21 @@ private:
 class character_object {
 public:
 
+	float run_speed = 0.05f;
+	float walk_speed = 0.03f;
+
 	int object_id = -1;
 	bool walking_around = false;
-	no::vector2i walking_around_center;
+	bool running = false;
 	std::string name; // to override definition name
-
-	no::vector2i bait_tile;
 
 	struct {
 		no::message_event<item_instance> equip;
 		no::message_event<equipment_slot> unequip;
 		no::signal_event attack;
 		no::signal_event defend;
-		no::message_event<bool> run;
+		no::signal_event idle;
+		no::message_event<bool> move;
 		no::signal_event start_fishing;
 		no::signal_event stop_fishing;
 	} events;
@@ -75,12 +77,15 @@ public:
 	bool is_moving() const;
 	bool in_combat() const;
 	bool is_fishing() const;
+	float speed() const;
 
 	character_stat& stat(stat_type stat);
 	const character_stat& stat(stat_type stat) const;
 	void add_combat_experience(int damage);
 	int combat_level() const;
 
+	no::vector2i walking_around_center;
+	no::vector2i bait_tile;
 	std::vector<no::vector2i> target_path;
 	int tiles_moved = 0;
 	bool moved_last_frame = false;

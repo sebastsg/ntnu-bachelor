@@ -81,8 +81,13 @@ void character_renderer::add(world_objects& objects, int object_id) {
 		characters[i].new_animation = true;
 		characters[i].play_once = true;
 	});
-	character.events.run = object.events.run.listen([i, this](bool running) {
-		characters[i].animation = (running ? "run" : "idle");
+	character.events.idle = object.events.idle.listen([i, this] {
+		characters[i].animation = "idle";
+		characters[i].new_animation = true;
+		characters[i].play_once = false;
+	});
+	character.events.move = object.events.move.listen([i, this](bool running) {
+		characters[i].animation = (running ? "run" : "walk");
 		characters[i].new_animation = true;
 		characters[i].play_once = false;
 	});
@@ -113,7 +118,8 @@ void character_renderer::remove(character_object& object) {
 			object.events.unequip.ignore(characters[i].events.unequip);
 			object.events.attack.ignore(characters[i].events.attack);
 			object.events.defend.ignore(characters[i].events.defend);
-			object.events.run.ignore(characters[i].events.run);
+			object.events.idle.ignore(characters[i].events.idle);
+			object.events.move.ignore(characters[i].events.move);
 			object.events.start_fishing.ignore(characters[i].events.start_fishing);
 			object.events.stop_fishing.ignore(characters[i].events.stop_fishing);
 			for (int j = 0; j < (int)characters[i].equipments.size(); j++) {

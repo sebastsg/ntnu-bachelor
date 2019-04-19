@@ -55,6 +55,5 @@ private:
 };
 
 float angle_to_goal(no::vector2i from, no::vector2i to);
-no::vector2f distance_to_goal(const no::vector3f& current, const no::vector3f& goal);
-bool move_towards_target(no::transform3& transform, std::vector<no::vector2i>& path);
-no::vector2i target_tile_at_distance(const game_object& target, const game_object& follower, int distance);
+no::vector2f distance_to_goal(const no::vector3f& current, const no::vector3f& goal, float speed);
+bool move_towards_target(no::transform3& transform, std::vector<no::vector2i>& path, float speed);

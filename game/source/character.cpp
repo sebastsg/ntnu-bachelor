@@ -101,9 +101,13 @@ void character_object::update(world_state& world, game_object& object) {
 		target_path.pop_back();
 	}
 	int path_count = (int)target_path.size();
-	bool moved = move_towards_target(object.transform, target_path);
+	bool moved = move_towards_target(object.transform, target_path, speed());
 	if (moved != moved_last_frame) {
-		events.run.emit(moved);
+		if (moved) {
+			events.move.emit(running);
+		} else {
+			events.idle.emit();
+		}
 	}
 	moved_last_frame = moved;
 	if (path_count > (int)target_path.size()) {
@@ -185,6 +189,10 @@ bool character_object::in_combat() const {
 
 bool character_object::is_fishing() const {
 	return fishing;
+}
+
+float character_object::speed() const {
+	return running ? run_speed : walk_speed;
 }
 
 character_stat& character_object::stat(stat_type stat) {

@@ -135,6 +135,7 @@ character_object* server_state::load_player(int client_index) {
 		player->stat(stat_type::health).add_experience(player->stat(stat_type::health).experience_for_level(20));
 	}
 	player->name = client.player.display_name;
+	player->running = true;
 	return player;
 }
 

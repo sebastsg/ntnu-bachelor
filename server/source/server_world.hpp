@@ -49,9 +49,9 @@ public:
 private:
 
 	void update_fishing();
-	void update_combat_movement(character_object& character, game_object& object);
 	void update_random_walk_movement(character_object& character, game_object& object);
 
 	server_state& server;
+	no::random_number_generator random;
 
 };

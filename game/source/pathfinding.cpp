@@ -138,8 +138,7 @@ float angle_to_goal(no::vector2i from, no::vector2i to) {
 	return -1.0f;
 }
 
-no::vector2f distance_to_goal(const no::vector3f& current, const no::vector3f& goal) {
-	const float speed = 0.05f;
+no::vector2f distance_to_goal(const no::vector3f& current, const no::vector3f& goal, float speed) {
 	float x = goal.x - current.x;
 	float z = goal.z - current.z;
 	no::vector2f distance;
@@ -152,46 +151,23 @@ no::vector2f distance_to_goal(const no::vector3f& current, const no::vector3f& g
 	return distance;
 }
 
-bool move_towards_target(no::transform3& transform, std::vector<no::vector2i>& path) {
+bool move_towards_target(no::transform3& transform, std::vector<no::vector2i>& path, float speed) {
 	if (path.empty()) {
 		return false;
 	}
-	float speed = 0.05f;
 	no::vector2i current_target = path.back();
 	no::vector3f target_position = tile_index_to_world_position(current_target);
-	no::vector2f distance = distance_to_goal(transform.position, target_position);
+	no::vector2f distance = distance_to_goal(transform.position, target_position, speed);
 	bool moving = (std::abs(distance.x) > 0.0f || std::abs(distance.y) > 0.0f);
 	if (!moving) {
 		path.pop_back();
-		return path.empty() ? false : move_towards_target(transform, path);
+		return path.empty() ? false : move_towards_target(transform, path, speed);
 	}
 	transform.position.x += distance.x;
 	transform.position.z += distance.y;
-	float new_angle = angle_to_goal(world_position_to_tile_index(transform.position), current_target);
-	if (new_angle >= 0.0f) {
-		transform.rotation.y = new_angle;
+	float angle = angle_to_goal(world_position_to_tile_index(transform.position), current_target);
+	if (angle >= 0.0f) {
+		transform.rotation.y = angle;
 	}
 	return true;
-}
-
-no::vector2i target_tile_at_distance(const game_object& target, const game_object& follower, int distance) {
-	no::vector2i target_tile = target.tile();
-	no::vector2i delta = follower.tile() - target_tile;
-	for (int i = 0; i < distance; i++) {
-		if (delta.x >= 1) {
-			target_tile.x++; // to west of target
-			delta.x--;
-		} else if (delta.x <= -1) {
-			target_tile.x--; // to east of target
-			delta.x++;
-		}
-		if (delta.y >= 1) {
-			target_tile.y++; // to south of target
-			delta.y--;
-		} else if (delta.y <= -1) {
-			target_tile.y--; // to north of target
-			delta.y++;
-		}
-	}
-	return target_tile;
 }

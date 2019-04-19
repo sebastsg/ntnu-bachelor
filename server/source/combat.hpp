@@ -19,6 +19,7 @@ public:
 	bool is_target_in_range() const;
 	int hit();
 	void next_turn();
+	void update_movement();
 
 private:
 
@@ -55,10 +56,9 @@ public:
 
 	void stop_all(int object_id);
 	bool is_in_combat(int object_id) const;
-	int find_target(int object_id) const;
-	int find_attacker(int object_id) const;
 
 private:
+
 
 	std::vector<active_combat> combats;
 	server_world& world;

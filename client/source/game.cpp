@@ -98,6 +98,7 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 			world.objects.add(objstream);
 			world.my_player_id = packet.object.instance_id;
 			world.my_player().object.pickable = false;
+			world.my_player().character.running = true;
 			enable_tabs();
 			variables = packet.variables;
 			quests = packet.quests;
@@ -106,6 +107,7 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 		case to_client::game::other_player_joined::type:
 		{
 			to_client::game::other_player_joined packet{ stream };
+			packet.player.running = true;
 			no::io_stream objstream;
 			packet.object.write(objstream);
 			packet.player.write(objstream);
@@ -128,6 +130,7 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 			attacker->add_combat_experience(packet.damage);
 			attacker->events.attack.emit();
 			target->events.defend.emit();
+			target->target_path.clear();
 			if (attacker->stat(stat_type::health).effective() < 1) {
 				world.objects.remove(packet.attacker_id);
 			}

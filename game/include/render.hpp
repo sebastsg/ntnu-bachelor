@@ -42,7 +42,8 @@ private:
 		int unequip = -1;
 		int attack = -1;
 		int defend = -1;
-		int run = -1;
+		int idle = -1;
+		int move = -1;
 		int start_fishing = -1;
 		int stop_fishing = -1;
 	};
