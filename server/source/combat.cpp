@@ -70,27 +70,11 @@ void active_combat::update_movement() {
 	auto& target_object = world->objects.object(target_id);
 	auto attacker = world->objects.character(attacker_id);
 	auto target = world->objects.character(target_id);
-
-	no::vector2i target_tile = target_object.tile();
-
-	/*float attacker_angle = angle_to_goal(attacker_object.tile(), target_tile);
-	if (attacker_angle >= 0.0f) {
-		attacker_object.transform.rotation.y = attacker_angle;
-		world->events.rotate.emplace_and_push(attacker->object_id, attacker_object.transform.rotation);
-	}
-
-	float target_angle = angle_to_goal(target_tile, attacker_object.tile());
-	if (target_angle >= 0.0f) {
-		target_object.transform.rotation.y = target_angle;
-		world->events.rotate.emplace_and_push(target->object_id, target_object.transform.rotation);
-	}*/
-
 	if (!attacker->target_path.empty()) {
 		return;
 	}
-
 	std::vector<no::vector2i> path;
-
+	no::vector2i target_tile = target_object.tile();
 	no::vector2i delta = target_tile - attacker_object.tile();
 	bool too_close = (std::abs(delta.x) < 2 && std::abs(delta.y) < 2);
 	if (too_close) {
@@ -118,22 +102,6 @@ void active_combat::update_movement() {
 	}
 	attacker->target_path = path;
 	world->events.move.emplace_and_push(attacker_id, path);
-
-	/*no::vector2i target_tile = target_tile_at_distance(target, object, 2);
-	if (character.tiles_moved > 1 || character.target_path.empty()) {
-		if (target_tile != target.tile()) {
-			auto path = path_between(object.tile(), target_tile);
-			character.start_path_movement(path);
-			events.move.emplace_and_push(character.object_id, path);
-		}
-	}
-
-
-	float new_angle = angle_to_goal(object.tile(), target_tile);
-	if (new_angle >= 0.0f && object.transform.rotation.y != new_angle) {
-		object.transform.rotation.y = new_angle;
-		events.rotate.emplace_and_push(character.object_id, object.transform.rotation);
-	}*/
 }
 
 combat_system::combat_system(server_world& world) : world{ world } {

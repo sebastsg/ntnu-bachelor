@@ -11,6 +11,7 @@
 #include "ui_tabs.hpp"
 #include "ui_hud.hpp"
 #include "chat.hpp"
+#include "pathfinding.hpp"
 
 game_world::game_world() {
 	name = "main";
@@ -131,6 +132,10 @@ game_state::game_state() : renderer(world), dragger(mouse()) {
 			attacker->events.attack.emit();
 			target->events.defend.emit();
 			target->target_path.clear();
+			auto& attacker_object = world.objects.object(attacker->object_id);
+			auto& target_object = world.objects.object(target->object_id);
+			attacker_object.transform.rotation.y = angle_to_goal(attacker_object.transform.position, target_object.transform.position);
+			target_object.transform.rotation.y = angle_to_goal(target_object.transform.position, attacker_object.transform.position);
 			if (attacker->stat(stat_type::health).effective() < 1) {
 				world.objects.remove(packet.attacker_id);
 			}
