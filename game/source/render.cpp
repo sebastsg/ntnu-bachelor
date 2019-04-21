@@ -441,20 +441,112 @@ world_view::world_view(world_state& world) : world(world) {
 	reload_shaders();
 	no::surface temp_surface{ no::asset_path("textures/tiles.png") };
 	// grass/dirt
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 5, 1);
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 6, 2);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 7, 1);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 8, 2);
 	// stone/grass
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::grass, 7, 3);
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::grass, 8, 4);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::grass, 9, 3);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::grass, 10, 4);
 	// stone/dirt
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 9, 3);
-	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 10, 4);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 11, 3);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 12, 4);
+	// snow/grass
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::grass, 13, 5);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::grass, 14, 6);
+	// snow/dirt
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 15, 5);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::dirt, 16, 6);
+	// snow/stone
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::stone, 17, 5);
+	repeat_tile_under_row(temp_surface.data(), temp_surface.width(), temp_surface.height(), world_tile::stone, 18, 6);
 
 	no::surface tile_surface = add_tile_borders(temp_surface.data(), temp_surface.width(), temp_surface.height());
 	tileset.texture = no::create_texture(tile_surface, no::scale_option::nearest_neighbour, true);
 	no::surface surface{ 2, 2, no::pixel_format::rgba };
 	surface.clear(0xFFFFFFFF);
 	highlight_texture = no::create_texture(surface);
+	skybox_texture = no::create_texture({ no::asset_path("textures/skybox.png") }, no::scale_option::nearest_neighbour, false);
+	static_shader = no::create_shader(no::asset_path("shaders/static"));
+
+	float grid_x = 1.0f / 4.0f;
+	float grid_y = 1.0f / 3.0f;
+	/*
+		0, 1, 5, 5, 4, 0, // left
+		0, 1, 3, 3, 2, 0, // back
+		2, 3, 7, 7, 6, 2, // right
+		5, 7, 6, 6, 4, 5, // front
+		0, 2, 6, 6, 4, 0, // bottom
+		1, 3, 7, 7, 5, 1, // top
+
+		{ 0.0f, 0.0f, 0.0f }, // (top left) lower - 0
+		{ 0.0f, 1.0f, 0.0f }, // (top left) upper - 1
+		{ 1.0f, 0.0f, 0.0f }, // (top right) lower - 2
+		{ 1.0f, 1.0f, 0.0f }, // (top right) upper - 3
+		{ 0.0f, 0.0f, 1.0f }, // (bottom left) lower - 4
+		{ 0.0f, 1.0f, 1.0f }, // (bottom left) upper - 5
+		{ 1.0f, 0.0f, 1.0f }, // (bottom right) lower - 6
+		{ 1.0f, 1.0f, 1.0f }, // (bottom right) upper - 7
+	*/
+
+	no::vector2f left{ 0.0f, grid_y };
+	no::vector2f top{ grid_x, 0.0f };
+	no::vector2f front{ grid_x, grid_y };
+	no::vector2f right{ grid_x * 2.0f, grid_y };
+	no::vector2f back{ grid_x * 3.0f, grid_y };
+	no::vector2f bottom{ grid_x, 0.0f };
+
+	no::model_data<static_vertex> skybox_data;
+	skybox_data.name = "skybox";
+	skybox_data.min = 0.0f;
+	skybox_data.max = 1.0f;
+	skybox_data.shape.vertices = {
+
+		// left - 0, 1, 3, 3, 2, 0
+		{{ 0.0f, 0.0f, 0.0f }, { 1.0f / 4.0f, 2.0f / 3.0f }}, // (top left) lower - 0
+		{{ 0.0f, 1.0f, 0.0f }, { 1.0f / 4.0f, 1.0f / 3.0f }}, // (top left) upper - 1
+		{{ 0.0f, 0.0f, 1.0f }, { 0.0f / 4.0f, 2.0f / 3.0f }}, // (bottom left) lower - 4
+		{{ 0.0f, 1.0f, 1.0f }, { 0.0f / 4.0f, 1.0f / 3.0f }}, // (bottom left) upper - 5
+
+		// front - 4, 5, 7, 7, 6, 0
+		{{ 0.0f, 0.0f, 0.0f }, { 1.0f / 4.0f, 2.0f / 3.0f }}, // (top left) lower - 0
+		{{ 0.0f, 1.0f, 0.0f }, { 1.0f / 4.0f, 1.0f / 3.0f }}, // (top left) upper - 1
+		{{ 1.0f, 0.0f, 0.0f }, { 2.0f / 4.0f, 2.0f / 3.0f }}, // (top right) lower - 2
+		{{ 1.0f, 1.0f, 0.0f }, { 2.0f / 4.0f, 1.0f / 3.0f }}, // (top right) upper - 3
+
+		// right - 8, 9, 11, 11, 10, 8
+		{{ 1.0f, 0.0f, 0.0f }, { 2.0f / 4.0f, 2.0f / 3.0f }}, // (top right) lower - 2
+		{{ 1.0f, 1.0f, 0.0f }, { 2.0f / 4.0f, 1.0f / 3.0f }}, // (top right) upper - 3
+		{{ 1.0f, 0.0f, 1.0f }, { 3.0f / 4.0f, 2.0f / 3.0f }}, // (bottom right) lower - 6
+		{{ 1.0f, 1.0f, 1.0f }, { 3.0f / 4.0f, 1.0f / 3.0f }}, // (bottom right) upper - 7
+
+		// back - 12, 13, 15, 15, 14, 12
+		{{ 0.0f, 0.0f, 1.0f }, { 4.0f / 4.0f, 2.0f / 3.0f }}, // (bottom left) lower - 4
+		{{ 0.0f, 1.0f, 1.0f }, { 4.0f / 4.0f, 1.0f / 3.0f }}, // (bottom left) upper - 5
+		{{ 1.0f, 0.0f, 1.0f }, { 3.0f / 4.0f, 2.0f / 3.0f }}, // (bottom right) lower - 6
+		{{ 1.0f, 1.0f, 1.0f }, { 3.0f / 4.0f, 1.0f / 3.0f }}, // (bottom right) upper - 7
+
+		// bottom - 16, 17, 19, 19, 18, 16
+		{{ 0.0f, 0.0f, 0.0f }, { 1.0f / 4.0f, 2.0f / 3.0f }}, // (top left) lower - 0
+		{{ 1.0f, 0.0f, 0.0f }, { 2.0f / 4.0f, 2.0f / 3.0f }}, // (top right) lower - 2
+		{{ 0.0f, 0.0f, 1.0f }, { 1.0f / 4.0f, 3.0f / 3.0f }}, // (bottom left) lower - 4
+		{{ 1.0f, 0.0f, 1.0f }, { 2.0f / 4.0f, 3.0f / 3.0f }}, // (bottom right) lower - 6
+
+		// top - 20, 21, 23, 23, 22, 20
+		{{ 0.0f, 1.0f, 0.0f }, { 1.0f / 4.0f, 1.0f / 3.0f }}, // (top left) upper - 1
+		{{ 1.0f, 1.0f, 0.0f }, { 2.0f / 4.0f, 1.0f / 3.0f }}, // (top right) upper - 3
+		{{ 0.0f, 1.0f, 1.0f }, { 1.0f / 4.0f, 2.0f / 3.0f }}, // (bottom left) upper - 5
+		{{ 1.0f, 1.0f, 1.0f }, { 2.0f / 4.0f, 2.0f / 3.0f }}, // (bottom right) upper - 7
+
+	};
+	skybox_data.shape.indices = {
+		0,  1,  3,  3,  2,  0,  // left
+		4,  5,  7,  7,  6,  0,  // front
+		8,  9,  11, 11, 10, 8,  // right
+		12, 13, 15, 15, 14, 12, // back
+		16, 17, 19, 19, 18, 16, // bottom
+		20, 21, 23, 23, 22, 20, // top
+	};
+	
+	skybox.load(skybox_data);
 
 	water_quad.set({ { 0.0f, 0.0f, 0.0f } }, { { 1.0f, 0.0f, 0.0f } }, { { 0.0f, 0.0f, 1.0f } }, { { 1.0f, 0.0f, 1.0f } });
 
@@ -522,12 +614,15 @@ world_view::~world_view() {
 	world.objects.events.remove.ignore(remove_object_id);
 	no::delete_shader(animate_diffuse_shader);
 	no::delete_shader(static_diffuse_shader);
+	no::delete_shader(static_shader);
 	no::delete_shader(pick_shader);
 	no::delete_texture(highlight_texture);
 	no::delete_texture(tileset.texture);
+	no::delete_texture(skybox_texture);
 }
 
 void world_view::draw() {
+	draw_skybox();
 	no::bind_shader(static_diffuse_shader);
 	no::set_shader_view_projection(camera);
 	light.var_position_static.set(light.position);
@@ -542,6 +637,16 @@ void world_view::draw() {
 	characters.update(mappings, world.objects);
 	characters.draw();
 	draw_water();
+}
+
+void world_view::draw_skybox() {
+	no::bind_shader(static_shader);
+	no::set_shader_view_projection(camera);
+	no::transform3 transform;
+	transform.position = camera.transform.position - 96.0f;
+	transform.scale = 192.0f;
+	no::bind_texture(skybox_texture);
+	no::draw_shape(skybox, transform);
 }
 
 void world_view::draw_terrain() {

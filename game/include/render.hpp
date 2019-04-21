@@ -14,6 +14,12 @@ struct static_object_vertex {
 	no::vector2f tex_coords;
 };
 
+struct static_vertex {
+	static constexpr no::vertex_attribute_specification attributes[] = { 3, 2 };
+	no::vector3f position;
+	no::vector2f tex_coords;
+};
+
 class character_renderer {
 public:
 
@@ -183,6 +189,7 @@ public:
 	world_view& operator=(world_view&&) = delete;
 
 	void draw();
+	void draw_skybox();
 	void draw_terrain();
 	void draw_water();
 	void draw_for_picking();
@@ -220,6 +227,10 @@ private:
 	object_pick_renderer pick_objects;
 	std::vector<bool> object_visibilities;
 
+	no::model skybox;
+	int skybox_texture = -1;
+
+	int static_shader = -1;
 	int animate_diffuse_shader = -1;
 	int static_diffuse_shader = -1;
 	int pick_shader = -1;

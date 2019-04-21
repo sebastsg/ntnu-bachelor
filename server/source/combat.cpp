@@ -74,13 +74,13 @@ void active_combat::update_movement() {
 	no::vector2i target_tile = target_object.tile();
 
 	float attacker_angle = angle_to_goal(attacker_object.tile(), target_tile);
-	if (attacker_angle >= 0.0f && attacker_object.transform.rotation.y != attacker_angle) {
+	if (attacker_angle >= 0.0f) {
 		attacker_object.transform.rotation.y = attacker_angle;
 		world->events.rotate.emplace_and_push(attacker->object_id, attacker_object.transform.rotation);
 	}
 
 	float target_angle = angle_to_goal(target_tile, attacker_object.tile());
-	if (target_angle >= 0.0f && target_object.transform.rotation.y != target_angle) {
+	if (target_angle >= 0.0f) {
 		target_object.transform.rotation.y = target_angle;
 		world->events.rotate.emplace_and_push(target->object_id, target_object.transform.rotation);
 	}

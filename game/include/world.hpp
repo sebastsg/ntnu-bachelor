@@ -23,6 +23,7 @@ struct world_tile {
 	static const uint8_t grass = 0;
 	static const uint8_t dirt = 1;
 	static const uint8_t stone = 2;
+	static const uint8_t snow = 3;
 
 	float height = 0.0f;
 	float water_height = 0.0f;

@@ -85,6 +85,7 @@ void tiling_tool::update_imgui() {
 	ImGui::RadioButton("Grass", &current_type, world_tile::grass);
 	ImGui::RadioButton("Dirt", &current_type, world_tile::dirt);
 	ImGui::RadioButton("Stone", &current_type, world_tile::stone);
+	ImGui::RadioButton("Snow", &current_type, world_tile::snow);
 	ImGui::Separator();
 	update_water_imgui();
 }

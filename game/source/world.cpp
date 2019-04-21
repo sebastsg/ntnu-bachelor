@@ -53,12 +53,19 @@ world_autotiler::world_autotiler() {
 	add_main(world_tile::grass);
 	add_main(world_tile::dirt);
 	add_main(world_tile::stone);
-	row = 5;
-	add_group(world_tile::grass, world_tile::dirt);
+	add_main(world_tile::snow);
 	row = 7;
-	add_group(world_tile::stone, world_tile::grass);
+	add_group(world_tile::grass, world_tile::dirt);
 	row = 9;
+	add_group(world_tile::stone, world_tile::grass);
+	row = 11;
 	add_group(world_tile::stone, world_tile::dirt);
+	row = 13;
+	add_group(world_tile::snow, world_tile::grass);
+	row = 15;
+	add_group(world_tile::snow, world_tile::dirt);
+	row = 17;
+	add_group(world_tile::snow, world_tile::stone);
 }
 
 void world_autotiler::add_main(int tile) {
