@@ -244,9 +244,6 @@ std::pair<uint32_t*, vector2i> font::render_text(const std::string& text, uint32
 		face->render_glyph();
 		FT_GlyphSlot glyph = face->face->glyph;
 
-		int glyph_max_y = ft::font_to_pixel(ft::floor(glyph->metrics.horiBearingY));
-		int glyph_min_y = glyph_max_y - glyph->bitmap.rows;
-
 		int row_y = (text_size.size.y / text_size.rows) * row;
 		int top = text_size.size.y - row_y - glyph->bitmap_top + text_size.min_y;
 
