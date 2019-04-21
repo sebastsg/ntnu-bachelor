@@ -467,39 +467,11 @@ world_view::world_view(world_state& world) : world(world) {
 	skybox_texture = no::create_texture({ no::asset_path("textures/skybox.png") }, no::scale_option::nearest_neighbour, false);
 	static_shader = no::create_shader(no::asset_path("shaders/static"));
 
-	float grid_x = 1.0f / 4.0f;
-	float grid_y = 1.0f / 3.0f;
-	/*
-		0, 1, 5, 5, 4, 0, // left
-		0, 1, 3, 3, 2, 0, // back
-		2, 3, 7, 7, 6, 2, // right
-		5, 7, 6, 6, 4, 5, // front
-		0, 2, 6, 6, 4, 0, // bottom
-		1, 3, 7, 7, 5, 1, // top
-
-		{ 0.0f, 0.0f, 0.0f }, // (top left) lower - 0
-		{ 0.0f, 1.0f, 0.0f }, // (top left) upper - 1
-		{ 1.0f, 0.0f, 0.0f }, // (top right) lower - 2
-		{ 1.0f, 1.0f, 0.0f }, // (top right) upper - 3
-		{ 0.0f, 0.0f, 1.0f }, // (bottom left) lower - 4
-		{ 0.0f, 1.0f, 1.0f }, // (bottom left) upper - 5
-		{ 1.0f, 0.0f, 1.0f }, // (bottom right) lower - 6
-		{ 1.0f, 1.0f, 1.0f }, // (bottom right) upper - 7
-	*/
-
-	no::vector2f left{ 0.0f, grid_y };
-	no::vector2f top{ grid_x, 0.0f };
-	no::vector2f front{ grid_x, grid_y };
-	no::vector2f right{ grid_x * 2.0f, grid_y };
-	no::vector2f back{ grid_x * 3.0f, grid_y };
-	no::vector2f bottom{ grid_x, 0.0f };
-
 	no::model_data<static_vertex> skybox_data;
 	skybox_data.name = "skybox";
 	skybox_data.min = 0.0f;
 	skybox_data.max = 1.0f;
 	skybox_data.shape.vertices = {
-
 		// left - 0, 1, 3, 3, 2, 0
 		{{ 0.0f, 0.0f, 0.0f }, { 1.0f / 4.0f, 2.0f / 3.0f }}, // (top left) lower - 0
 		{{ 0.0f, 1.0f, 0.0f }, { 1.0f / 4.0f, 1.0f / 3.0f }}, // (top left) upper - 1
@@ -535,7 +507,6 @@ world_view::world_view(world_state& world) : world(world) {
 		{{ 1.0f, 1.0f, 0.0f }, { 2.0f / 4.0f, 1.0f / 3.0f }}, // (top right) upper - 3
 		{{ 0.0f, 1.0f, 1.0f }, { 1.0f / 4.0f, 2.0f / 3.0f }}, // (bottom left) upper - 5
 		{{ 1.0f, 1.0f, 1.0f }, { 2.0f / 4.0f, 2.0f / 3.0f }}, // (bottom right) upper - 7
-
 	};
 	skybox_data.shape.indices = {
 		0,  1,  3,  3,  2,  0,  // left
