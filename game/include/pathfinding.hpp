@@ -54,6 +54,6 @@ private:
 
 };
 
-float angle_to_goal(no::vector2i from, no::vector2i to);
+float angle_to_goal(no::vector3f from, no::vector3f to);
 no::vector2f distance_to_goal(const no::vector3f& current, const no::vector3f& goal, float speed);
 bool move_towards_target(no::transform3& transform, std::vector<no::vector2i>& path, float speed);

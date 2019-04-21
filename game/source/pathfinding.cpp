@@ -105,37 +105,16 @@ std::vector<no::vector2i> pathfinder::traverse_path(int index) const {
 	return result;
 }
 
-float angle_to_goal(no::vector2i from, no::vector2i to) {
-	bool left = from.x > to.x;
-	bool right = to.x > from.x;
-	if (right == left) {
-		right = false;
-		left = false;
+float angle_to_goal(no::vector3f from, no::vector3f to) {
+	const float z = from.z - to.z;
+	const float x = from.x - to.x;
+	float result = no::rad_to_deg(std::atan2(z, x));
+	if (result > 180.0f) {
+		result = 540.0f - result;
+	} else {
+		result = 180.0f - result;
 	}
-	bool up = from.y > to.y;
-	bool down = to.y > from.y;
-	if (up == down) {
-		up = false;
-		down = false;
-	}
-	if (left && up) {
-		return directions::north_west;
-	} else if (right && up) {
-		return directions::north_east;
-	} else if (left && down) {
-		return directions::south_west;
-	} else if (right && down) {
-		return directions::south_east;
-	} else if (left) {
-		return directions::west;
-	} else if (right) {
-		return directions::east;
-	} else if (down) {
-		return directions::south;
-	} else if (up) {
-		return directions::north;
-	}
-	return -1.0f;
+	return std::floor(result + 90.0f);
 }
 
 no::vector2f distance_to_goal(const no::vector3f& current, const no::vector3f& goal, float speed) {
@@ -165,9 +144,8 @@ bool move_towards_target(no::transform3& transform, std::vector<no::vector2i>& p
 	}
 	transform.position.x += distance.x;
 	transform.position.z += distance.y;
-	float angle = angle_to_goal(world_position_to_tile_index(transform.position), current_target);
-	if (angle >= 0.0f) {
-		transform.rotation.y = angle;
+	if (std::abs(transform.position.x - target_position.x) > 0.4f || std::abs(transform.position.z - target_position.z) > 0.4f) {
+		transform.rotation.y = angle_to_goal(transform.position, target_position);
 	}
 	return true;
 }

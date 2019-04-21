@@ -8,19 +8,6 @@
 
 class world_state;
 
-namespace directions {
-
-const float north_west = 225.0f;
-const float north_east = 135.0f;
-const float south_west = 315.0f;
-const float south_east = 45.0f;
-const float west = 270.0f;
-const float east = 90.0f;
-const float south = 0.0f;
-const float north = 180.0f;
-
-}
-
 enum class game_object_type {
 	invalid,
 	decoration,

@@ -89,8 +89,8 @@ float transform2::distance_to(const vector2f& b_position) const {
 
 float transform2::angle_to(const transform2& b) const {
 	const float y = position.y + scale.y / 2.0f - b.position.y + b.scale.y / 2.0f;
-	const float x = position.x + scale.x / 2.0f - b.position.x + b.scale.y / 2.0f;
-	float result = rad_to_deg(std::atan2(x, y));
+	const float x = position.x + scale.x / 2.0f - b.position.x + b.scale.x / 2.0f;
+	float result = rad_to_deg(std::atan2(y, x));
 	if (result > 180.0f) {
 		result = 540.0f - result;
 	} else {
@@ -101,7 +101,7 @@ float transform2::angle_to(const transform2& b) const {
 
 float transform2::angle_to(const vector2f& b_position, const vector2f& b_scale) const {
 	const float y = position.y + scale.y / 2.0f - b_position.y + b_scale.y / 2.0f;
-	const float x = position.x + scale.x / 2.0f - b_position.x + b_scale.y / 2.0f;
+	const float x = position.x + scale.x / 2.0f - b_position.x + b_scale.x / 2.0f;
 	float result = rad_to_deg(std::atan2(y, x));
 	if (result > 180.0f) {
 		result = 540.0f - result;
