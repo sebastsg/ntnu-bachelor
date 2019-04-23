@@ -60,7 +60,7 @@ void update_hit_splats() {
 			auto& target = game->world.objects.object(splat.target_id);
 			no::vector3f position = target.transform.position;
 			position.y += 2.0f; // todo: height of model
-			splat.transform.position = game->world_camera().world_to_screen(position) / game->ui_camera.zoom;
+			splat.transform.position = game->world_camera().world_to_screen(position) / game->ui_camera_2x.zoom;
 			splat.transform.position.y -= (splat.fade_in * 0.5f + splat.fade_out) * 32.0f;
 		}
 		splat.transform.scale = no::texture_size(splat.texture).to<float>();

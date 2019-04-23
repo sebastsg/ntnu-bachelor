@@ -6,8 +6,9 @@
 #include "ui_tabs.hpp"
 #include "chat.hpp"
 
-const no::vector4f trade_background_uv{ 8.0f, 632.0f, 352.0f, 240.0f };
-const no::vector4f button_uv{ 8.0f, 992.0f, 264.0f, 24.0f };
+const no::vector4f trade_background_uv{ 34.0f, 612.0f, 358.0f, 248.0f };
+const no::vector4f button_uv{ 442.0f, 34.0f, 92.0f, 25.0f };
+const no::vector4f grid_uv = { 200.0f, 128.0f, 138.0f, 205.0f };
 
 struct item_slot {
 	no::rectangle rectangle;
@@ -18,8 +19,10 @@ struct trading_view {
 
 	game_state& game;
 	int trader_id = -1;
+	int cursor_icon_id = -1;
 
 	no::rectangle background;
+	no::rectangle grid;
 	no::button accept;
 	no::button cancel;
 	no::transform2 transform;
@@ -35,6 +38,7 @@ struct trading_view {
 	std::vector<item_slot> right_slots;
 
 	trading_view(game_state& game, int trader_id);
+	~trading_view();
 
 	void update();
 	void draw();
@@ -51,18 +55,21 @@ struct trading_view {
 trading_view::trading_view(game_state& game_, int trader_id) :
 	game{ game_ }, 
 	trader_id{ trader_id }, 
-	accept{ game_, game_.ui_camera }, 
-	cancel{ game_, game_.ui_camera },
-	other_accepted_label{ game_, game_.ui_camera }, 
-	waiting_label{ game_, game_.ui_camera } {
+	accept{ game_, game_.ui_camera_2x },
+	cancel{ game_, game_.ui_camera_2x },
+	other_accepted_label{ game_, game_.ui_camera_2x },
+	waiting_label{ game_, game_.ui_camera_2x } {
 	set_ui_uv(background, trade_background_uv);
+	set_ui_uv(grid, grid_uv);
 	transform.scale = trade_background_uv.zw;
+	accept.transition.enabled = false;
+	cancel.transition.enabled = false;
+	accept.animation.frames = 1;
+	cancel.animation.frames = 1;
 	accept.set_tex_coords(button_uv.xy / 1024.0f, button_uv.zw / 1024.0f);
 	cancel.set_tex_coords(button_uv.xy / 1024.0f, button_uv.zw / 1024.0f);
 	accept.transform.scale = button_uv.zw;
 	cancel.transform.scale = button_uv.zw;
-	accept.transform.scale.x /= 3.0f;
-	cancel.transform.scale.x /= 3.0f;
 	accept.label.render(fonts().leo_10, "Accept");
 	cancel.label.render(fonts().leo_10, "Cancel");
 	accept.events.click.listen([this] {
@@ -75,30 +82,46 @@ trading_view::trading_view(game_state& game_, int trader_id) :
 	});
 	other_accepted_label.render(fonts().leo_10, "Other player has accepted this trade");
 	waiting_label.render(fonts().leo_10, "Waiting for other player...");
+
+	cursor_icon_id = game.mouse().icon.listen([this] {
+		if (accept.is_hovered() || cancel.is_hovered()) {
+			game.mouse().set_icon(no::mouse::cursor::pointer);
+		}
+	});
+}
+
+trading_view::~trading_view() {
+	game.mouse().icon.ignore(cursor_icon_id);
 }
 
 void trading_view::update() {
-	transform.position = game.ui_camera.size() / 2.0f - transform.scale / 2.0f;
-	accept.transform.position.x = transform.position.x + transform.scale.x / 2.0f - 4.0f - 88.0f;
-	cancel.transform.position.x = transform.position.x + transform.scale.x / 2.0f + 4.0f;
-	accept.transform.position.y = transform.position.y + transform.scale.y - accept.transform.scale.y - 16.0f;
-	cancel.transform.position.y = transform.position.y + transform.scale.y - cancel.transform.scale.y - 16.0f;
+	transform.position = game.ui_camera_2x.size() / 2.0f - transform.scale / 2.0f;
+	accept.transform.position.x = transform.position.x + transform.scale.x / 2.0f - 4.0f - 122.0f;
+	cancel.transform.position.x = transform.position.x + transform.scale.x / 2.0f + 4.0f + 34.0f;
+	accept.transform.position.y = transform.position.y + transform.scale.y - accept.transform.scale.y - 8.0f;
+	cancel.transform.position.y = transform.position.y + transform.scale.y - cancel.transform.scale.y - 8.0f;
 	if (!waiting) {
 		accept.update();
 	}
 	cancel.update();
 	other_accepted_label.transform.position.x = transform.position.x + transform.scale.x / 2.0f - other_accepted_label.transform.scale.x / 2.0f;
-	other_accepted_label.transform.position.y = transform.position.y + transform.scale.y - 48.0f;
+	other_accepted_label.transform.position.y = transform.position.y + transform.scale.y + 8.0f;
 	waiting_label.transform.position.x = transform.position.x + transform.scale.x / 2.0f - waiting_label.transform.scale.x / 2.0f;
-	waiting_label.transform.position.y = transform.position.y + transform.scale.y - 48.0f;
+	waiting_label.transform.position.y = transform.position.y + transform.scale.y + 8.0f;
 }
 
 void trading_view::draw() {
 	accept.color = shaders().sprite.color;
 	cancel.color = shaders().sprite.color;
 	no::draw_shape(background, transform);
+	no::transform2 grid_transform;
+	grid_transform.position = transform.position + no::vector2f{ 32.0f, 10.0f };
+	grid_transform.scale = grid_uv.zw;
+	no::draw_shape(grid, grid_transform);
+	grid_transform.position.x += transform.scale.x / 2.0f - 24.0f;
+	no::draw_shape(grid, grid_transform);
 	int index = 0;
-	no::vector2f position = transform.position + 16.0f;
+	no::vector2f position = grid_transform.position + 1.0f;
 	for (auto& slot : left_slots) {
 		if (slot.item.definition_id != -1) {
 			no::draw_shape(slot.rectangle, slot_transform(position, index));
@@ -106,7 +129,7 @@ void trading_view::draw() {
 		index++;
 	}
 	index = 0;
-	position.x = transform.position.x + transform.scale.x - item_grid.x * 4.0f - 16.0f;
+	position.x = grid_transform.position.x + grid_transform.scale.x - item_grid.x * 4.0f - 1.0f;
 	for (auto& slot : right_slots) {
 		if (slot.item.definition_id != -1) {
 			no::draw_shape(slot.rectangle, slot_transform(position, index));
@@ -114,7 +137,22 @@ void trading_view::draw() {
 		index++;
 	}
 	if (!waiting) {
+		if (accept.is_hovered()) {
+			if (accept.is_pressed()) {
+				shaders().sprite.color.set({ 1.0f, 0.2f, 0.2f, 1.0f });
+			} else {
+				shaders().sprite.color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
+			}
+		}
 		accept.draw_button();
+		shaders().sprite.color.set(no::vector4f{ 1.0f });
+	}
+	if (cancel.is_hovered()) {
+		if (cancel.is_pressed()) {
+			shaders().sprite.color.set({ 1.0f, 0.2f, 0.2f, 1.0f });
+		} else {
+			shaders().sprite.color.set({ 1.0f, 0.7f, 0.3f, 1.0f });
+		}
 	}
 	cancel.draw_button();
 	if (!waiting) {
@@ -140,7 +178,7 @@ no::transform2 trading_view::slot_transform(no::vector2f position, int index) co
 no::vector2i trading_view::hovered_slot(std::vector<item_slot>& slots, no::vector2f position) const {
 	int i = 0;
 	for (auto& slot : slots) {
-		if (slot_transform(position, i).collides_with(game.ui_camera.mouse_position(game.mouse()))) {
+		if (slot_transform(position, i).collides_with(game.ui_camera_2x.mouse_position(game.mouse()))) {
 			return { i % 4, i / 4 };
 		}
 		i++;

@@ -42,7 +42,14 @@ void world_minimap::update(no::vector2i tile) {
 	world.objects.for_each([&](const game_object* object) {
 		no::vector2i object_tile = object->tile();
 		if (std::abs(object_tile.x - tile.x) < 32 && std::abs(object_tile.y - tile.y) < 32) {
-			surface.set(object_tile.x - begin.x, object_tile.y - begin.y, 0xFFFFFFFF);
+			switch (object->definition().type) {
+			case game_object_type::character:
+				surface.set(object_tile.x - begin.x, object_tile.y - begin.y, 0xFFEEEEEE);
+				break;
+			case game_object_type::item_spawn:
+				surface.set(object_tile.x - begin.x, object_tile.y - begin.y, 0xFF2222FF);
+				break;
+			}
 		}
 	});
 	no::load_texture(texture, surface);

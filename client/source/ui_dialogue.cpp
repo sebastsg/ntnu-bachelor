@@ -21,7 +21,7 @@ struct dialogue_view {
 	no::text_view message_view;
 	std::vector<no::text_view> choice_views;
 
-	dialogue_view(game_state& game) : game{ game }, message_view{ game, game.ui_camera } {}
+	dialogue_view(game_state& game) : game{ game }, message_view{ game, game.ui_camera_2x } {}
 
 	~dialogue_view() {
 		game.keyboard().press.ignore(key_listener);
@@ -53,7 +53,7 @@ void open_dialogue(game_state& game, int id) {
 		dialogue->message_view.render(fonts().leo_10, ((choice_node*)tree.nodes[tree.current_node()])->text);
 		dialogue->choice_views.clear();
 		for (auto& choice : event.choices) {
-			dialogue->choice_views.emplace_back(dialogue->game, dialogue->game.ui_camera).render(fonts().leo_10, choice.text);
+			dialogue->choice_views.emplace_back(dialogue->game, dialogue->game.ui_camera_2x).render(fonts().leo_10, choice.text);
 		}
 	});
 	tree.process_entry_point();
@@ -106,8 +106,8 @@ void update_dialogue() {
 		close_dialogue();
 		return;
 	}
-	dialogue->transform.position = dialogue->game.ui_camera.transform.position;
-	dialogue->transform.scale = dialogue->game.ui_camera.transform.scale;
+	dialogue->transform.position = dialogue->game.ui_camera_2x.transform.position;
+	dialogue->transform.scale = dialogue->game.ui_camera_2x.transform.scale;
 	dialogue->transform.position += dialogue->transform.scale / 2.0f;
 	dialogue->transform.scale /= 2.0f;
 	dialogue->transform.position -= dialogue->transform.scale / 2.0f;

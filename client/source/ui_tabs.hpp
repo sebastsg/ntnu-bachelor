@@ -4,12 +4,12 @@
 
 class game_state;
 
-const no::vector2f inventory_offset = { 23.0f, 130.0f };
+const no::vector2f inventory_offset = { 23.0f, 198.0f };
 const no::vector2f ui_size = 1024.0f;
 const no::vector2f item_size = 32.0f;
 const no::vector2f item_grid = item_size + 2.0f;
-const no::vector4f background_uv = { 391.0f, 48.0f, 184.0f, 352.0f };
-const no::vector2f tab_background_uv = { 128.0f, 24.0f };
+const no::vector4f background_uv = { 672.0f, 572.0f, 190.0f, 284.0f };
+const no::vector2f tab_background_uv = { 128.0f, 26.0f };
 const no::vector2f tab_inventory_uv = { 160.0f, 24.0f };
 const no::vector2f tab_equipment_uv = { 224.0f, 24.0f };
 const no::vector2f tab_quests_uv = { 192.0f, 24.0f };

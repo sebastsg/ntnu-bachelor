@@ -29,7 +29,7 @@ struct stats_view {
 	no::rectangle exp[stat_count];
 	no::text_view exp_text;
 
-	stats_view(game_state& game) : game{ game }, exp_text{ game, game.ui_camera } {}
+	stats_view(game_state& game) : game{ game }, exp_text{ game, game.ui_camera_2x } {}
 
 };
 
@@ -49,7 +49,7 @@ void show_stats_tab(game_state& game) {
 	stats = new stats_view{ game };
 	for (int i = 0; i < stat_count; i++) {
 		set_ui_uv(stats->icons[i], stat_icon_uvs[i], 32.0f);
-		stats->levels.emplace_back(game, game.ui_camera);
+		stats->levels.emplace_back(game, game.ui_camera_2x);
 	}
 	set_ui_uv(stats->exp_back, exp_back_uv);
 	set_ui_uv(stats->blank, { 0.0f, 0.0f, 4.0f, 4.0f });
@@ -79,7 +79,7 @@ void draw_stats_tab() {
 		transform.position.y += 6.0f;
 		transform.scale = exp_back_uv.zw;
 		no::draw_shape(stats->exp_back, transform);
-		no::vector2f mouse = stats->game.ui_camera.mouse_position(stats->game.mouse());
+		no::vector2f mouse = stats->game.ui_camera_2x.mouse_position(stats->game.mouse());
 		bool mouse_over = transform.collides_with(mouse);
 		float exp_width = stat.progress();
 		set_ui_uv(stats->exp[i], exp_front_uv.xy, { exp_front_uv.z * exp_width, exp_front_uv.w });
@@ -95,8 +95,8 @@ void draw_stats_tab() {
 			stats->exp_text.transform.position = mouse;
 			stats->exp_text.transform.position.x -= stats->exp_text.transform.scale.x / 2.0f;
 			stats->exp_text.transform.position.y += stats->exp_text.transform.scale.y + 2.0f;
-			if (stats->exp_text.transform.position.x + stats->exp_text.transform.scale.x > stats->game.ui_camera.width()) {
-				stats->exp_text.transform.position.x = stats->game.ui_camera.width() - stats->exp_text.transform.scale.x - 1.0f;
+			if (stats->exp_text.transform.position.x + stats->exp_text.transform.scale.x > stats->game.ui_camera_2x.width()) {
+				stats->exp_text.transform.position.x = stats->game.ui_camera_2x.width() - stats->exp_text.transform.scale.x - 1.0f;
 			}
 			show_exp_text = true;
 		}

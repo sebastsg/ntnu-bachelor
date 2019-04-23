@@ -32,7 +32,8 @@ public:
 	game_world world;
 	game_variable_map variables;
 	quest_instance_list quests;
-	no::ortho_camera ui_camera;
+	no::ortho_camera ui_camera_2x;
+	no::ortho_camera ui_camera_1x;
 
 	game_state();
 	~game_state() override;
@@ -63,6 +64,7 @@ private:
 
 	no::vector3i hovered_pixel;
 
+	int cursor_icon_id = -1;
 	int mouse_press_id = -1;
 	int mouse_scroll_id = -1;
 	int keyboard_press_id = -1;

@@ -105,6 +105,11 @@ void converter_tool::update() {
 			}
 			auto merged_model = no::merge_model_animations<no::animated_mesh_vertex>(models);
 			merged_model.name = std::filesystem::path(browsed_path).parent_path().stem().string();
+			if (merged_model.animations.empty()) {
+				auto& default_animation = merged_model.animations.emplace_back();
+				default_animation.name = std::filesystem::path(files.front()).stem().string();
+				default_animation.channels.insert(default_animation.channels.begin(), merged_model.nodes.size(), {});
+			}
 			model.load(merged_model.name, import_options.vertex_type, merged_model);
 		} else if (import_options.vertex_type == loaded_model::static_object) {
 			no::convert_model(browsed_path, model.name, options);
@@ -258,6 +263,7 @@ void attachments_tool::update() {
 		return true;
 	}, &root_model, root_model.total_animations(), 15);
 	animator.play(0, animation, -1);
+	animator.sync();
 
 	ImGui::Separator();
 
@@ -521,13 +527,20 @@ void attachments_tool::update() {
 		if (ImGui::Button("[Spear]")) {
 			path = no::asset_path("models/spear.nom");
 		}
-		ImGui::SameLine();
 		if (ImGui::Button("[Pants]")) {
 			path = no::asset_path("models/pants.nom");
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("[Shirt]")) {
 			path = no::asset_path("models/shirt.nom");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("[Helm]")) {
+			path = no::asset_path("models/helm.nom");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("[Shoes]")) {
+			path = no::asset_path("models/shoes.nom");
 		}
 		if (!path.empty()) {
 			bool found = false;
@@ -572,6 +585,7 @@ void attachments_tool::draw() {
 	animator.shader.bones = no::get_shader_variable("uni_Bones");
 	animator.draw();
 	for (auto& attachment : active_attachments) {
+		attachment.animator->sync();
 		if (attachment.alive && attachment.animator->can_animate(0)) {
 			if (attachment.texture != -1) {
 				no::bind_texture(attachment.texture);
@@ -657,8 +671,6 @@ void model_manager_state::draw() {
 	no::set_shader_view_projection(camera);
 	no::get_shader_variable("uni_LightPosition").set(camera.transform.position + camera.offset());
 	no::get_shader_variable("uni_LightColor").set(no::vector3f{ 1.0f, 1.0f, 1.0f });
-	no::get_shader_variable("uni_FogStart").set(100.0f);
-	no::get_shader_variable("uni_FogDistance").set(0.0f);
 	no::get_shader_variable("uni_Color").set(no::vector4f{ 1.0f });
 	if (current_tool == 0) {
 		converter.draw();

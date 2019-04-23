@@ -36,11 +36,19 @@ static void on_change(equipment_slot slot) {
 	}
 }
 
+static no::transform2 equipment_transform() {
+	no::transform2 transform = tab_body_transform();
+	transform.position.x += 3.0f;
+	transform.position.y += 6.0f;
+	return transform;
+}
+
 static no::transform2 slot_transform(equipment_slot slot) {
 	no::transform2 transform;
 	transform.scale = item_size;
-	transform.position.x = equipment->game.ui_camera.width() - background_uv.z + 26.0f;
-	transform.position.y = 141.0f;
+	transform.position = equipment_transform().position;
+	transform.position.x += 5.0f;
+	transform.position.y += 12.0f;
 	switch (slot) {
 	case equipment_slot::left_hand:
 		transform.position.x += 2.0f * (item_grid.x + 14.0f);
@@ -65,7 +73,7 @@ static no::transform2 slot_transform(equipment_slot slot) {
 
 static equipment_slot hovered_slot() {
 	for (auto& slot : equipment->slots) {
-		if (slot_transform(slot.first).collides_with(equipment->game.ui_camera.mouse_position(equipment->game.mouse()))) {
+		if (slot_transform(slot.first).collides_with(equipment->game.ui_camera_2x.mouse_position(equipment->game.mouse()))) {
 			return slot.first;
 		}
 	}
@@ -111,7 +119,7 @@ void draw_equipment_tab() {
 	if (!equipment) {
 		return;
 	}
-	no::draw_shape(equipment->background, tab_body_transform());
+	no::draw_shape(equipment->background, equipment_transform());
 	for (auto& slot : equipment->slots) {
 		no::draw_shape(slot.second.rectangle, slot_transform(slot.first));
 	}
@@ -131,7 +139,7 @@ void add_equipment_context_menu_options() {
 		return;
 	}
 	auto definition = item_definitions().get(item.definition_id);
-	add_context_menu_option("Unequip", [slot] {
+	add_context_menu_option("Unequip " + definition.name, [slot] {
 		equipment->game.unequip_to_inventory(slot);
 	});
 }

@@ -59,7 +59,6 @@ public:
 
 private:
 
-
 	std::vector<active_combat> combats;
 	server_world& world;
 	int object_remove_event = -1;

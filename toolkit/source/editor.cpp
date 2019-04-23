@@ -224,6 +224,7 @@ void object_tool::enable() {
 		object.transform.position = editor.world_position_for_tile(editor.selected_tile);
 		object.transform.position.x += 0.5f;
 		object.transform.position.z += 0.5f;
+		editor.renderer.update_object_visibility();
 	});
 }
 
@@ -356,6 +357,7 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()), el
 	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });
 	tool().enable();
 	tile_flag.refresh();
+	renderer.camera.transform.position = { 0.0f, 10.0f, 0.0f };
 }
 
 world_editor_state::~world_editor_state() {

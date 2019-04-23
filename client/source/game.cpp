@@ -26,8 +26,13 @@ player_data game_world::my_player() {
 	};
 }
 
-game_state::game_state() : renderer(world), dragger(mouse()) {
-	ui_camera.zoom = 2.0f;
+game_state::game_state() : renderer{ world }, dragger{ mouse() } {
+	cursor_icon_id = mouse().icon.listen([this] {
+		mouse().set_icon(no::mouse::cursor::arrow);
+	});
+
+	ui_camera_2x.zoom = 2.0f;
+	ui_camera_1x.zoom = 1.0f;
 	create_game_assets();
 	start_hit_splats(*this);
 	show_tabs(*this);
@@ -246,6 +251,7 @@ game_state::~game_state() {
 	hide_hud();
 	mouse().press.ignore(mouse_press_id);
 	mouse().scroll.ignore(mouse_scroll_id);
+	mouse().icon.ignore(cursor_icon_id);
 	keyboard().press.ignore(keyboard_press_id);
 	no::socket_event(server()).packet.ignore(receive_packet_id);
 	destroy_game_assets();
@@ -254,12 +260,13 @@ game_state::~game_state() {
 void game_state::update() {
 	no::synchronize_socket(server());
 	renderer.camera.size = window().size().to<float>();
-	ui_camera.transform.scale = window().size().to<float>();
+	ui_camera_2x.transform.scale = window().size().to<float>();
+	ui_camera_1x.transform.scale = window().size().to<float>();
 	if (world.my_player_id == -1) {
 		return;
 	}
 	no::transform3 camera_follow = world.my_player().object.transform;
-	camera_follow.position.y = 0.0f; // since it's annoying if camera bumps up and down
+	camera_follow.position.y = 0.5f; // since it's annoying if camera bumps up and down
 	follower.update(renderer.camera, camera_follow);
 	dragger.update(renderer.camera);
 	rotater.update(renderer.camera, keyboard());
@@ -311,15 +318,22 @@ void game_state::draw() {
 	}
 
 	no::bind_shader(shaders().sprite.id);
-	no::set_shader_view_projection(ui_camera);
+	no::set_shader_view_projection(ui_camera_2x);
 	shaders().sprite.color.set(no::vector4f{ 1.0f });
 	no::bind_texture(sprites().ui);
 
 	draw_hud();
 	draw_tabs();
+
 	draw_hit_splats();
 	draw_chat();
 	draw_dialogue();
+
+	no::bind_shader(shaders().sprite.id);
+	no::set_shader_view_projection(ui_camera_1x);
+	shaders().sprite.color.set(no::vector4f{ 1.0f });
+	no::bind_texture(sprites().ui);
+	draw_context_menu();
 }
 
 no::vector2i game_state::hovered_tile() const {

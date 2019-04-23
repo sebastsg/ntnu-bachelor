@@ -198,7 +198,7 @@ static void draw_option(int option_index) {
 void open_context_menu(game_state& game) {
 	close_context_menu();
 	context = new context_menu{ game };
-	context->position = game.ui_camera.mouse_position(game.mouse());
+	context->position = game.ui_camera_1x.mouse_position(game.mouse());
 	context->position.floor();
 	for (int i = 0; i < total_tiles; i++) {
 		set_ui_uv(context->rectangles.emplace_back(), context_uv[i]);
@@ -223,6 +223,9 @@ void add_context_menu_option(const std::string& text, const std::function<void()
 	option.action = action;
 	option.texture = no::create_texture(fonts().leo_9.render(text));
 	context->max_width = std::max(context->max_width, (float)no::texture_size(option.texture).x + context_uv[top_begin].z);
+	if (context->position.x + context->max_width + 40.0f > context->game.ui_camera_1x.width()) {
+		context->position.x = context->game.ui_camera_1x.width() - context->max_width - 40.0f;
+	}
 }
 
 void trigger_context_menu_option(int index) {
@@ -232,11 +235,11 @@ void trigger_context_menu_option(int index) {
 }
 
 bool is_mouse_over_context_menu_option(int index) {
-	return context ? option_transform(index).collides_with(context->game.ui_camera.mouse_position(context->game.mouse())) : false;
+	return context ? option_transform(index).collides_with(context->game.ui_camera_1x.mouse_position(context->game.mouse())) : false;
 }
 
 bool is_mouse_over_context_menu() {
-	return context ? menu_transform().collides_with(context->game.ui_camera.mouse_position(context->game.mouse())) : false;
+	return context ? menu_transform().collides_with(context->game.ui_camera_1x.mouse_position(context->game.mouse())) : false;
 }
 
 void draw_context_menu() {

@@ -4,13 +4,13 @@
 #include "game_assets.hpp"
 #include "minimap.hpp"
 
-const no::vector4f hud_left_uv = { 8.0f, 528.0f, 40.0f, 68.0f };
-const no::vector4f hud_tile_1_uv = { 56.0f, 528.0f, 16.0f, 68.0f };
-const no::vector4f hud_tile_2_uv = { 80.0f, 528.0f, 16.0f, 68.0f };
-const no::vector4f hud_right_uv = { 104.0f, 528.0f, 16.0f, 68.0f };
-const no::vector2f hud_health_background = { 104.0f, 152.0f };
-const no::vector2f hud_health_foreground = { 112.0f, 152.0f };
-const no::vector2f hud_health_size = { 8.0f, 12.0f };
+const no::vector4f hud_left_uv = { 755.0f, 290.0f, 29.0f, 60.0f };
+const no::vector4f hud_tile_uv = { 792.0f, 290.0f, 1.0f, 60.0f };
+const no::vector4f hud_right_uv = { 800.0f, 290.0f, 29.0f, 60.0f };
+const no::vector2f hud_health_background = { 690.0f, 288.0f };
+const no::vector2f hud_health_foreground = { 680.0f, 288.0f };
+const no::vector2f hud_health_size = { 10.0f, 10.0f };
+const no::vector4f minimap_uv = { 792.0f, 8.0f, 96.0f, 96.0f };
 
 struct hud_view {
 
@@ -20,12 +20,11 @@ struct hud_view {
 	long long fps = 0;
 
 	no::rectangle left;
-	no::rectangle tile_1;
-	no::rectangle tile_2;
+	no::rectangle tile;
 	no::rectangle right;
 	no::rectangle health_background;
 	no::rectangle health_foreground;
-	no::rectangle background;
+	no::rectangle minimap_background;
 
 	int fps_texture = -1;
 	int debug_texture = -1;
@@ -47,12 +46,11 @@ void show_hud(game_state& game) {
 	hud->fps_texture = no::create_texture();
 	hud->debug_texture = no::create_texture();
 	set_ui_uv(hud->left, hud_left_uv);
-	set_ui_uv(hud->tile_1, hud_tile_1_uv);
-	set_ui_uv(hud->tile_2, hud_tile_2_uv);
+	set_ui_uv(hud->tile, hud_tile_uv);
 	set_ui_uv(hud->right, hud_right_uv);
 	set_ui_uv(hud->health_background, hud_health_background, hud_health_size);
 	set_ui_uv(hud->health_foreground, hud_health_foreground, hud_health_size);
-	set_ui_uv(hud->background, background_uv);
+	set_ui_uv(hud->minimap_background, minimap_uv);
 }
 
 void hide_hud() {
@@ -61,8 +59,8 @@ void hide_hud() {
 }
 
 void update_hud() {
-	hud->minimap.transform.position = { 109.0f, 12.0f };
-	hud->minimap.transform.position.x += hud->game.ui_camera.width() - background_uv.z - 2.0f;
+	hud->minimap.transform.position.x = hud->game.ui_camera_2x.width() - minimap_uv.z + 15.0f;
+	hud->minimap.transform.position.y = 18.0f;
 	hud->minimap.transform.scale = 64.0f;
 	hud->minimap.transform.rotation = hud->game.world_camera().transform.rotation.y;
 	hud->minimap.update(hud->game.world.my_player().object.tile());
@@ -70,9 +68,14 @@ void update_hud() {
 
 void draw_hud() {
 	hud->minimap.draw();
+	no::bind_texture(sprites().ui);
+	no::transform2 transform;
+	transform.scale = minimap_uv.zw;
+	transform.position.x = hud->game.ui_camera_2x.width() - transform.scale.x - 2.0f;
+	transform.position.y = 2.0f;
+	no::draw_shape(hud->minimap_background, transform);
 
 	auto& player = hud->game.world.my_player().character;
-	no::transform2 transform;
 	transform.position = { 300.0f, 4.0f };
 	transform.scale = no::texture_size(hud->fps_texture).to<float>();
 	no::bind_texture(hud->fps_texture);
@@ -89,19 +92,17 @@ void draw_hud() {
 	transform.scale = hud_left_uv.zw;
 	no::draw_shape(hud->left, transform);
 	transform.position.x += transform.scale.x;
-	transform.scale = hud_tile_1_uv.zw;
-	for (int i = 0; i <= player.stat(stat_type::health).real() / 2; i++) {
-		no::draw_shape(hud->tile_1, transform);
-		transform.position.x += transform.scale.x;
-	}
+	transform.scale.x = (float)player.stat(stat_type::health).real() * 10.0f;
+	transform.scale.y = hud_tile_uv.w;
+	no::draw_shape(hud->tile, transform);
+	transform.position.x += transform.scale.x;
 	transform.scale = hud_right_uv.zw;
 	no::draw_shape(hud->right, transform);
 
 	// health
 	transform.scale = hud_health_size;
-	transform.position = 8.0f;
-	transform.position.x += 36.0f;
-	transform.position.y += 32.0f;
+	transform.position.x = 36.0f;
+	transform.position.y = 20.0f;
 	for (int i = 1; i <= player.stat(stat_type::health).real(); i++) {
 		if (player.stat(stat_type::health).effective() >= i) {
 			no::draw_shape(hud->health_foreground, transform);
@@ -109,13 +110,11 @@ void draw_hud() {
 			no::draw_shape(hud->health_background, transform);
 		}
 		transform.position.x += transform.scale.x + 1.0f;
+		if (i % 18 == 0) {
+			transform.position.x = 36.0f;
+			transform.position.y += 12.0f;
+		}
 	}
-
-	// right background
-	transform.scale = background_uv.zw;
-	transform.position.x = hud->game.ui_camera.width() - transform.scale.x - 2.0f;
-	transform.position.y = 0.0f;
-	no::draw_shape(hud->background, transform);
 }
 
 void set_hud_fps(long long fps) {

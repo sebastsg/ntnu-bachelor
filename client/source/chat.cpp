@@ -17,7 +17,7 @@ struct chat_view {
 	std::vector<no::text_view> history;
 	int visible_history_length = 10;
 
-	chat_view(game_state& game) : game{ game }, input{ game, game.ui_camera } {}
+	chat_view(game_state& game) : game{ game }, input{ game, game.ui_camera_2x } {}
 
 };
 
@@ -40,9 +40,9 @@ void update_chat() {
 	if (!chat) {
 		return;
 	}
-	chat->input.transform.position = { 16.0f, chat->game.ui_camera.height() - chat->input.transform.scale.y - 48.0f };
+	chat->input.transform.position = { 16.0f, chat->game.ui_camera_2x.height() - chat->input.transform.scale.y - 48.0f };
 	const int lower = std::max(0, (int)chat->history.size() - chat->visible_history_length);
-	float y = chat->game.ui_camera.height() - 96.0f;
+	float y = chat->game.ui_camera_2x.height() - 96.0f;
 	for (int i = (int)chat->history.size() - 1; i >= lower; i--) {
 		chat->history[i].transform.position = { chat->input.transform.position.x + 8.0f, y };
 		y -= chat->history[i].transform.scale.y + 4.0f;
@@ -61,7 +61,7 @@ void draw_chat() {
 
 void add_chat_message(const std::string& author, const std::string& message) {
 	std::string text = (author.empty() ? "" : (author + ": ")) + message;
-	chat->history.emplace_back(chat->game, chat->game.ui_camera).render(fonts().leo_14, text);
+	chat->history.emplace_back(chat->game, chat->game.ui_camera_2x).render(fonts().leo_14, text);
 }
 
 void enable_chat() {

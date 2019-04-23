@@ -27,6 +27,9 @@ public:
 	ui_element& operator=(const ui_element&) = delete;
 	ui_element& operator=(ui_element&&) = delete;
 
+	bool is_hovered() const;
+	bool is_pressed() const;
+
 protected:
 	
 	const window_state& state;
@@ -85,8 +88,6 @@ public:
 	void draw_label();
 	
 	void set_tex_coords(vector2f position, vector2f size);
-
-private:
 
 	struct {
 		bool enabled = true;

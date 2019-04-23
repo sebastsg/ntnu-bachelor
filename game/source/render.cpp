@@ -24,8 +24,9 @@ character_renderer::character_renderer() {
 	std::vector<item_definition> items = item_definitions().of_type(item_type::equipment);
 	for (auto& item : items) {
 		auto& equipment = equipment_models[item.id];
+		auto texture = item.texture.empty() ? item.model : item.texture;
 		equipment.model.load<no::animated_mesh_vertex>(no::asset_path("models/" + item.model + ".nom"));
-		equipment.texture = no::create_texture({ no::asset_path("textures/" + item.model + ".png") });
+		equipment.texture = no::create_texture({ no::asset_path("textures/" + texture + ".png") });
 	}
 	for (auto& item : items) {
 		equipment_animators.emplace(item.id, equipment_models[item.id].model);

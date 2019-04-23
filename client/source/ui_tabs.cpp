@@ -12,6 +12,7 @@ struct tabs_view {
 
 	game_state& game;
 	no::rectangle background;
+	no::rectangle tab_background;
 	no::rectangle inventory;
 	no::rectangle equipment;
 	no::rectangle quests;
@@ -42,22 +43,28 @@ void set_item_uv(no::rectangle& rectangle, no::vector2f uv) {
 no::transform2 tab_body_transform() {
 	no::transform2 transform;
 	transform.scale = { 138.0f, 205.0f };
-	transform.position.x = tabs->game.ui_camera.width() - background_uv.z - 2.0f + inventory_offset.x;
-	transform.position.y = inventory_offset.y;
+	transform.position.x = tabs->game.ui_camera_2x.width() - background_uv.z - 2.0f + inventory_offset.x;
+	transform.position.y = inventory_offset.y + 68.0f;
 	return transform;
 }
 
 static no::transform2 tab_transform(int index) {
 	no::transform2 transform;
-	transform.position = { 429.0f, 146.0f };
-	transform.position -= background_uv.xy;
-	transform.position.x += tabs->game.ui_camera.width() - background_uv.z - 2.0f + (tab_size.x + 4.0f) * (float)index;
+	transform.position.x = 42.0f + tabs->game.ui_camera_2x.width() - background_uv.z + (tab_size.x + 2.0f) * (float)index;
+	transform.position.y = 238.0f;
 	transform.scale = tab_size;
 	return transform;
 }
 
+static no::transform2 background_transform() {
+	no::transform2 transform;
+	transform.scale = background_uv.zw;
+	transform.position = tabs->game.ui_camera_2x.size() - transform.scale - 2.0f;
+	return transform;
+}
+
 static bool is_tab_hovered(int index) {
-	return tab_transform(index).collides_with(tabs->game.ui_camera.mouse_position(tabs->game.mouse()));
+	return tab_transform(index).collides_with(tabs->game.ui_camera_2x.mouse_position(tabs->game.mouse()));
 }
 
 void draw_tab(int index, const no::rectangle& tab) {
@@ -69,8 +76,8 @@ void draw_tab(int index, const no::rectangle& tab) {
 	if (tabs->active == index) {
 		shaders().sprite.color.set({ 1.0f, 0.2f, 0.2f, 1.0f });
 	}
-	tabs->background.bind();
-	tabs->background.draw();
+	tabs->tab_background.bind();
+	tabs->tab_background.draw();
 	shaders().sprite.color.set(no::vector4f{ 1.0f });
 	tab.bind();
 	tab.draw();
@@ -79,7 +86,8 @@ void draw_tab(int index, const no::rectangle& tab) {
 void show_tabs(game_state& game) {
 	hide_tabs();
 	tabs = new tabs_view{ game };
-	set_ui_uv(tabs->background, tab_background_uv, tab_size);
+	set_ui_uv(tabs->background, background_uv);
+	set_ui_uv(tabs->tab_background, tab_background_uv, tab_size);
 	set_ui_uv(tabs->inventory, tab_inventory_uv, tab_size);
 	set_ui_uv(tabs->equipment, tab_equipment_uv, tab_size);
 	set_ui_uv(tabs->quests, tab_quests_uv, tab_size);
@@ -101,6 +109,8 @@ void draw_tabs() {
 	if (!tabs) {
 		return;
 	}
+	no::bind_texture(sprites().ui);
+	no::draw_shape(tabs->background, background_transform());
 	draw_inventory_tab();
 	draw_equipment_tab();
 	draw_stats_tab();
@@ -110,9 +120,6 @@ void draw_tabs() {
 	draw_tab(2, tabs->quests);
 	draw_tab(3, tabs->stats);
 	draw_trading_ui();
-	shaders().sprite.color.set(no::vector4f{ 1.0f });
-	no::bind_texture(sprites().ui);
-	draw_context_menu();
 }
 
 void add_tabs_context_menu_options() {
@@ -221,7 +228,6 @@ void enable_tabs() {
 				return;
 			}
 		}
-		tabs->game.mouse().set_icon(no::mouse::cursor::arrow);
 	});
 	switch (tabs->active) {
 	case 0: show_inventory_tab(tabs->game); break;
@@ -250,15 +256,18 @@ bool is_mouse_over_tabs() {
 	if (!tabs) {
 		return false;
 	}
-	no::transform2 transform;
-	transform.scale = background_uv.zw;
-	transform.position.x = tabs->game.ui_camera.width() - transform.scale.x - 2.0f;
-	return transform.collides_with(tabs->game.ui_camera.mouse_position(tabs->game.mouse()));
+	auto mouse = tabs->game.ui_camera_2x.mouse_position(tabs->game.mouse());
+	auto transform = tab_body_transform();
+	transform.position.x -= 24.0f;
+	transform.position.y -= 32.0f;
+	transform.scale.x += 48.0f;
+	transform.scale.y += 64.0f;
+	return transform.collides_with(mouse);
 }
 
 bool is_mouse_over_tab_body() {
 	if (!tabs) {
 		return false;
 	}
-	return tab_body_transform().collides_with(tabs->game.ui_camera.mouse_position(tabs->game.mouse()));
+	return tab_body_transform().collides_with(tabs->game.ui_camera_2x.mouse_position(tabs->game.mouse()));
 }

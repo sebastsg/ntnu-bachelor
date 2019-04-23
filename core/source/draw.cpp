@@ -192,6 +192,9 @@ bool sprite_animation::is_paused() const {
 }
 
 void sprite_animation::set_frame(int frame) {
+	if (frame >= frames || frame < 0) {
+		return;
+	}
 	previous_frame = current_frame;
 	current_frame = frame;
 	sub_frame = (float)frame;

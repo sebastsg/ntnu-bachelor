@@ -40,17 +40,25 @@ static void on_change(no::vector2i slot) {
 	}
 }
 
+static no::transform2 inventory_transform() {
+	no::transform2 transform = tab_body_transform();
+	transform.position.x += 3.0f;
+	transform.position.y += 5.0f;
+	return transform;
+}
+
 static no::transform2 slot_transform(int index) {
 	no::transform2 transform;
 	transform.scale = item_size;
-	transform.position.x = inventory->game.ui_camera.width() - background_uv.z + 23.0f + (float)(index % 4) * item_grid.x;
-	transform.position.y = 132.0f + (float)(index / 4) * item_grid.y;
+	transform.position = inventory_transform().position + 1.0f;
+	transform.position.x += (float)(index % 4) * item_grid.x;
+	transform.position.y += (float)(index / 4) * item_grid.y;
 	return transform;
 }
 
 static no::vector2i hovered_slot() {
 	for (auto& slot : inventory->slots) {
-		if (slot_transform(slot.first).collides_with(inventory->game.ui_camera.mouse_position(inventory->game.mouse()))) {
+		if (slot_transform(slot.first).collides_with(inventory->game.ui_camera_2x.mouse_position(inventory->game.mouse()))) {
 			return { slot.first % 4, slot.first / 4 };
 		}
 	}
@@ -98,7 +106,7 @@ void draw_inventory_tab() {
 	if (!inventory) {
 		return;
 	}
-	no::draw_shape(inventory->background, tab_body_transform());
+	no::draw_shape(inventory->background, inventory_transform());
 	for (auto& slot : inventory->slots) {
 		no::draw_shape(slot.second.rectangle, slot_transform(slot.first));
 	}

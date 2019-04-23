@@ -25,7 +25,7 @@ struct world_tile {
 	static const uint8_t stone = 2;
 	static const uint8_t snow = 3;
 
-	float height = 0.0f;
+	float height = 5.0f;
 	float water_height = 0.0f;
 	uint8_t corners[4] = {};
 

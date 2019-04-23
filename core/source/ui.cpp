@@ -15,6 +15,14 @@ ui_element::~ui_element() {
 	state.mouse().release.ignore(mouse_release_id);
 }
 
+bool ui_element::is_hovered() const {
+	return transform.collides_with(camera.mouse_position(state.mouse()));
+}
+
+bool ui_element::is_pressed() const {
+	return is_hovered() && state.mouse().is_button_down(mouse::button::left);
+}
+
 text_view::text_view(const window_state& state, const ortho_camera& camera) : ui_element(state, camera) {
 	texture = create_texture();
 }
@@ -60,7 +68,7 @@ button::button(const window_state& state, const ortho_camera& camera) : ui_eleme
 }
 
 void button::update() {
-	if (transform.collides_with(camera.mouse_position(state.mouse()))) {
+	if (is_hovered()) {
 		if (transition.enabled) {
 			transition.current += transition.in_speed;
 			if (transition.current > 1.0f) {

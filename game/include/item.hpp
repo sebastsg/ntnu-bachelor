@@ -67,6 +67,7 @@ struct item_definition {
 	no::vector2f uv_medium_stack;
 	no::vector2f uv_large_stack;
 	std::string model;
+	std::string texture;
 	struct {
 		int accuracy = 0;
 		int power = 0;

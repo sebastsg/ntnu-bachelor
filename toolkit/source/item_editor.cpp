@@ -100,6 +100,7 @@ void item_editor::ui_select_item() {
 		i++;
 	}
 	imgui_input_text<64>("Model##EditItemModel", selected.model);
+	imgui_input_text<64>("Texture##EditItemTexture", selected.texture);
 	ImGui::Checkbox("Is attachment##EditIsAttachment", &selected.attachment);
 
 	ImGui::InputInt("Accuracy##EditItemAccuracy", &selected.stats.accuracy);
