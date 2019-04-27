@@ -68,11 +68,11 @@ world_autotiler::world_autotiler() {
 	add_group(world_tile::snow, world_tile::stone);
 }
 
-void world_autotiler::add_main(int tile) {
+void world_autotiler::add_main(uint8_t tile) {
 	uv_indices[packed_corners(tile, tile, tile, tile)] = { tile, 0 };
 }
 
-void world_autotiler::add_group(int primary, int secondary) {
+void world_autotiler::add_group(uint8_t primary, uint8_t secondary) {
 	uv_indices[packed_corners(primary, primary, primary, secondary)] = { 0, row };
 	uv_indices[packed_corners(primary, primary, secondary, primary)] = { 1, row };
 	uv_indices[packed_corners(primary, secondary, secondary, primary)] = { 2, row };
@@ -93,13 +93,8 @@ void world_autotiler::add_group(int primary, int secondary) {
 	row++;
 }
 
-uint32_t world_autotiler::packed_corners(int top_left, int top_right, int bottom_left, int bottom_right) const {
-	uint32_t result = 0;
-	result += (uint32_t)(top_left & 0xFF) << 24;
-	result += (uint32_t)(top_right & 0xFF) << 16;
-	result += (uint32_t)(bottom_left & 0xFF) << 8;
-	result += (uint32_t)(bottom_right & 0xFF);
-	return result;
+uint32_t world_autotiler::packed_corners(uint8_t top_left, uint8_t top_right, uint8_t bottom_left, uint8_t bottom_right) const {
+	return (top_left << 24) + (top_right << 16) + (bottom_left << 8) + bottom_right;
 }
 
 no::vector2i world_autotiler::uv_index(uint32_t corners) const {

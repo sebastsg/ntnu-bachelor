@@ -52,13 +52,13 @@ public:
 
 	world_autotiler();
 
-	uint32_t packed_corners(int top_left, int top_right, int bottom_left, int bottom_right) const;
+	uint32_t packed_corners(uint8_t top_left, uint8_t top_right, uint8_t bottom_left, uint8_t bottom_right) const;
 	no::vector2i uv_index(uint32_t corners) const;
 
 private:
 
-	void add_main(int tile);
-	void add_group(int tile, int bordering_tile);
+	void add_main(uint8_t tile);
+	void add_group(uint8_t tile, uint8_t bordering_tile);
 
 	std::unordered_map<uint32_t, no::vector2i> uv_indices;
 	int row = 0;
