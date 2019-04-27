@@ -9,6 +9,7 @@
 #include "script.hpp"
 #include "quest.hpp"
 #include "server_world.hpp"
+#include "../config.hpp"
 
 const int inventory_container_type = 0;
 const int equipment_container_type = 1;
@@ -69,8 +70,6 @@ struct trade_state {
 class server_state : public no::window_state {
 public:
 
-	static const int max_clients = 100;
-
 	database_connection database;
 	game_persister persister;
 
@@ -115,7 +114,7 @@ private:
 	void remove_trade(int client_index);
 
 	int listener = -1;
-	client_state clients[max_clients];
+	client_state clients[config::max_clients];
 
 	std::vector<trade_state> trades;
 

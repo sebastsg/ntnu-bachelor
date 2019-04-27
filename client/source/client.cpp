@@ -2,13 +2,14 @@
 #include "window.hpp"
 #include "platform.hpp"
 #include "network.hpp"
+#include "../config.hpp"
 
 static int server_socket = -1;
 client_state::player_details_ client_state::player_details;
 
 client_state::client_state() {
 	if (server_socket == -1) {
-		server_socket = no::open_socket("game.einheri.xyz", 7524); // todo: config file
+		server_socket = no::open_socket(config::host, config::port);
 	}
 	window().set_swap_interval(no::swap_interval::immediate);
 	set_synchronization(no::draw_synchronization::always);

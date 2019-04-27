@@ -7,7 +7,7 @@
 
 server_state::server_state() : persister{ database }, world{ *this, "main" } {
 	listener = no::open_socket();
-	no::bind_socket(listener, "10.0.0.130", 7524); // todo: config file
+	no::bind_socket(listener, config::host, config::port);
 	no::listen_socket(listener);
 	no::socket_event(listener).accept.listen([this](int accepted_id) {
 		connect(accepted_id);
@@ -22,7 +22,7 @@ server_state::server_state() : persister{ database }, world{ *this, "main" } {
 }
 
 server_state::~server_state() {
-	for (int i = 0; i < max_clients; i++) {
+	for (int i = 0; i < config::max_clients; i++) {
 		save_player(i);
 	}
 	world.combat.events.hit.ignore(combat_hit_event_id);
@@ -37,8 +37,8 @@ void server_state::update() {
 			i--;
 		}
 	}
-	for (int i = 0; i < max_clients; i++) {
-		if (clients[i].is_connected() && clients[i].last_saved.seconds() > 120) {
+	for (int i = 0; i < config::max_clients; i++) {
+		if (clients[i].is_connected() && clients[i].last_saved.seconds() > config::save_interval_seconds) {
 			save_player(i);
 		}
 	}
@@ -108,7 +108,7 @@ void server_state::draw() {
 }
 
 int server_state::client_with_player(int player_id) {
-	for (int i = 0; i < max_clients; i++) {
+	for (int i = 0; i < config::max_clients; i++) {
 		if (clients[i].object.player_instance_id == player_id) {
 			return i;
 		}
@@ -160,7 +160,7 @@ void server_state::save_player(int client_index) {
 }
 
 void server_state::connect(int index) {
-	if (index >= max_clients) {
+	if (index >= config::max_clients) {
 		// todo: send some message to client to let it know properly
 		WARNING("Rejecting client. Connection limit reached");
 		return;
@@ -490,7 +490,7 @@ void server_state::on_connect_to_world(int client_index, const to_server::lobby:
 	my_info.quests = clients[client_index].player.quests;
 	no::send_packet(client_index, my_info);
 
-	for (int j = 0; j < max_clients; j++) {
+	for (int j = 0; j < config::max_clients; j++) {
 		if (clients[j].is_connected() && client_index != j) {
 			auto existing_player = world.objects.character(clients[j].object.player_instance_id);
 			if (!existing_player) {

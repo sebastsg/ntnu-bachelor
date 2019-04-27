@@ -1,6 +1,7 @@
 #include "persistency.hpp"
 #include "network.hpp"
 #include "debug.hpp"
+#include "../config.hpp"
 
 query_result_row::query_result_row(PGresult* result, int row) : result(result), row(row) {
 
@@ -74,7 +75,14 @@ std::string query_result::status_message() const {
 }
 
 database_connection::database_connection() {
-	connection = PQconnectdb("host=localhost port=5432 dbname=einheri user=einheri password=einheri");
+	namespace db = config::database;
+	connection = PQconnectdb(CSTRING(
+		"host=" << db::host <<
+		" port=" << db::port <<
+		" dbname=" << db::name <<
+		" user=" << db::user <<
+		" password=" << db::password
+	));
 	if (is_bad()) {
 		CRITICAL("Failed to connect: " << status_message());
 	}
