@@ -9,6 +9,8 @@ toolkit/project/VisualStudio15
 *.pdb
 
 # config
+client/config.hpp
+server/config.hpp
 web/config.php
 
 # public web files
