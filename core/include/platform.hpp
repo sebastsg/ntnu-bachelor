@@ -2,10 +2,40 @@
 
 #include "debug.hpp"
 
-#define PLATFORM_WINDOWS (_WIN32 || _WIN64)
+#ifdef _MSC_VER_
+# define COMPILER_MSVC     1
+# define COMPILER_GCC      0
+#elif defined(__GNUC__)
+# define COMPILER_MSVC     0
+# define COMPILER_GCC      1
+#endif
 
-#define ENABLE_GL         1
-#define ENABLE_WINDOWS_GL 1
+#ifdef _WIN32
+# define PLATFORM_WINDOWS  1
+# define PLATFORM_LINUX    0
+#elif defined(__linux__)
+# define PLATFORM_WINDOWS  0
+# define PLATFORM_LINUX    1
+#endif
+
+#define ENABLE_WINDOW     0
+
+#define ENABLE_GRAPHICS   0
+#define ENABLE_GL         (ENABLE_GRAPHICS && (PLATFORM_WINDOWS || PLATFORM_LINUX))
+
+#define ENABLE_AUDIO      0
+#define ENABLE_WASAPI     (ENABLE_AUDIO && PLATFORM_WINDOWS)
+
+#define ENABLE_NETWORK    0
+#define ENABLE_WINSOCK2   (ENABLE_NETWORK && PLATFORM_WINDOWS)
+
+#define ENABLE_IMGUI      0
+
+#if COMPILER_MSVC
+#  define FORCE_INLINE __forceinline
+#elif COMPILER_GCC
+#  define FORCE_INLINE __always_inline
+#endif
 
 namespace no {
 
@@ -42,9 +72,19 @@ namespace platform {
 class windows_window;
 using platform_window = windows_window;
 
-#if ENABLE_WINDOWS_GL
+#if ENABLE_GL
 class windows_gl_context;
 using platform_render_context = windows_gl_context;
+#endif
+
+#elif PLATFORM_LINUX
+
+class linux_window;
+using platform_window = linux_window;
+
+#if ENABLE_GL
+class x11_gl_context;
+using platform_render_context = x11_gl_context;
 #endif
 
 #endif

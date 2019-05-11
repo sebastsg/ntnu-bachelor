@@ -1,6 +1,6 @@
 #include "windows_gl.hpp"
 
-#if ENABLE_WINDOWS_GL
+#if PLATFORM_WINDOWS && ENABLE_GL
 
 #include <glew/glew.h>
 #include <glew/wglew.h>

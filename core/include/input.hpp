@@ -18,32 +18,12 @@ public:
 		vector2i position;
 	};
 
-	struct press_message {
-		button button = button::none;
-	};
-
-	struct release_message {
-		button button = button::none;
-	};
-
-	struct double_click_message {
-		button button = button::none;
-	};
-
-	struct scroll_message {
-		int steps = 0;
-	};
-
-	struct visibility_message {
-		bool is_visible = true;
-	};
-
 	message_event<move_message> move;
-	message_event<press_message> press;
-	message_event<release_message> release;
-	message_event<double_click_message> double_click;
-	message_event<scroll_message> scroll;
-	message_event<visibility_message> visibility;
+	message_event<button> press;
+	message_event<button> release;
+	message_event<button> double_click;
+	message_event<int> scroll;
+	message_event<bool> visibility;
 	signal_event icon;
 
 	mouse(window* parent_window);
@@ -149,27 +129,10 @@ enum class key {
 class keyboard {
 public:
 
-	struct press_message {
-		key key;
-	};
-
-	struct repeated_press_message {
-		key key;
-		int repeat = 0;
-	};
-
-	struct release_message {
-		key key;
-	};
-
-	struct input_message {
-		unsigned int character = 0;
-	};
-
-	message_event<press_message> press;
-	message_event<repeated_press_message> repeated_press;
-	message_event<release_message> release;
-	message_event<input_message> input;
+	message_event<key> press;
+	message_event<key> repeated_press;
+	message_event<key> release;
+	message_event<unsigned int> input;
 
 	keyboard();
 

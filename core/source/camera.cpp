@@ -20,7 +20,7 @@ void ortho_camera::update() {
 			transform.position.y += delta.y;
 		}
 	}
-	transform.rotation = std::fmodf(transform.rotation, 360.0f);
+	transform.rotation = fmodf(transform.rotation, 360.0f);
 	if (transform.rotation < 0.0f) {
 		transform.rotation += 360.0f;
 	}
@@ -155,8 +155,8 @@ vector2f perspective_camera::world_to_screen(const vector3f& position) const {
 }
 
 void perspective_camera::update_rotation() {
-	transform.rotation.x = std::fmodf(transform.rotation.x, 360.0f);
-	transform.rotation.y = std::fmodf(transform.rotation.y, 360.0f);
+	transform.rotation.x = fmodf(transform.rotation.x, 360.0f);
+	transform.rotation.y = fmodf(transform.rotation.y, 360.0f);
 	if (transform.rotation.x < 5.0f) {
 		transform.rotation.x = 5.0f;
 	} else if (transform.rotation.x > 89.0f) {
@@ -179,7 +179,7 @@ void perspective_camera::update_rotation() {
 }
 
 perspective_camera::drag_controller::drag_controller(mouse& mouse) : mouse_(mouse) {
-	press_id = mouse.press.listen([this](const mouse::press_message& event) {
+	press_id = mouse.press.listen([this](mouse::button button) {
 		last_mouse_position = mouse_.position().to<float>();
 	});
 }

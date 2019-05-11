@@ -74,9 +74,8 @@ public:
 		} else if constexpr (std::is_floating_point<T>::value) {
 			std::uniform_real_distribution<T> distribution(min, max);
 			return distribution(mersianne_twister_engine);
-		} else {
-			static_assert(false, "T is not an integral or floating point type");
 		}
+		static_assert(std::is_integral<T>::value || std::is_floating_point<T>::value, "T is not an integral or floating point type");
 	}
 
 	// max is inclusive

@@ -164,7 +164,7 @@ public:
 	}
 
 	void shift_left(const std::vector<T>& new_values) {
-		ASSERT((int)heights.size() == size.y);
+		ASSERT((int)values.size() == size.y);
 		shift_left();
 		for (int row = 0; row < size.y; row++) {
 			values[row * size.x] = new_values[row];
@@ -172,7 +172,7 @@ public:
 	}
 
 	void shift_right(const std::vector<T>& new_values) {
-		ASSERT((int)heights.size() == size.y);
+		ASSERT((int)values.size() == size.y);
 		shift_right();
 		for (int row = 0; row < size.y; row++) {
 			values[row * size.x + size.x - 1] = new_values[row];
@@ -180,7 +180,7 @@ public:
 	}
 
 	void shift_up(const std::vector<T>& new_values) {
-		ASSERT((int)heights.size() == size.x);
+		ASSERT((int)values.size() == size.x);
 		shift_up();
 		for (int column = 0; column < size.x; column++) {
 			values[column] = new_values[column];
@@ -188,7 +188,7 @@ public:
 	}
 
 	void shift_down(const std::vector<T>& new_values) {
-		ASSERT((int)heights.size() == size.x);
+		ASSERT((int)values.size() == size.x);
 		shift_down();
 		const int row_index = (size.y - 1) * size.x;
 		for (int column = 0; column < size.x; column++) {

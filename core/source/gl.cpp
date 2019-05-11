@@ -11,7 +11,7 @@
 #include "debug.hpp"
 #include "draw.hpp"
 
-#include "GLM/gtc/type_ptr.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 namespace no {
 

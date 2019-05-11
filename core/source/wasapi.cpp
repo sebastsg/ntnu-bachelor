@@ -1,3 +1,7 @@
+#include "platform.hpp"
+
+#if ENABLE_WASAPI
+
 #include "wasapi.hpp"
 #include "debug.hpp"
 #include "io.hpp"
@@ -255,3 +259,5 @@ void audio_device::clear_players() {
 }
 
 }
+
+#endif

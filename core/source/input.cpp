@@ -22,13 +22,17 @@ int mouse::y() const {
 }
 
 vector2i mouse::position() const {
+#if PLATFORM_WINDOWS
 	POINT cursor;
 	GetCursorPos(&cursor);
 	ScreenToClient(parent_window->platform_window()->handle(), &cursor);
 	return { cursor.x, cursor.y };
+#endif
+	return 0; // todo: implement
 }
 
 bool mouse::is_button_down(button button) const {
+#if PLATFORM_WINDOWS
 	switch (button) {
 	case button::left:
 		return (GetAsyncKeyState(VK_LBUTTON) & 0b1000000000000000) == 0b1000000000000000;
@@ -39,6 +43,8 @@ bool mouse::is_button_down(button button) const {
 	default:
 		return false;
 	}
+#endif
+	return false; // todo: implement
 }
 
 void mouse::set_icon(cursor icon) {
@@ -47,16 +53,16 @@ void mouse::set_icon(cursor icon) {
 
 keyboard::keyboard() {
 	std::fill(std::begin(keys), std::end(keys), false);
-	press.listen([this](const press_message& event) {
-		keys[(size_t)event.key] = true;
+	press.listen([this](key pressed_key) {
+		keys[(size_t)pressed_key] = true;
 	});
-	release.listen([this](const release_message& event) {
-		keys[(size_t)event.key] = false;
+	release.listen([this](key released_key) {
+		keys[(size_t)released_key] = false;
 	});
 }
 
-bool keyboard::is_key_down(key key) const {
-	return keys[(size_t)key];
+bool keyboard::is_key_down(key check_key) const {
+	return keys[(size_t)check_key];
 }
 
 }

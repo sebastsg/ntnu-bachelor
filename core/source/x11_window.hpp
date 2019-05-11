@@ -2,14 +2,18 @@
 
 #include "platform.hpp"
 
-#if PLATFORM_WINDOWS
+#if PLATFORM_LINUX
 
-#include "windows_platform.hpp"
+#include <X11/X.h>
+#include <X11/Xlib-xcb.h>
+#include <xcb/xcb.h>
+
+#include "linux_platform.hpp"
 #include "math.hpp"
 #include "input.hpp"
 
 #if ENABLE_GL
-#include "windows_gl.hpp"
+#include "linux_gl.hpp"
 #endif
 
 namespace no {
@@ -18,18 +22,18 @@ class window;
 
 namespace platform {
 
-class windows_window {
+class x11_window {
 public:
 
-	windows_window(window* window, const std::string& title, int width, int height, int samples, bool is_maximized);
+	x11_window(window* window, const std::string& title, int width, int height, int samples, bool is_maximized);
 
-	windows_window(const windows_window&) = delete;
-	windows_window(windows_window&&) = delete;
+	x11_window(const x11_window&) = delete;
+	x11_window(x11_window&&) = delete;
 
-	~windows_window();
+	~x11_window();
 
-	windows_window& operator=(const windows_window&) = delete;
-	windows_window& operator=(windows_window&&) = delete;
+	x11_window& operator=(const x11_window&) = delete;
+	x11_window& operator=(x11_window&&) = delete;
 
 	void poll();
 	void set_base_window(window* window);
@@ -52,12 +56,13 @@ public:
 	void clear();
 	void swap();
 
-	HWND handle() const;
-
 private:
 
-	HWND window_handle = nullptr;
-	HDC device_context_handle = nullptr;
+    Display* display = nullptr;
+    int default_screen = 0;
+    xcb_connection_t* connection = nullptr;
+    xcb_screen_t* screen = nullptr;
+
 	window* base_window = nullptr;
 	platform_render_context context;
 

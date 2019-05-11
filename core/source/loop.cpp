@@ -1,10 +1,16 @@
 #include "loop.hpp"
-#include "window.hpp"
-#include "wasapi.hpp"
-#include "windows_sockets.hpp"
 
-#include "imgui.h"
-#include "imgui_platform.h"
+#if ENABLE_WINDOW
+#include "window.hpp"
+#endif
+
+#if ENABLE_WASAPI
+#include "wasapi.hpp"
+#endif
+
+#if ENABLE_WINSOCK2
+#include "windows_sockets.hpp"
+#endif
 
 #include <ctime>
 
@@ -14,13 +20,13 @@ extern void start();
 namespace no {
 
 loop_frame_counter::loop_frame_counter() {
-	timer.start();
+	run_timer.start();
 }
 
 void loop_frame_counter::next_frame() {
 	delta_time = (double)(new_time - old_time) / 1000000.0;
 	old_time = new_time;
-	new_time = timer.microseconds();
+	new_time = run_timer.microseconds();
 	frames_this_second++;
 	if (new_time - time_last_second >= 1000000) {
 		time_last_second = new_time;
@@ -31,7 +37,7 @@ void loop_frame_counter::next_frame() {
 }
 
 long long loop_frame_counter::ticks() const {
-	return timer.microseconds();
+	return run_timer.microseconds();
 }
 
 long long loop_frame_counter::frames() const {
@@ -57,7 +63,9 @@ static struct {
 	loop_frame_counter frame_counter;
 	draw_synchronization synchronization = draw_synchronization::if_updated;
 
+#if ENABLE_WASAPI
 	audio_endpoint* audio = nullptr;
+#endif
 
 	std::vector<window_state*> states;
 	std::vector<window*> windows;
@@ -111,14 +119,18 @@ static void destroy_stopped_states() {
 		if (index != -1) {
 			bool is_closing = !loop.states[index]->has_next_state();
 			if (is_closing) {
+#if ENABLE_WASAPI
 				loop.audio->stop_all_players();
+#endif
 			}
 			delete loop.states[index];
 			loop.states.erase(loop.states.begin() + index);
 			if (is_closing) {
 				delete loop.windows[index];
 				loop.windows.erase(loop.windows.begin() + index);
+#if ENABLE_WASAPI
 				loop.audio->clear_players();
+#endif
 			}
 		}
 	}
@@ -187,7 +199,11 @@ bool window_state::has_next_state() const {
 std::string current_local_time_string() {
 	time_t now = std::time(nullptr);
 	tm local_time;
+#if PLATFORM_WINDOWS
 	localtime_s(&local_time, &now);
+#else
+	local_time = *localtime(&now);
+#endif
 	char buffer[64];
 	std::strftime(buffer, 64, "%X", &local_time);
 	return buffer;
@@ -196,7 +212,11 @@ std::string current_local_time_string() {
 std::string curent_local_date_string() {
 	time_t now = std::time(nullptr);
 	tm local_time;
+#if PLATFORM_WINDOWS
 	localtime_s(&local_time, &now);
+#else
+	local_time = *localtime(&now);
+#endif
 	char buffer[64];
 	std::strftime(buffer, 64, "%Y.%m.%d", &local_time);
 	return buffer;
@@ -213,8 +233,13 @@ int run_main_loop() {
 	configure();
 	loop.post_configure.emit();
 
+#if ENABLE_WASAPI
 	loop.audio = new wasapi::audio_device();
+#endif
+
+#if ENABLE_NETWORK
 	start_network();
+#endif
 
 	start();
 
@@ -252,9 +277,13 @@ void destroy_main_loop() {
 	}
 	destroy_stopped_states();
 	loop.pre_exit.emit();
+#if ENABLE_NETWORK
 	stop_network();
+#endif
+#if ENABLE_WASAPI
 	delete loop.audio;
 	loop.audio = nullptr;
+#endif
 }
 
 }

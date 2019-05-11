@@ -2,26 +2,18 @@
 
 #include "platform.hpp"
 
-#if PLATFORM_WINDOWS && ENABLE_GL
+#if PLATFORM_LINUX && ENABLE_GL
 
-#include "windows_platform.hpp"
+#include "linux_platform.hpp"
 #include "draw.hpp"
-
-#ifndef _WINDEF_
-struct HGLRC__;
-typedef HGLRC__ *HGLRC;
-#endif
 
 namespace no {
 
 namespace platform {
 
-class windows_gl_context {
+class x11_gl_context {
 public:
 
-	void create_dummy(HDC device_context_handle);
-	void create_with_attributes(HDC device_context_handle, int samples);
-	HGLRC handle() const;
 	bool exists() const;
 	bool is_current() const;
 	void make_current();
@@ -35,16 +27,9 @@ public:
 
 	void log_renderer_info() const;
 
-	static HGLRC current_context_handle();
-
 private:
 
-	void initialize_glew();
 	void initialize_gl();
-
-	HGLRC gl_context = nullptr;
-	HDC device_context_handle = nullptr;
-	bool is_arb_context = false;
 
 };
 

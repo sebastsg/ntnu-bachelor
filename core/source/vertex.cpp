@@ -7,6 +7,7 @@
 
 #include <filesystem>
 #include <unordered_map>
+#include <cfloat>
 
 namespace no {
 

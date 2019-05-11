@@ -38,7 +38,7 @@ public:
 
 private:
 
-	timer timer;
+	timer run_timer;
 	long long frame_count = 0;
 	long long old_time = 0;
 	long long new_time = 0;

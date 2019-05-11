@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <sstream>
 #include <vector>
 
@@ -86,7 +87,7 @@ public:
 		return value;
 	}
 
-	template<>
+	//template<>
 	std::string read() {
 		size_t length = read<uint32_t>();
 		if (length == 0) {
@@ -117,7 +118,7 @@ public:
 		write_position += sizeof(T);
 	}
 
-	template<>
+	//template<>
 	void write(std::string value) {
 		size_t size = value.size();
 		write<uint32_t>(size);

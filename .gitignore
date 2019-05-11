@@ -1,9 +1,23 @@
 # projects
 core/project/VisualStudio15
+core/project/VisualStudio16
+core/project/Unix
+
 game/project/VisualStudio15
+game/project/VisualStudio16
+game/project/Unix
+
 client/project/VisualStudio15
+client/project/VisualStudio16
+client/project/Unix
+
 server/project/VisualStudio15
+server/project/VisualStudio16
+server/project/Unix
+
 toolkit/project/VisualStudio15
+toolkit/project/VisualStudio16
+toolkit/project/Unix
 
 # debug program database
 *.pdb

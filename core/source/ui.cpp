@@ -4,8 +4,8 @@
 namespace no {
 
 ui_element::ui_element(const window_state& state_, const ortho_camera& camera_) : state(state_), camera(camera_) {
-	mouse_release_id = state.mouse().release.listen([this](const mouse::release_message& event) {
-		if (event.button == mouse::button::left && transform.collides_with(camera.mouse_position(state.mouse()))) {
+	mouse_release_id = state.mouse().release.listen([this](mouse::button button) {
+		if (button == mouse::button::left && transform.collides_with(camera.mouse_position(state.mouse()))) {
 			events.click.emit();
 		}
 	});
@@ -135,8 +135,8 @@ input_field::input_field(const window_state& state_, const ortho_camera& camera_
 	events.click.listen([this] {
 		focus();
 	});
-	mouse_press = state.mouse().press.listen([this](const mouse::press_message& event) {
-		if (event.button == mouse::button::left) {
+	mouse_press = state.mouse().press.listen([this](mouse::button button) {
+		if (button == mouse::button::left) {
 			if (transform.collides_with(camera.mouse_position(state.mouse()))) {
 				focus();
 			} else {
@@ -177,16 +177,16 @@ void input_field::focus() {
 	if (key_input != -1) {
 		return;
 	}
-	key_input = state.keyboard().input.listen([this](const keyboard::input_message& event) {
-		if (event.character == (unsigned int)key::enter) {
+	key_input = state.keyboard().input.listen([this](unsigned int character) {
+		if (character == (unsigned int)key::enter) {
 			return;
 		}
-		if (event.character == (unsigned int)key::backspace) {
+		if (character == (unsigned int)key::backspace) {
 			if (!input.empty()) {
 				input = input.substr(0, input.size() - 1);
 			}
-		} else if (event.character < 0x7F) {
-			input += (char)event.character;
+		} else if (character < 0x7F) {
+			input += (char)character;
 		}
 	});
 }

@@ -3,18 +3,18 @@
 
 namespace no {
 
-static __forceinline glm::mat4 interpolate_positions(float factor, const vector3f& begin, const vector3f& end) {
+static FORCE_INLINE glm::mat4 interpolate_positions(float factor, const vector3f& begin, const vector3f& end) {
 	const vector3f delta = end - begin;
 	const vector3f interpolated = factor * delta;
 	const vector3f translation = begin + interpolated;
 	return glm::translate(glm::mat4{ 1.0f }, { translation.x, translation.y, translation.z });
 }
 
-static __forceinline glm::mat4 interpolate_rotations(float factor, const glm::quat& begin, const glm::quat& end) {
+static FORCE_INLINE glm::mat4 interpolate_rotations(float factor, const glm::quat& begin, const glm::quat& end) {
 	return glm::mat4_cast(glm::normalize(glm::slerp(begin, end, factor)));
 }
 
-static __forceinline glm::mat4 interpolate_scales(float factor, const vector3f& begin, const vector3f& end) {
+static FORCE_INLINE glm::mat4 interpolate_scales(float factor, const vector3f& begin, const vector3f& end) {
 	const vector3f delta = end - begin;
 	const vector3f interpolated = factor * delta;
 	const vector3f scale = begin + interpolated;

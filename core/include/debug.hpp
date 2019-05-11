@@ -26,8 +26,13 @@ void append(int index, message_type type, const char* file, const char* func, in
 			abort(); \
 		}
 
+#ifdef PLATFORM_WINDOWS
 #  define DEBUG(ID, TYPE, STR) \
 		no::debug::append(ID, TYPE, __FILE__, __FUNCSIG__, __LINE__, STRING(STR))
+#else
+#  define DEBUG(ID, TYPE, STR) \
+		no::debug::append(ID, TYPE, __FILE__, __PRETTY_FUNCTION__, __LINE__, STRING(STR))
+#endif
 
 #  define DEBUG_LIMIT(ID, TYPE, STR, LIMIT) \
 		{ \

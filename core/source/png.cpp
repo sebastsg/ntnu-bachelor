@@ -27,7 +27,12 @@ surface load_png(const std::string& path) {
 		return { 2, 2, pixel_format::rgba };
 	}
 	FILE* file;
+#if PLATFORM_WINDOWS
 	errno_t error = fopen_s(&file, path.c_str(), "rb");
+#else
+	file = fopen(path.c_str(), "rb");
+	int error = errno;
+#endif
 	if (error == ENOENT) {
 		WARNING("Image file was not found: " << path);
 		return { 2, 2, pixel_format::rgba };
