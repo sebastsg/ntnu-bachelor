@@ -1,4 +1,4 @@
-#include "linux_window.hpp"
+#include "x11_window.hpp"
 
 #if PLATFORM_LINUX
 

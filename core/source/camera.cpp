@@ -1,4 +1,7 @@
 #include "camera.hpp"
+
+#if ENABLE_GRAPHICS
+
 #include "input.hpp"
 
 namespace no {
@@ -240,3 +243,5 @@ void perspective_camera::follow_controller::update(perspective_camera& camera, c
 }
 
 }
+
+#endif

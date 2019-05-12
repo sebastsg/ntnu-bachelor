@@ -1,6 +1,6 @@
 #include "windows_window.hpp"
 
-#if PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS && ENABLE_WINDOW
 
 #include <Windows.h>
 #include <windowsx.h>
@@ -37,52 +37,52 @@ LRESULT WINAPI process_window_messages(HWND window_handle, UINT message, WPARAM 
 		return 0;
 	}
 	case WM_LBUTTONDOWN:
-		mouse.press.emit({ no::mouse::button::left });
+		mouse.press.emit(no::mouse::button::left);
 		return 0;
 	case WM_LBUTTONUP:
-		mouse.release.emit({ no::mouse::button::left });
+		mouse.release.emit(no::mouse::button::left);
 		return 0;
 	case WM_LBUTTONDBLCLK:
-		mouse.double_click.emit({ no::mouse::button::left });
+		mouse.double_click.emit(no::mouse::button::left);
 		return 0;
 	case WM_RBUTTONDOWN:
-		mouse.press.emit({ no::mouse::button::right });
+		mouse.press.emit(no::mouse::button::right);
 		return 0;
 	case WM_RBUTTONUP:
-		mouse.release.emit({ no::mouse::button::right });
+		mouse.release.emit(no::mouse::button::right);
 		return 0;
 	case WM_RBUTTONDBLCLK:
-		mouse.double_click.emit({ no::mouse::button::right });
+		mouse.double_click.emit(no::mouse::button::right);
 		return 0;
 	case WM_MBUTTONDOWN:
-		mouse.press.emit({ no::mouse::button::middle });
+		mouse.press.emit(no::mouse::button::middle);
 		return 0;
 	case WM_MBUTTONUP:
-		mouse.release.emit({ no::mouse::button::middle });
+		mouse.release.emit(no::mouse::button::middle);
 		return 0;
 	case WM_MBUTTONDBLCLK:
-		mouse.double_click.emit({ no::mouse::button::middle });
+		mouse.double_click.emit(no::mouse::button::middle);
 		return 0;
 	case WM_MOUSEWHEEL:
 		// TODO: Maybe this won't work for mouse wheels without notches.
-		mouse.scroll.emit({ GET_WHEEL_DELTA_WPARAM(w_param) / WHEEL_DELTA });
+		mouse.scroll.emit(GET_WHEEL_DELTA_WPARAM(w_param) / WHEEL_DELTA);
 		return 0;
 	case WM_KEYDOWN:
 	case WM_SYSKEYDOWN:
 	{
 		int repeat = l_param >> 30;
-		keyboard.repeated_press.emit({ (no::key)w_param, repeat });
+		keyboard.repeated_press.emit((no::key)w_param);
 		if (repeat == 0) {
-			keyboard.press.emit({ (no::key)w_param });
+			keyboard.press.emit((no::key)w_param);
 		}
 		return 0;
 	}
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
-		keyboard.release.emit({ (no::key)w_param });
+		keyboard.release.emit((no::key)w_param);
 		return 0;
 	case WM_CHAR:
-		keyboard.input.emit({ w_param });
+		keyboard.input.emit(w_param);
 		return 0;
 	case WM_SIZE:
 		active_window->set_viewport(0, 0, LOWORD(l_param), HIWORD(l_param));

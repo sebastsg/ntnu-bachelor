@@ -1,5 +1,7 @@
 #include "network.hpp"
 
+#if ENABLE_NETWORK
+
 namespace no {
 
 void packetizer::start(io_stream& stream) {
@@ -68,3 +70,5 @@ std::ostream& operator<<(std::ostream& out, no::socket_close_status status) {
 	default: return out << "Invalid (" << (int)status << ")";
 	}
 }
+
+#endif

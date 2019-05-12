@@ -67,7 +67,7 @@ struct trade_state {
 
 };
 
-class server_state : public no::window_state {
+class server_state : public no::program_state {
 public:
 
 	database_connection database;

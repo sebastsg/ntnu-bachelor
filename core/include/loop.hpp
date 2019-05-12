@@ -9,13 +9,13 @@
 namespace no {
 
 class window;
-class window_state;
+class program_state;
 class keyboard;
 class mouse;
 
 namespace internal {
 
-using make_state_function = std::function<window_state*()>;
+using make_state_function = std::function<program_state*()>;
 
 void create_state(const std::string& title, int width, int height, int samples, bool maximized, const make_state_function& make_state);
 int run_main_loop();
@@ -52,24 +52,27 @@ private:
 // 'always' should only used to test performance, and requires swap_interval::immediate.
 enum class draw_synchronization { always, if_updated };
 
-class window_state {
+class program_state {
 public:
 
-	window_state();
-	window_state(const window_state&) = delete;
-	window_state(window_state&&) = delete;
+	program_state();
+	program_state(const program_state&) = delete;
+	program_state(program_state&&) = delete;
 
-	virtual ~window_state();
+	virtual ~program_state();
 
-	window_state& operator=(const window_state&) = delete;
-	window_state& operator=(window_state&&) = delete;
+	program_state& operator=(const program_state&) = delete;
+	program_state& operator=(program_state&&) = delete;
 
 	virtual void update() = 0;
 	virtual void draw() = 0;
 
+#if ENABLE_WINDOW
 	window& window() const;
 	keyboard& keyboard() const;
 	mouse& mouse() const;
+#endif
+
 	const loop_frame_counter& frame_counter() const;
 
 	bool has_next_state() const;
@@ -78,9 +81,7 @@ protected:
 
 	template<typename T>
 	void change_state() {
-		change_state([] {
-			return new T();
-		});
+		change_state([] { return new T(); });
 	}
 
 	loop_frame_counter& frame_counter();
@@ -103,9 +104,7 @@ signal_event& pre_exit_event();
 
 template<typename T>
 void create_state(const std::string& title, int width, int height, int samples, bool maximized) {
-	internal::create_state(title, width, height, samples, maximized, [] {
-		return new T();
-	});
+	internal::create_state(title, width, height, samples, maximized, [] { return new T(); });
 }
 
 std::string current_local_time_string();

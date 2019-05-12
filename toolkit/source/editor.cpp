@@ -212,8 +212,8 @@ object_tool::~object_tool() {
 }
 
 void object_tool::enable() {
-	mouse_press_id = editor.mouse().press.listen([this](const no::mouse::press_message& event) {
-		if (event.button != no::mouse::button::left || editor.is_mouse_over_ui()) {
+	mouse_press_id = editor.mouse().press.listen([this](no::mouse::button pressed_button) {
+		if (pressed_button != no::mouse::button::left || editor.is_mouse_over_ui()) {
 			return;
 		}
 		if (!editor.keyboard().is_key_down(no::key::space)) {
@@ -334,24 +334,24 @@ world_editor_state::world_editor_state() : renderer(world), dragger(mouse()), el
 	window().set_swap_interval(no::swap_interval::immediate);
 	set_synchronization(no::draw_synchronization::if_updated);
 	no::imgui::create(window());
-	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
-		if (event.button != no::mouse::button::left || is_mouse_over_ui()) {
+	mouse_press_id = mouse().press.listen([this](no::mouse::button pressed_button) {
+		if (pressed_button != no::mouse::button::left || is_mouse_over_ui()) {
 			return;
 		}
 		selected_tile = hovered_tile;
 		is_selected = true;
 	});
-	mouse_release_id = mouse().release.listen([this](const no::mouse::release_message& event) {
-		if (event.button == no::mouse::button::left) {
+	mouse_release_id = mouse().release.listen([this](no::mouse::button released_button) {
+		if (released_button == no::mouse::button::left) {
 			is_selected = false;
 		}
 	});
-	mouse_scroll_id = mouse().scroll.listen([this](const no::mouse::scroll_message& event) {
+	mouse_scroll_id = mouse().scroll.listen([this](int steps) {
 		if (is_selected) {
-			world.terrain.elevate_tile(selected_tile, (float)event.steps * 0.5f);
+			world.terrain.elevate_tile(selected_tile, (float)steps * 0.5f);
 		}
 	});
-	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
+	keyboard_press_id = keyboard().press.listen([this](no::key pressed_key) {
 
 	});
 	window().set_clear_color({ 160.0f / 255.0f, 230.0f / 255.0f, 1.0f });

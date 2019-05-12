@@ -1,13 +1,14 @@
 #include "debug.hpp"
+
+#if ENABLE_DEBUG
+
 #include "io.hpp"
 #include "assets.hpp"
 #include "loop.hpp"
 
 #include <chrono>
 
-namespace no {
-
-namespace debug {
+namespace no::debug {
 
 static const size_t LOG_COUNT = 4;
 
@@ -84,4 +85,4 @@ void append(int index, message_type type, const char* file, const char* func, in
 
 }
 
-}
+#endif

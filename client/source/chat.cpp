@@ -65,23 +65,23 @@ void add_chat_message(const std::string& author, const std::string& message) {
 }
 
 void enable_chat() {
-	chat->key_press = chat->game.keyboard().press.listen([](const no::keyboard::press_message & event) {
-		if (event.key == no::key::enter && !chat->input.text().empty()) {
+	chat->key_press = chat->game.keyboard().press.listen([](no::key pressed_key) {
+		if (pressed_key == no::key::enter && !chat->input.text().empty()) {
 			chat->events.message.emit(chat->input.text());
 			add_chat_message(chat->game.player_name(), chat->input.text());
 			chat->input.render(fonts().leo_14, "");
 		}
 	});
-	chat->key_input = chat->game.keyboard().input.listen([](const no::keyboard::input_message & event) {
-		if (event.character == (unsigned int)no::key::enter) {
+	chat->key_input = chat->game.keyboard().input.listen([](unsigned int character) {
+		if (character == (unsigned int)no::key::enter) {
 			return;
 		}
-		if (event.character == (unsigned int)no::key::backspace) {
+		if (character == (unsigned int)no::key::backspace) {
 			if (!chat->input.text().empty()) {
 				chat->input.render(fonts().leo_14, chat->input.text().substr(0, chat->input.text().size() - 1));
 			}
-		} else if (event.character < 0x7F) {
-			chat->input.render(fonts().leo_14, chat->input.text() + (char)event.character);
+		} else if (character < 0x7F) {
+			chat->input.render(fonts().leo_14, chat->input.text() + (char)character);
 		}
 	});
 }

@@ -1,4 +1,7 @@
 #include "game_assets.hpp"
+
+#if ENABLE_RENDERING
+
 #include "draw.hpp"
 
 struct game_assets {
@@ -59,3 +62,5 @@ shader_assets& shaders() {
 shape_assets& shapes() {
 	return *assets.shapes;
 }
+
+#endif

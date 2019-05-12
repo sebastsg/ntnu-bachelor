@@ -1,5 +1,9 @@
 #pragma once
 
+#include "../config.hpp"
+
+#if ENABLE_RENDERING
+
 #include "world.hpp"
 #include "skeletal.hpp"
 #include "character.hpp"
@@ -252,3 +256,5 @@ private:
 	int remove_object_id = -1;
 
 };
+
+#endif

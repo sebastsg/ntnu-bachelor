@@ -1,4 +1,7 @@
 #include "render.hpp"
+
+#if ENABLE_RENDERING
+
 #include "assets.hpp"
 #include "surface.hpp"
 
@@ -953,3 +956,5 @@ void world_view::repeat_tile_under_row(uint32_t* pixels, int width, int height, 
 		}
 	}
 }
+
+#endif

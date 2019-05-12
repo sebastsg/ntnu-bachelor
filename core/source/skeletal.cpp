@@ -1,5 +1,6 @@
 #include "skeletal.hpp"
-#include "platform.hpp"
+
+#if ENABLE_GRAPHICS
 
 namespace no {
 
@@ -421,3 +422,5 @@ std::string bone_attachment_mapping_list::find_root_animation(const std::string&
 }
 
 }
+
+#endif

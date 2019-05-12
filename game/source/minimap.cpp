@@ -1,4 +1,7 @@
 #include "minimap.hpp"
+
+#if ENABLE_RENDERING
+
 #include "world.hpp"
 #include "game_assets.hpp"
 
@@ -59,3 +62,5 @@ void world_minimap::draw() const {
 	no::bind_texture(texture);
 	no::draw_shape(shapes().rectangle, transform);
 }
+
+#endif

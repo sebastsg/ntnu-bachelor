@@ -3,7 +3,7 @@
 #include "loop.hpp"
 #include "common_ui.hpp"
 
-class menu_bar_state : public no::window_state {
+class menu_bar_state : public no::program_state {
 public:
 
 	void update() override;

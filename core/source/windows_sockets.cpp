@@ -1,6 +1,6 @@
 #include "windows_sockets.hpp"
 
-#if PLATFORM_WINDOWS
+#if ENABLE_WINSOCK
 
 #define WS_PRINT_ERROR(ERR)      print_winsock_error(ERR, __FUNCSIG__, __LINE__, 0)
 #define WS_PRINT_ERROR_X(ERR, X) print_winsock_error(ERR, __FUNCSIG__, __LINE__, X)

@@ -1,4 +1,7 @@
 #include "draw.hpp"
+
+#if ENABLE_GRAPHICS
+
 #include "debug.hpp"
 #include "assets.hpp"
 #include "io.hpp"
@@ -218,3 +221,5 @@ std::ostream& operator<<(std::ostream& out, no::swap_interval interval) {
 	default: return out << "Unknown";
 	}
 }
+
+#endif

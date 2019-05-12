@@ -1,9 +1,14 @@
 #include "vertex.hpp"
+
+#if ENABLE_GRAPHICS
+
 #include "draw.hpp"
 
+#if ENABLE_ASSIMP
 #include "assimp/scene.h"
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
+#endif
 
 #include <filesystem>
 #include <unordered_map>
@@ -11,6 +16,29 @@
 
 namespace no {
 
+template<typename V>
+static vector3f find_min_vertex(const std::vector<V>& vertices) {
+	vector3f min = FLT_MAX;
+	for (auto& vertex : vertices) {
+		min.x = std::min(min.x, vertex.position.x);
+		min.y = std::min(min.y, vertex.position.y);
+		min.z = std::min(min.z, vertex.position.z);
+	}
+	return min;
+}
+
+template<typename V>
+static vector3f find_max_vertex(const std::vector<V>& vertices) {
+	vector3f max = -FLT_MAX;
+	for (auto& vertex : vertices) {
+		max.x = std::max(max.x, vertex.position.x);
+		max.y = std::max(max.y, vertex.position.y);
+		max.z = std::max(max.z, vertex.position.z);
+	}
+	return max;
+}
+
+#if ENABLE_ASSIMP
 static glm::mat4 ai_mat4_to_glm_mat4(const aiMatrix4x4& ai_matrix) {
 	// note: assimp uses row-major order, while glm uses column-major order
 	glm::mat4 glm_matrix;
@@ -35,28 +63,6 @@ static glm::mat4 ai_mat4_to_glm_mat4(const aiMatrix4x4& ai_matrix) {
 
 static glm::quat ai_quat_to_glm_quat(const aiQuaternion& ai_quat) {
 	return glm::quat(ai_quat.w, ai_quat.x, ai_quat.y, ai_quat.z);
-}
-
-template<typename V>
-static vector3f find_min_vertex(const std::vector<V>& vertices) {
-	vector3f min = FLT_MAX;
-	for (auto& vertex : vertices) {
-		min.x = std::min(min.x, vertex.position.x);
-		min.y = std::min(min.y, vertex.position.y);
-		min.z = std::min(min.z, vertex.position.z);
-	}
-	return min;
-}
-
-template<typename V>
-static vector3f find_max_vertex(const std::vector<V>& vertices) {
-	vector3f max = -FLT_MAX;
-	for (auto& vertex : vertices) {
-		max.x = std::max(max.x, vertex.position.x);
-		max.y = std::max(max.y, vertex.position.y);
-		max.z = std::max(max.z, vertex.position.z);
-	}
-	return max;
 }
 
 class assimp_importer {
@@ -309,6 +315,8 @@ void convert_model(const std::string& source, const std::string& destination, mo
 	options.exporter(destination, importer.model);
 }
 
+#endif
+
 transform3 load_model_bounding_box(const std::string& path) {
 	io_stream stream;
 	file::read(path, stream);
@@ -336,3 +344,5 @@ animation_channel::scale_frame::scale_frame(key_time time, vector3f scale) : tim
 }
 
 }
+
+#endif

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "platform.hpp"
+
+#if ENABLE_WINDOW
+
 #include "event.hpp"
 #include "math.hpp"
 
@@ -148,3 +152,5 @@ private:
 
 std::ostream& operator<<(std::ostream& out, no::mouse::button button);
 std::ostream& operator<<(std::ostream& out, no::key key);
+
+#endif

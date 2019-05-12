@@ -57,9 +57,9 @@ void open_dialogue(game_state& game, int id) {
 		}
 	});
 	tree.process_entry_point();
-	dialogue->key_listener = game.keyboard().press.listen([&tree](const no::keyboard::press_message& event) {
+	dialogue->key_listener = game.keyboard().press.listen([&tree](no::key pressed_key) {
 		// todo: 1, 2, 3, 4, 5... etc to select choice
-		switch (event.key) {
+		switch (pressed_key) {
 		case no::key::w:
 		case no::key::up:
 			if (dialogue->current_choice > 0) {

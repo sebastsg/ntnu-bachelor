@@ -81,10 +81,10 @@ lobby_state::lobby_state() :
 	});
 	load_config();
 
-	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		if (event.key == no::key::num_5) {
+	keyboard_press_id = keyboard().press.listen([this](no::key pressed_key) {
+		if (pressed_key == no::key::num_5) {
 			username.set_value("test@test.no");
-		} else if (event.key == no::key::num_6) {
+		} else if (pressed_key == no::key::num_6) {
 			username.set_value("sebastian@sgundersen.com");
 		}
 	});

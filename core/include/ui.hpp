@@ -1,5 +1,9 @@
 #pragma once
 
+#include "platform.hpp"
+
+#if ENABLE_GRAPHICS
+
 #include "transform.hpp"
 #include "event.hpp"
 #include "loop.hpp"
@@ -18,7 +22,7 @@ public:
 		signal_event click;
 	} events;
 
-	ui_element(const window_state& state, const ortho_camera& camera);
+	ui_element(const program_state& state, const ortho_camera& camera);
 	ui_element(const ui_element&) = delete;
 	ui_element(ui_element&&) = delete;
 
@@ -32,7 +36,7 @@ public:
 
 protected:
 	
-	const window_state& state;
+	const program_state& state;
 	const ortho_camera& camera;
 
 private:
@@ -44,7 +48,7 @@ private:
 class text_view : public ui_element {
 public:
 
-	text_view(const window_state& state, const ortho_camera& camera);
+	text_view(const program_state& state, const ortho_camera& camera);
 	text_view(const text_view&) = delete;
 	text_view(text_view&&);
 
@@ -74,7 +78,7 @@ public:
 	align_type label_alignment = align_type::middle;
 	vector2f label_padding;
 
-	button(const window_state& state, const ortho_camera& camera);
+	button(const program_state& state, const ortho_camera& camera);
 	button(const button&) = delete;
 	button(button&&) = delete;
 
@@ -109,7 +113,7 @@ public:
 	bool censor = false;
 	vector2f padding = { 8.0f, 0.0f };
 
-	input_field(const window_state& state, const ortho_camera& camera, const font& font);
+	input_field(const program_state& state, const ortho_camera& camera, const font& font);
 	input_field(const input_field&) = delete;
 	input_field(input_field&&) = delete;
 
@@ -144,3 +148,5 @@ private:
 };
 
 }
+
+#endif

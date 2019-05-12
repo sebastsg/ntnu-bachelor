@@ -37,8 +37,8 @@ game_state::game_state() : renderer{ world }, dragger{ mouse() } {
 	start_hit_splats(*this);
 	show_tabs(*this);
 	show_hud(*this);
-	mouse_press_id = mouse().press.listen([this](const no::mouse::press_message& event) {
-		if (event.button != no::mouse::button::left) {
+	mouse_press_id = mouse().press.listen([this](no::mouse::button pressed_button) {
+		if (pressed_button != no::mouse::button::left) {
 			return;
 		}
 		if (is_mouse_over_tabs() || is_trading() || is_mouse_over_context_menu()) {
@@ -52,9 +52,9 @@ game_state::game_state() : renderer{ world }, dragger{ mouse() } {
 		}
 	});
 
-	mouse_scroll_id = mouse().scroll.listen([this](const no::mouse::scroll_message& event) {
+	mouse_scroll_id = mouse().scroll.listen([this](int steps) {
 		float& factor = renderer.camera.rotation_offset_factor;
-		factor -= (float)event.steps;
+		factor -= (float)steps;
 		if (factor > 12.0f) {
 			factor = 12.0f;
 		} else if (factor < 4.0f) {
@@ -62,8 +62,8 @@ game_state::game_state() : renderer{ world }, dragger{ mouse() } {
 		}
 	});
 
-	keyboard_press_id = keyboard().press.listen([this](const no::keyboard::press_message& event) {
-		if (event.key == no::key::num_7) {
+	keyboard_press_id = keyboard().press.listen([this](no::key pressed_key) {
+		if (pressed_key == no::key::num_7) {
 			renderer.reload_shaders();
 		}
 	});

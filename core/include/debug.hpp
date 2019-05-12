@@ -1,40 +1,38 @@
 #pragma once
 
-#include "io.hpp"
+#include "platform.hpp"
 
-#define DEBUG_RELEASE 1
-
-#define DEBUG_ENABLED (_DEBUG || DEBUG_RELEASE)
-
-namespace no {
-
-namespace debug {
+namespace no::debug {
 
 enum class message_type { message, warning, critical, info };
+
+}
+
+#if ENABLE_DEBUG
+
+#include "io.hpp"
+
+namespace no::debug {
 
 void append(int index, message_type type, const char* file, const char* func, int line, const std::string& message);
 
 }
 
-}
-
-#if DEBUG_ENABLED
-
-#  define ASSERT(EXPRESSION) \
+# define ASSERT(EXPRESSION) \
 		if (!(EXPRESSION)) { \
 			CRITICAL(#EXPRESSION); \
 			abort(); \
 		}
 
-#ifdef PLATFORM_WINDOWS
-#  define DEBUG(ID, TYPE, STR) \
+#if COMPILER_MSVC
+# define DEBUG(ID, TYPE, STR) \
 		no::debug::append(ID, TYPE, __FILE__, __FUNCSIG__, __LINE__, STRING(STR))
-#else
-#  define DEBUG(ID, TYPE, STR) \
+#elif defined(COMPILER_GCC)
+# define DEBUG(ID, TYPE, STR) \
 		no::debug::append(ID, TYPE, __FILE__, __PRETTY_FUNCTION__, __LINE__, STRING(STR))
 #endif
 
-#  define DEBUG_LIMIT(ID, TYPE, STR, LIMIT) \
+# define DEBUG_LIMIT(ID, TYPE, STR, LIMIT) \
 		{ \
 			static int COUNTER = 0; \
 			if (++COUNTER <= (LIMIT)) { \
@@ -43,9 +41,9 @@ void append(int index, message_type type, const char* file, const char* func, in
 		}
 
 #else
-#  define ASSERT(EXPRESSION) 
-#  define DEBUG(ID, TYPE, STR) 
-#  define DEBUG_LIMIT(ID, TYPE, STR, LIMIT) 
+# define ASSERT(EXPRESSION) 
+# define DEBUG(ID, TYPE, STR) 
+# define DEBUG_LIMIT(ID, TYPE, STR, LIMIT) 
 #endif
 
 #define MESSAGE(STR)  DEBUG(0, no::debug::message_type::message, STR)

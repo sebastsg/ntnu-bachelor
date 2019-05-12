@@ -8,9 +8,7 @@
 #include "wasapi.hpp"
 #endif
 
-#if ENABLE_WINSOCK2
-#include "windows_sockets.hpp"
-#endif
+#include "network.hpp"
 
 #include <ctime>
 
@@ -63,14 +61,14 @@ static struct {
 	loop_frame_counter frame_counter;
 	draw_synchronization synchronization = draw_synchronization::if_updated;
 
-#if ENABLE_WASAPI
+#if ENABLE_AUDIO
 	audio_endpoint* audio = nullptr;
 #endif
 
-	std::vector<window_state*> states;
+	std::vector<program_state*> states;
 	std::vector<window*> windows;
 
-	std::vector<window_state*> states_to_stop;
+	std::vector<program_state*> states_to_stop;
 
 	long redundant_bind_calls_this_frame = 0;
 
@@ -87,7 +85,7 @@ signal_event& pre_exit_event() {
 	return loop.pre_exit;
 }
 
-static int state_index(const window_state* state) {
+static int state_index(const program_state* state) {
 	for (size_t i = 0; i < loop.states.size(); i++) {
 		if (loop.states[i] == state) {
 			return (int)i;
@@ -99,18 +97,22 @@ static int state_index(const window_state* state) {
 static void update_windows() {
 	for (auto state : loop.states) {
 		auto window = loop.windows[state_index(state)];
+#if ENABLE_WINDOW
 		window->poll();
+#endif
 		state->update();
 	}
 }
 
 static void draw_windows() {
+#if ENABLE_WINDOW
 	for (auto state : loop.states) {
 		auto window = loop.windows[state_index(state)];
 		window->clear();
 		state->draw();
 		window->swap();
 	}
+#endif
 }
 
 static void destroy_stopped_states() {
@@ -119,16 +121,18 @@ static void destroy_stopped_states() {
 		if (index != -1) {
 			bool is_closing = !loop.states[index]->has_next_state();
 			if (is_closing) {
-#if ENABLE_WASAPI
+#if ENABLE_AUDIO
 				loop.audio->stop_all_players();
 #endif
 			}
 			delete loop.states[index];
 			loop.states.erase(loop.states.begin() + index);
 			if (is_closing) {
+#if ENABLE_WINDOW
 				delete loop.windows[index];
 				loop.windows.erase(loop.windows.begin() + index);
-#if ENABLE_WASAPI
+#endif
+#if ENABLE_AUDIO
 				loop.audio->clear_players();
 #endif
 			}
@@ -137,24 +141,30 @@ static void destroy_stopped_states() {
 	loop.states_to_stop.clear();
 }
 
-window_state::window_state() {
+program_state::program_state() {
+#if ENABLE_WINDOW
 	window_close_id = window().close.listen([this] {
 		loop.states_to_stop.push_back(this);
 	});
+#endif
 }
 
-window_state::~window_state() {
+program_state::~program_state() {
+#if ENABLE_WINDOW
 	window().close.ignore(window_close_id);
+#endif
 	if (make_next_state) {
 		loop.states.emplace_back(make_next_state());
 	}
 }
 
-void window_state::stop() {
+void program_state::stop() {
 	loop.states_to_stop.push_back(this);
 }
 
-window& window_state::window() const {
+#if ENABLE_WINDOW
+
+window& program_state::window() const {
 	int index = state_index(this);
 	if (index == -1) {
 		// likely called from constructor. window would be added just before, so back() should be correct
@@ -163,36 +173,38 @@ window& window_state::window() const {
 	return *loop.windows[index];
 }
 
-keyboard& window_state::keyboard() const {
+keyboard& program_state::keyboard() const {
 	return window().keyboard;
 }
 
-mouse& window_state::mouse() const {
+mouse& program_state::mouse() const {
 	return window().mouse;
 }
 
-const loop_frame_counter& window_state::frame_counter() const {
+#endif
+
+const loop_frame_counter& program_state::frame_counter() const {
 	return loop.frame_counter;
 }
 
-loop_frame_counter& window_state::frame_counter() {
+loop_frame_counter& program_state::frame_counter() {
 	return loop.frame_counter;
 }
 
-void window_state::set_synchronization(draw_synchronization synchronization) {
+void program_state::set_synchronization(draw_synchronization synchronization) {
 	loop.synchronization = synchronization;
 }
 
-long window_state::redundant_bind_calls_this_frame() {
+long program_state::redundant_bind_calls_this_frame() {
 	return loop.redundant_bind_calls_this_frame;
 }
 
-void window_state::change_state(const internal::make_state_function& make_state) {
+void program_state::change_state(const internal::make_state_function& make_state) {
 	make_next_state = make_state;
 	loop.states_to_stop.push_back(this);
 }
 
-bool window_state::has_next_state() const {
+bool program_state::has_next_state() const {
 	return make_next_state.operator bool();
 }
 
@@ -225,7 +237,9 @@ std::string curent_local_date_string() {
 namespace internal {
 
 void create_state(const std::string& title, int width, int height, int samples, bool maximized, const make_state_function& make_state) {
+#if ENABLE_WINDOW
 	loop.windows.emplace_back(new window(title, width, height, samples, maximized));
+#endif
 	loop.states.emplace_back(make_state());
 }
 
@@ -259,9 +273,9 @@ int run_main_loop() {
 		}
 
 		if (is_updated || loop.synchronization == draw_synchronization::always) {
-			long current_redundant_bind_calls = total_redundant_bind_calls();
+			long current_redundant_bind_calls = 0;// total_redundant_bind_calls();
 			draw_windows();
-			loop.redundant_bind_calls_this_frame = total_redundant_bind_calls() - current_redundant_bind_calls;
+			loop.redundant_bind_calls_this_frame = /*total_redundant_bind_calls()*/0 - current_redundant_bind_calls;
 			loop.frame_counter.next_frame();
 		}
 
@@ -280,7 +294,7 @@ void destroy_main_loop() {
 #if ENABLE_NETWORK
 	stop_network();
 #endif
-#if ENABLE_WASAPI
+#if ENABLE_AUDIO
 	delete loop.audio;
 	loop.audio = nullptr;
 #endif

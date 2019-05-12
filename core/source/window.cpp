@@ -1,5 +1,9 @@
 #include "window.hpp"
-#include "windows_window.hpp"
+
+#if ENABLE_WINDOW
+
+#include "windows_window.hpp" // todo: shouldn't be here
+
 #include "debug.hpp"
 #include "timer.hpp"
 
@@ -155,3 +159,5 @@ std::ostream& operator<<(std::ostream& out, no::window::display_mode mode) {
 	default: return out << "Unknown";
 	}
 }
+
+#endif

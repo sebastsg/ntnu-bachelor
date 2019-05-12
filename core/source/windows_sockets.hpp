@@ -10,7 +10,7 @@
 #include <mutex>
 #include <unordered_set>
 
-#if PLATFORM_WINDOWS
+#if ENABLE_WINSOCK
 
 namespace no {
 

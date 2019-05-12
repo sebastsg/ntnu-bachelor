@@ -599,12 +599,12 @@ void attachments_tool::draw() {
 
 model_manager_state::model_manager_state() : dragger(mouse()) {
 	no::imgui::create(window());
-	mouse_scroll_id = mouse().scroll.listen([this](const no::mouse::scroll_message& event) {
+	mouse_scroll_id = mouse().scroll.listen([this](int steps) {
 		if (is_mouse_over_ui()) {
 			return;
 		}
 		float& factor = camera.rotation_offset_factor;
-		factor -= (float)event.steps;
+		factor -= (float)steps;
 		if (factor > 12.0f) {
 			factor = 12.0f;
 		} else if (factor < 4.0f) {

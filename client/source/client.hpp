@@ -2,7 +2,7 @@
 
 #include "loop.hpp"
 
-class client_state : public no::window_state {
+class client_state : public no::program_state {
 public:
 
 	client_state();

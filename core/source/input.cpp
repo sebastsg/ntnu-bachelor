@@ -1,5 +1,7 @@
 #include "input.hpp"
-#include "platform.hpp"
+
+#if ENABLE_WINDOW
+
 #include "window.hpp"
 
 #if PLATFORM_WINDOWS
@@ -22,7 +24,7 @@ int mouse::y() const {
 }
 
 vector2i mouse::position() const {
-#if PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS && ENABLE_WINDOW
 	POINT cursor;
 	GetCursorPos(&cursor);
 	ScreenToClient(parent_window->platform_window()->handle(), &cursor);
@@ -32,7 +34,7 @@ vector2i mouse::position() const {
 }
 
 bool mouse::is_button_down(button button) const {
-#if PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS && ENABLE_WINDOW
 	switch (button) {
 	case button::left:
 		return (GetAsyncKeyState(VK_LBUTTON) & 0b1000000000000000) == 0b1000000000000000;
@@ -172,3 +174,5 @@ std::ostream& operator<<(std::ostream& out, no::key key) {
 		return out << "Unknown (" << (char)key << ")";
 	}
 }
+
+#endif

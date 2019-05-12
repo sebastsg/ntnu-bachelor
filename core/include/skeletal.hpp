@@ -1,5 +1,9 @@
 #pragma once
 
+#include "platform.hpp"
+
+#if ENABLE_GRAPHICS
+
 #include "draw.hpp"
 
 #include <thread>
@@ -168,3 +172,5 @@ private:
 };
 
 }
+
+#endif

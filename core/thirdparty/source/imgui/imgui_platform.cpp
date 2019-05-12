@@ -136,41 +136,41 @@ void create(window& window) {
 	io.KeyMap[ImGuiKey_X] = 'X';
 	io.KeyMap[ImGuiKey_Y] = 'Y';
 	io.KeyMap[ImGuiKey_Z] = 'Z';
-	data.keyboard_repeated_press_id = window.keyboard.repeated_press.listen([&](const keyboard::repeated_press_message& event) {
-		if ((int)event.key < 256) {
-			io.KeysDown[(int)event.key] = true;
+	data.keyboard_repeated_press_id = window.keyboard.repeated_press.listen([&](key pressed_key) {
+		if ((int)pressed_key < 256) {
+			io.KeysDown[(int)pressed_key] = true;
 		}
 	});
-	data.keyboard_release_id = window.keyboard.release.listen([&](const keyboard::release_message& event) {
-		if ((int)event.key < 256) {
-			io.KeysDown[(int)event.key] = false;
+	data.keyboard_release_id = window.keyboard.release.listen([&](key released_key) {
+		if ((int)released_key < 256) {
+			io.KeysDown[(int)released_key] = false;
 		}
 	});
-	data.keybord_input_id = window.keyboard.input.listen([&](const keyboard::input_message& event) {
-		if (event.character > 0 && event.character < 0x10000) {
-			io.AddInputCharacter(event.character);
+	data.keybord_input_id = window.keyboard.input.listen([&](unsigned int character) {
+		if (character > 0 && character < 0x10000) {
+			io.AddInputCharacter(character);
 		}
 	});
-	data.mouse_scroll_id = window.mouse.scroll.listen([&](const mouse::scroll_message& event) {
-		io.MouseWheel += event.steps;
+	data.mouse_scroll_id = window.mouse.scroll.listen([&](int steps) {
+		io.MouseWheel += steps;
 	});
 	data.mouse_cursor_id = window.mouse.icon.listen([] {
 		update_cursor_icon();
 	});
-	data.mouse_press_id = window.mouse.press.listen([&](const mouse::press_message& event) {
+	data.mouse_press_id = window.mouse.press.listen([&](mouse::button pressed_button) {
 		if (!ImGui::IsAnyMouseDown() && !GetCapture()) {
 			SetCapture(data.window->platform_window()->handle());
 		}
-		set_mouse_down(event.button, true);
+		set_mouse_down(pressed_button, true);
 	});
-	data.mouse_double_click_id = window.mouse.double_click.listen([&](const mouse::double_click_message& event) {
+	data.mouse_double_click_id = window.mouse.double_click.listen([&](mouse::button pressed_button) {
 		if (!ImGui::IsAnyMouseDown() && !GetCapture()) {
 			SetCapture(data.window->platform_window()->handle());
 		}
-		set_mouse_down(event.button, true);
+		set_mouse_down(pressed_button, true);
 	});
-	data.mouse_release_id = window.mouse.release.listen([&](const mouse::release_message& event) {
-		set_mouse_down(event.button, false);
+	data.mouse_release_id = window.mouse.release.listen([&](mouse::button released_button) {
+		set_mouse_down(released_button, false);
 		if (!ImGui::IsAnyMouseDown() && GetCapture() == data.window->platform_window()->handle()) {
 			ReleaseCapture();
 		}

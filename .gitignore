@@ -23,6 +23,8 @@ toolkit/project/Unix
 *.pdb
 
 # config
+core/config.hpp
+game/config.hpp
 client/config.hpp
 server/config.hpp
 web/config.php

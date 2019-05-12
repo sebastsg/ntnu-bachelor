@@ -1,9 +1,12 @@
 #include "ui.hpp"
+
+#if ENABLE_GRAPHICS
+
 #include "input.hpp"
 
 namespace no {
 
-ui_element::ui_element(const window_state& state_, const ortho_camera& camera_) : state(state_), camera(camera_) {
+ui_element::ui_element(const program_state& state_, const ortho_camera& camera_) : state(state_), camera(camera_) {
 	mouse_release_id = state.mouse().release.listen([this](mouse::button button) {
 		if (button == mouse::button::left && transform.collides_with(camera.mouse_position(state.mouse()))) {
 			events.click.emit();
@@ -23,7 +26,7 @@ bool ui_element::is_pressed() const {
 	return is_hovered() && state.mouse().is_button_down(mouse::button::left);
 }
 
-text_view::text_view(const window_state& state, const ortho_camera& camera) : ui_element(state, camera) {
+text_view::text_view(const program_state& state, const ortho_camera& camera) : ui_element(state, camera) {
 	texture = create_texture();
 }
 
@@ -62,7 +65,7 @@ void text_view::draw(const rectangle& rectangle) const {
 	draw_shape(rectangle, transform);
 }
 
-button::button(const window_state& state, const ortho_camera& camera) : ui_element(state, camera), label(state, camera) {
+button::button(const program_state& state, const ortho_camera& camera) : ui_element(state, camera), label(state, camera) {
 	animation.pause();
 	animation.frames = 3;
 }
@@ -129,7 +132,7 @@ void button::set_tex_coords(vector2f position, vector2f size) {
 	animation.set_tex_coords(position, size);
 }
 
-input_field::input_field(const window_state& state_, const ortho_camera& camera_, const font& font) : ui_element(state_, camera_), label(state_, camera_), input_font(font) {
+input_field::input_field(const program_state& state_, const ortho_camera& camera_, const font& font) : ui_element(state_, camera_), label(state_, camera_), input_font(font) {
 	animation.pause();
 	animation.frames = 3;
 	events.click.listen([this] {
@@ -216,3 +219,5 @@ void input_field::set_value(const std::string& value) {
 }
 
 }
+
+#endif

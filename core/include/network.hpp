@@ -1,5 +1,9 @@
 #pragma once
 
+#include "platform.hpp"
+
+#if ENABLE_NETWORK
+
 #include "event.hpp"
 #include "io.hpp"
 
@@ -85,3 +89,5 @@ void broadcast(const P& packet, int except_id) {
 }
 
 std::ostream& operator<<(std::ostream& out, no::socket_close_status status);
+
+#endif

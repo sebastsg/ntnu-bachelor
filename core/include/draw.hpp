@@ -1,6 +1,9 @@
 #pragma once
 
 #include "platform.hpp"
+
+#if ENABLE_GRAPHICS
+
 #include "transform.hpp"
 #include "containers.hpp"
 #include "timer.hpp"
@@ -428,3 +431,5 @@ void draw_shape(const T& shape, const M& transform) {
 }
 
 std::ostream& operator<<(std::ostream& out, no::swap_interval interval);
+
+#endif

@@ -1,7 +1,10 @@
 #pragma once
 
-#include "event.hpp"
 #include "platform.hpp"
+
+#if ENABLE_WINDOW
+
+#include "event.hpp"
 #include "math.hpp"
 #include "input.hpp"
 #include "draw.hpp"
@@ -76,3 +79,5 @@ private:
 }
 
 std::ostream& operator<<(std::ostream& out, no::window::display_mode mode);
+
+#endif

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "platform.hpp"
+
+#if ENABLE_GRAPHICS
+
 #include "transform.hpp"
 #include "io.hpp"
 #include "debug.hpp"
@@ -229,8 +233,6 @@ struct model_conversion_options {
 	std::function<void(const std::string&, const model_data<animated_mesh_vertex>&)> exporter;
 };
 
-void convert_model(const std::string& source, const std::string& destination, model_conversion_options options);
-
 template<typename V>
 void export_model(const std::string& path, const model_data<V>& model) {
 	io_stream stream;
@@ -416,6 +418,13 @@ model_data<V> merge_model_animations(const std::vector<model_data<V>>& models) {
 	return output;
 }
 
+
+#if ENABLE_ASSIMP
+void convert_model(const std::string& source, const std::string& destination, model_conversion_options options);
+#endif
+
 transform3 load_model_bounding_box(const std::string& path);
 
 }
+
+#endif

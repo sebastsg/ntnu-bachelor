@@ -1,5 +1,9 @@
 #pragma once
 
+#include "../config.hpp"
+
+#if ENABLE_RENDERING
+
 #include "assets.hpp"
 #include "font.hpp"
 #include "draw.hpp"
@@ -35,3 +39,5 @@ sprite_assets& sprites();
 font_assets& fonts();
 shader_assets& shaders();
 shape_assets& shapes();
+
+#endif

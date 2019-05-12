@@ -1,5 +1,9 @@
 #pragma once
 
+#include "../config.hpp"
+
+#if ENABLE_RENDERING
+
 #include "surface.hpp"
 #include "transform.hpp"
 
@@ -23,3 +27,5 @@ private:
 	no::surface surface;
 
 };
+
+#endif

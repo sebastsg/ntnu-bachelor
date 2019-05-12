@@ -191,8 +191,8 @@ void enable_tabs() {
 	}
 	tabs->object_id = tabs->game.world.my_player().object.instance_id;
 	auto player = tabs->game.world.objects.character(tabs->object_id);
-	tabs->press_event_id = tabs->game.mouse().press.listen([](const no::mouse::press_message & event) {
-		if (event.button == no::mouse::button::left) {
+	tabs->press_event_id = tabs->game.mouse().press.listen([](no::mouse::button pressed_button) {
+		if (pressed_button == no::mouse::button::left) {
 			for (int i = 0; i < context_menu_option_count(); i++) {
 				if (is_mouse_over_context_menu_option(i)) {
 					trigger_context_menu_option(i);
@@ -217,7 +217,7 @@ void enable_tabs() {
 					break;
 				}
 			}
-		} else if (event.button == no::mouse::button::right) {
+		} else if (pressed_button == no::mouse::button::right) {
 			add_tabs_context_menu_options();
 		}
 	});
