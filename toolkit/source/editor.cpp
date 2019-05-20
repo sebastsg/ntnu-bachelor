@@ -226,11 +226,24 @@ void object_tool::enable() {
 		object.transform.position.z += 0.5f;
 		editor.renderer.update_object_visibility();
 	});
+	key_press_id = editor.keyboard().press.listen([this](no::key pressed_key) {
+		if (pressed_key != no::key::del) {
+			return;
+		}
+		editor.world.objects.for_each([this](game_object* object) {
+			if (object->tile() == editor.hovered_tile) {
+				editor.world.objects.remove(object->instance_id);
+				selected_object_instance_id = -1;
+			}
+		});
+	});
 }
 
 void object_tool::disable() {
 	editor.mouse().press.ignore(mouse_press_id);
+	editor.keyboard().press.ignore(key_press_id);
 	mouse_press_id = -1;
+	key_press_id = -1;
 }
 
 void object_tool::update() {

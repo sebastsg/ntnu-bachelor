@@ -29,7 +29,7 @@ server_state::~server_state() {
 }
 
 void server_state::update() {
-	no::synchronise_sockets();
+	no::synchronize_sockets();
 	for (int i = 0; i < (int)updaters.size(); i++) {
 		updaters[i].update();
 		if (updaters[i].is_done()) {
@@ -101,10 +101,6 @@ void server_state::update() {
 		}
 		no::broadcast(fishing_progress);
 	}
-}
-
-void server_state::draw() {
-	
 }
 
 int server_state::client_with_player(int player_id) {

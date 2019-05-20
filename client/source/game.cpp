@@ -113,11 +113,11 @@ game_state::game_state() : renderer{ world }, dragger{ mouse() } {
 		case to_client::game::other_player_joined::type:
 		{
 			to_client::game::other_player_joined packet{ stream };
-			packet.player.running = true;
 			no::io_stream objstream;
 			packet.object.write(objstream);
 			packet.player.write(objstream);
 			world.objects.add(objstream);
+			world.objects.character(packet.object.instance_id)->running = true;
 			break;
 		}
 		case to_client::game::chat_message::type:
@@ -266,7 +266,7 @@ void game_state::update() {
 		return;
 	}
 	no::transform3 camera_follow = world.my_player().object.transform;
-	camera_follow.position.y = 0.5f; // since it's annoying if camera bumps up and down
+	camera_follow.position.y = 5.5f; // since it's annoying if camera bumps up and down
 	follower.update(renderer.camera, camera_follow);
 	dragger.update(renderer.camera);
 	rotater.update(renderer.camera, keyboard());

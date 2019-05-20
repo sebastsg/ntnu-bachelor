@@ -7,15 +7,15 @@ ogg_vorbis_audio_source::ogg_vorbis_audio_source(const std::string& path) {
 	file::read(path, file_stream);
 	ov_callbacks callbacks = {
 		// read
-		[](void* pointer, size_t objectSize, size_t objectCount, void* source) -> size_t {
-			size_t size = objectSize * objectCount;
-			io_stream* file_stream = (io_stream*)source;
+		[](void* pointer, size_t object_size, size_t object_count, void* source) -> size_t {
+			size_t size = object_size * object_count;
+			auto file_stream = (io_stream*)source;
 			size_t remaining = file_stream->size_left_to_read();
 			if (size > remaining) {
 				size = remaining;
 			}
 			file_stream->read((char*)pointer, size);
-			return size / objectSize;
+			return size / object_size;
 		},
 		// seek
 		[](void* source, ogg_int64_t offset, int whence) -> int {
@@ -47,9 +47,9 @@ ogg_vorbis_audio_source::ogg_vorbis_audio_source(const std::string& path) {
 	);
 
 	char temp[4192];
-	int bitStream = 0;
+	int bit_stream = 0;
 	while (true) {
-		size_t bytes = ov_read(&file, temp, 4192, 0, 2, 1, &bitStream);
+		size_t bytes = ov_read(&file, temp, 4192, 0, 2, 1, &bit_stream);
 		if (bytes == 0) {
 			break;
 		}
@@ -65,8 +65,8 @@ size_t ogg_vorbis_audio_source::size() const {
 	return pcm_stream.size();
 }
 
-audio_data_format ogg_vorbis_audio_source::format() const {
-	return audio_data_format::pulse_code_modulation;
+pcm_format ogg_vorbis_audio_source::format() const {
+	return pcm_format::int_16;
 }
 
 const io_stream& ogg_vorbis_audio_source::stream() const {

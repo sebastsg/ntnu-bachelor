@@ -62,7 +62,7 @@ int open_socket();
 int open_socket(const std::string& address, int port);
 void close_socket(int id);
 void synchronize_socket(int id);
-void synchronise_sockets();
+void synchronize_sockets();
 bool bind_socket(int id, const std::string& address, int port);
 bool listen_socket(int id);
 bool increment_socket_accepts(int id);

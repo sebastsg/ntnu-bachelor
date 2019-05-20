@@ -7,7 +7,7 @@ namespace no {
 
 class io_stream;
 
-enum class audio_data_format { ieee_float, pulse_code_modulation, unknown };
+enum class pcm_format { float_32, int_16, unknown };
 
 class audio_source {
 public:
@@ -15,20 +15,20 @@ public:
 	virtual ~audio_source() = default;
 
 	virtual size_t size() const = 0;
-	virtual audio_data_format format() const = 0;
+	virtual pcm_format format() const = 0;
 	virtual const io_stream& stream() const = 0;
 
 };
 
-class audio_stream {
+class pcm_stream {
 public:
 
-	audio_stream(audio_source* source);
+	pcm_stream(audio_source* source);
 
 	bool is_empty() const;
 	float read_float();
 	void reset();
-	void stream(audio_data_format format, uint8_t* destination, size_t size, size_t channels);
+	void stream(pcm_format format, uint8_t* destination, size_t size, size_t channels);
 	void stream(float* destination, size_t count, size_t channels);
 
 private:
@@ -43,7 +43,7 @@ public:
 
 	virtual ~audio_player() = default;
 
-	virtual void play(const audio_stream& stream) = 0;
+	virtual void play(const pcm_stream& stream) = 0;
 	virtual void play(audio_source* source) = 0;
 	virtual void pause() = 0;
 	virtual void resume() = 0;

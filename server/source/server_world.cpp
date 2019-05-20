@@ -20,7 +20,7 @@ void server_world::update() {
 
 void server_world::update_fishing() {
 	for (auto& fisher : fishers) {
-		if (fisher.last_progress.seconds() < 2 || fisher.finished) {
+		if (fisher.last_progress.seconds() < 1 || fisher.finished) {
 			continue;
 		}
 		auto& object = objects.object(fisher.player_instance_id);

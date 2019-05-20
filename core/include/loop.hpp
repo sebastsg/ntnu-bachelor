@@ -17,7 +17,12 @@ namespace internal {
 
 using make_state_function = std::function<program_state*()>;
 
+#if ENABLE_WINDOW
 void create_state(const std::string& title, int width, int height, int samples, bool maximized, const make_state_function& make_state);
+#else
+void create_state(const std::string& title, const make_state_function& make_state);
+#endif
+
 int run_main_loop();
 void destroy_main_loop();
 
@@ -65,12 +70,15 @@ public:
 	program_state& operator=(program_state&&) = delete;
 
 	virtual void update() = 0;
-	virtual void draw() = 0;
 
 #if ENABLE_WINDOW
+	
+	virtual void draw() = 0;
+
 	window& window() const;
 	keyboard& keyboard() const;
 	mouse& mouse() const;
+
 #endif
 
 	const loop_frame_counter& frame_counter() const;
@@ -102,10 +110,21 @@ private:
 signal_event& post_configure_event();
 signal_event& pre_exit_event();
 
+#if ENABLE_WINDOW
+
 template<typename T>
 void create_state(const std::string& title, int width, int height, int samples, bool maximized) {
 	internal::create_state(title, width, height, samples, maximized, [] { return new T(); });
 }
+
+#else
+
+template<typename T>
+void create_state(const std::string& title) {
+	internal::create_state(title, [] { return new T(); });
+}
+
+#endif
 
 std::string current_local_time_string();
 std::string curent_local_date_string();

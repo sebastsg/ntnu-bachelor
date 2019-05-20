@@ -395,7 +395,7 @@ void synchronize_socket(int id) {
 	}
 }
 
-void synchronise_sockets() {
+void synchronize_sockets() {
 	for (int i = 0; i < (int)winsock.sockets.size(); i++) {
 		if (winsock.sockets[i].alive) {
 			synchronize_socket(i);

@@ -77,7 +77,7 @@ public:
 	~server_state() override;
 
 	void update() override;
-	void draw() override;
+	void draw() override {}
 
 private:
 

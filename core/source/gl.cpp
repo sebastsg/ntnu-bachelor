@@ -69,11 +69,11 @@ static struct {
 
 	int bound_shader = -1;
 
-	long total_redundant_bind_calls = 0;
+	long long total_redundant_bind_calls = 0;
 	
 } renderer;
 
-long total_redundant_bind_calls() {
+long long total_redundant_bind_calls() {
 	return renderer.total_redundant_bind_calls;
 }
 
@@ -393,7 +393,7 @@ void bind_shader(int id) {
 }
 
 shader_variable get_shader_variable(const std::string& name) {
-	return { renderer.shaders[renderer.bound_shader].id, name };
+	return { (int)renderer.shaders[renderer.bound_shader].id, name };
 }
 
 void set_shader_model(const glm::mat4& transform) {
@@ -439,7 +439,7 @@ void delete_shader(int id) {
 	shader = {};
 }
 
-shader_variable::shader_variable(unsigned int program_id, const std::string& name) {
+shader_variable::shader_variable(int program_id, const std::string& name) {
 	CHECK_GL_ERROR(location = glGetUniformLocation(program_id, name.c_str()));
 }
 

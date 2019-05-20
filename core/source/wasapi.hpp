@@ -29,7 +29,7 @@ public:
 	audio_client& operator=(const audio_client&) = delete;
 	audio_client& operator=(audio_client&&) = delete;
 
-	void play(const audio_stream& stream) override;
+	void play(const pcm_stream& stream) override;
 	void play(audio_source* source) override;
 	void pause() override;
 	void resume() override;
@@ -44,7 +44,7 @@ private:
 	void upload(unsigned int frames);
 
 	std::thread thread;
-	audio_stream playing_audio_stream;
+	pcm_stream playing_audio_stream;
 
 	std::atomic<bool> playing = false;
 	std::atomic<bool> paused = false;

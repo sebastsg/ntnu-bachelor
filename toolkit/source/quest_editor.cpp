@@ -143,7 +143,7 @@ void quest_editor::update_hints() {
 		return;
 	}
 	auto quest = quest_definitions().find_by_index(selected_quest_index);
-	for (int i = 0; i < quest->hints.size(); i++) {
+	for (int i = 0; i < (int)quest->hints.size(); i++) {
 		auto& hint = quest->hints[i];
 		ImGui::PushID(CSTRING("QuestHint" << i));
 		ImGui::BeginGroup();

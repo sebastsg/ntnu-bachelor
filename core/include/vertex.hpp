@@ -382,12 +382,12 @@ model_data<V> merge_model_animations(const std::vector<model_data<V>>& models) {
 		}
 		if (model.bones.size() != output.bones.size()) {
 			WARNING("Mesh not identical. Skipping.");
-			continue;
+			//continue;
 		}
 		for (size_t i = 0; i < model.bones.size(); i++) {
 			if (model.bones[i] != output.bones[i]) {
 				WARNING("Mesh not identical. Skipping.");
-				continue;
+				//continue;
 			}
 		}
 		if (model.shape != output.shape) {

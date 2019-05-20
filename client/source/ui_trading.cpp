@@ -120,6 +120,7 @@ void trading_view::draw() {
 	no::draw_shape(grid, grid_transform);
 	grid_transform.position.x += transform.scale.x / 2.0f - 24.0f;
 	no::draw_shape(grid, grid_transform);
+	grid_transform.position.x -= transform.scale.x / 2.0f - 24.0f;
 	int index = 0;
 	no::vector2f position = grid_transform.position + 1.0f;
 	for (auto& slot : left_slots) {
@@ -129,6 +130,7 @@ void trading_view::draw() {
 		index++;
 	}
 	index = 0;
+	grid_transform.position.x += transform.scale.x / 2.0f - 24.0f;
 	position.x = grid_transform.position.x + grid_transform.scale.x - item_grid.x * 4.0f - 1.0f;
 	for (auto& slot : right_slots) {
 		if (slot.item.definition_id != -1) {

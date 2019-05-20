@@ -96,8 +96,8 @@ static int state_index(const program_state* state) {
 
 static void update_windows() {
 	for (auto state : loop.states) {
-		auto window = loop.windows[state_index(state)];
 #if ENABLE_WINDOW
+		auto window = loop.windows[state_index(state)];
 		window->poll();
 #endif
 		state->update();
@@ -236,12 +236,21 @@ std::string curent_local_date_string() {
 
 namespace internal {
 
-void create_state(const std::string& title, int width, int height, int samples, bool maximized, const make_state_function& make_state) {
 #if ENABLE_WINDOW
+
+void create_state(const std::string& title, int width, int height, int samples, bool maximized, const make_state_function& make_state) {
 	loop.windows.emplace_back(new window(title, width, height, samples, maximized));
-#endif
 	loop.states.emplace_back(make_state());
 }
+
+#else
+
+void create_state(const std::string& title, const make_state_function& make_state) {
+	loop.windows.emplace_back(nullptr);
+	loop.states.emplace_back(make_state());
+}
+
+#endif
 
 int run_main_loop() {
 	configure();

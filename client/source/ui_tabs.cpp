@@ -3,6 +3,7 @@
 #include "ui_trading.hpp"
 #include "ui_tab_inventory.hpp"
 #include "ui_tab_equipment.hpp"
+#include "ui_tab_quests.hpp"
 #include "ui_tab_stats.hpp"
 #include "chat.hpp"
 #include "game.hpp"
@@ -102,7 +103,10 @@ void hide_tabs() {
 }
 
 void update_tabs() {
-
+	update_inventory_tab();
+	update_equipment_tab();
+	update_quests_tab();
+	update_stats_tab();
 }
 
 void draw_tabs() {
@@ -113,6 +117,7 @@ void draw_tabs() {
 	no::draw_shape(tabs->background, background_transform());
 	draw_inventory_tab();
 	draw_equipment_tab();
+	draw_quests_tab();
 	draw_stats_tab();
 	no::bind_texture(sprites().ui);
 	draw_tab(0, tabs->inventory);
@@ -206,12 +211,14 @@ void enable_tabs() {
 					switch (tabs->active) {
 					case 0: hide_inventory_tab(); break;
 					case 1: hide_equipment_tab(); break;
+					case 2: hide_quests_tab(); break;
 					case 3: hide_stats_tab(); break;
 					}
 					tabs->active = i;
 					switch (tabs->active) {
 					case 0: show_inventory_tab(tabs->game); break;
 					case 1: show_equipment_tab(tabs->game); break;
+					case 2: show_quests_tab(tabs->game); break;
 					case 3: show_stats_tab(tabs->game); break;
 					}
 					break;
@@ -232,6 +239,7 @@ void enable_tabs() {
 	switch (tabs->active) {
 	case 0: show_inventory_tab(tabs->game); break;
 	case 1: show_equipment_tab(tabs->game); break;
+	case 2: show_quests_tab(tabs->game); break;
 	case 3: show_stats_tab(tabs->game); break;
 	}
 }
@@ -248,6 +256,7 @@ void disable_tabs() {
 	switch (tabs->active) {
 	case 0: hide_inventory_tab(); break;
 	case 1: hide_equipment_tab(); break;
+	case 2: hide_quests_tab(); break;
 	case 3: hide_stats_tab(); break;
 	}
 }

@@ -11,6 +11,7 @@ const no::vector2f hud_health_background = { 690.0f, 288.0f };
 const no::vector2f hud_health_foreground = { 680.0f, 288.0f };
 const no::vector2f hud_health_size = { 10.0f, 10.0f };
 const no::vector4f minimap_uv = { 792.0f, 8.0f, 96.0f, 96.0f };
+const no::vector4f minimap_compass_uv = { 920.0f, 32.0f, 16.0f, 32.0f };
 
 struct hud_view {
 
@@ -25,6 +26,7 @@ struct hud_view {
 	no::rectangle health_background;
 	no::rectangle health_foreground;
 	no::rectangle minimap_background;
+	no::rectangle minimap_compass;
 
 	int fps_texture = -1;
 	int debug_texture = -1;
@@ -51,6 +53,7 @@ void show_hud(game_state& game) {
 	set_ui_uv(hud->health_background, hud_health_background, hud_health_size);
 	set_ui_uv(hud->health_foreground, hud_health_foreground, hud_health_size);
 	set_ui_uv(hud->minimap_background, minimap_uv);
+	set_ui_uv(hud->minimap_compass, minimap_compass_uv);
 }
 
 void hide_hud() {
@@ -59,8 +62,8 @@ void hide_hud() {
 }
 
 void update_hud() {
-	hud->minimap.transform.position.x = hud->game.ui_camera_2x.width() - minimap_uv.z + 15.0f;
-	hud->minimap.transform.position.y = 18.0f;
+	hud->minimap.transform.position.x = hud->game.ui_camera_2x.width() - minimap_uv.z;
+	hud->minimap.transform.position.y = 32.0f;
 	hud->minimap.transform.scale = 64.0f;
 	hud->minimap.transform.rotation = hud->game.world_camera().transform.rotation.y;
 	hud->minimap.update(hud->game.world.my_player().object.tile());
@@ -71,20 +74,38 @@ void draw_hud() {
 	no::bind_texture(sprites().ui);
 	no::transform2 transform;
 	transform.scale = minimap_uv.zw;
-	transform.position.x = hud->game.ui_camera_2x.width() - transform.scale.x - 2.0f;
-	transform.position.y = 2.0f;
+	transform.position.x = hud->game.ui_camera_2x.width() - transform.scale.x - 16.0f;
+	transform.position.y = 16.0f;
 	no::draw_shape(hud->minimap_background, transform);
+	
+	no::vector2f middle = transform.position + transform.scale / 2.0f;
+
+	transform = {};
+	transform.rotation = hud->game.world_camera().transform.rotation.y;
+	float angle = no::deg_to_rad(225.0f - transform.rotation);
+	float cos_a = std::cos(angle);
+	float sin_a = std::sin(angle);
+
+	transform.position.x = 32.0f * cos_a - 32.0f * sin_a;
+	transform.position.y = 32.0f * sin_a + 32.0f * cos_a;
+	transform.position += middle;
+	transform.position.x -= 8.0f;
+	transform.position.y -= 16.0f;
+
+	transform.scale = minimap_compass_uv.zw;
+	no::draw_shape(hud->minimap_compass, transform);
+	transform.rotation = 0.0f;
 
 	auto& player = hud->game.world.my_player().character;
 	transform.position = { 300.0f, 4.0f };
 	transform.scale = no::texture_size(hud->fps_texture).to<float>();
 	no::bind_texture(hud->fps_texture);
-	no::draw_shape(shapes().rectangle, transform);
+	//no::draw_shape(shapes().rectangle, transform);
 	transform.position.y = 24.0f;
 	transform.scale = no::texture_size(hud->debug_texture).to<float>();
 	no::bind_texture(hud->debug_texture);
 	no::set_shader_model(transform);
-	shapes().rectangle.draw();
+	//shapes().rectangle.draw();
 
 	// background
 	no::bind_texture(sprites().ui);

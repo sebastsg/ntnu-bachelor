@@ -54,7 +54,7 @@ void delete_shader(int id);
 
 void set_polygon_render_mode(polygon_render_mode mode);
 
-long total_redundant_bind_calls();
+long long total_redundant_bind_calls();
 
 vector3i read_pixel_at(vector2i position);
 
@@ -64,7 +64,7 @@ public:
 	int location = -1;
 
 	shader_variable() = default;
-	shader_variable(unsigned int program_id, const std::string& name);
+	shader_variable(int program_id, const std::string& name);
 
 	// debatable whether or not these should be const
 	// it's useful for const draw functions

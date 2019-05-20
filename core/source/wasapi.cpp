@@ -42,24 +42,24 @@ static auto get() {
 
 }
 
-static audio_data_format wave_format_to_audio_data_format(WAVEFORMATEX* wave_format) {
+static pcm_format wave_format_to_audio_data_format(WAVEFORMATEX* wave_format) {
 	auto extendedFormat = (WAVEFORMATEXTENSIBLE*)wave_format;
 	switch (wave_format->wFormatTag) {
 	case WAVE_FORMAT_IEEE_FLOAT:
-		return audio_data_format::ieee_float;
+		return pcm_format::float_32;
 	case WAVE_FORMAT_PCM:
-		return audio_data_format::pulse_code_modulation;
+		return pcm_format::int_16;
 	case WAVE_FORMAT_EXTENSIBLE:
 		if (memcmp(&extendedFormat->SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, sizeof(GUID)) == 0) {
-			return audio_data_format::ieee_float;
+			return pcm_format::float_32;
 		}
 		if (memcmp(&extendedFormat->SubFormat, &KSDATAFORMAT_SUBTYPE_PCM, sizeof(GUID)) == 0) {
-			return audio_data_format::pulse_code_modulation;
+			return pcm_format::int_16;
 		}
-		return audio_data_format::unknown;
+		return pcm_format::unknown;
 	default:
 		WARNING("Unknown wave format: " << wave_format->wFormatTag);
-		return audio_data_format::unknown;
+		return pcm_format::unknown;
 	}
 }
 
@@ -159,7 +159,7 @@ void audio_client::stream() {
 	client->Stop();
 }
 
-void audio_client::play(const audio_stream& new_audio_stream) {
+void audio_client::play(const pcm_stream& new_audio_stream) {
 	stop();
 	playing = true;
 	playing_audio_stream = new_audio_stream;
@@ -167,7 +167,7 @@ void audio_client::play(const audio_stream& new_audio_stream) {
 }
 
 void audio_client::play(audio_source* source) {
-	play(audio_stream{ source });
+	play(pcm_stream{ source });
 }
 
 void audio_client::pause() {
@@ -207,7 +207,7 @@ void audio_client::upload(unsigned int frames) {
 		return;
 	}
 
-	audio_data_format format = wave_format_to_audio_data_format(wave_format);
+	auto format = wave_format_to_audio_data_format(wave_format);
 	size_t size = frames * wave_format->nBlockAlign;
 	size_t channels = wave_format->nChannels;
 	playing_audio_stream.stream(format, buffer, size, channels);

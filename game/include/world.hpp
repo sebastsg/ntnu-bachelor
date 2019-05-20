@@ -33,6 +33,7 @@ struct world_tile {
 	void set_corner(int index, uint8_t type);
 	uint8_t corner(int index) const;
 	int corners_of_type(uint8_t type) const;
+	bool equal_corners(const world_tile& tile) const;
 
 	bool is_solid() const;
 	void set_solid(bool solid);

@@ -21,6 +21,13 @@ int world_tile::corners_of_type(uint8_t type) const {
 	return (int)(corner(0) == type) + (int)(corner(1) == type) + (int)(corner(2) == type) + (int)(corner(3) == type);
 }
 
+bool world_tile::equal_corners(const world_tile& tile) const {
+	return corner(0) == tile.corner(0) 
+		&& corner(1) == tile.corner(1) 
+		&& corner(2) == tile.corner(2) 
+		&& corner(3) == tile.corner(3);
+}
+
 bool world_tile::is_solid() const {
 	return flag(solid_flag);
 }
@@ -496,8 +503,6 @@ void world_terrain::shift_to_center_of(no::vector2i tile) {
 	no::vector2i goal = tile - size / 2;
 	current /= world_tile_chunk::width;
 	goal /= world_tile_chunk::width;
-	goal.x = std::max(0, goal.x);
-	goal.y = std::max(0, goal.y);
 	while (current.x > goal.x) {
 		current.x--;
 		shift_left();

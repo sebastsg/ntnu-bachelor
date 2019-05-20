@@ -57,6 +57,9 @@ static no::transform2 slot_transform(equipment_slot slot) {
 	case equipment_slot::right_hand:
 		transform.position.y += 1.0f * (item_grid.y + 14.0f);
 		break;
+	case equipment_slot::head:
+		transform.position.x += 1.0f * (item_grid.x + 14.0f);
+		break;
 	case equipment_slot::body:
 		transform.position.x += 1.0f * (item_grid.x + 14.0f);
 		transform.position.y += 1.0f * (item_grid.y + 14.0f);
@@ -65,8 +68,12 @@ static no::transform2 slot_transform(equipment_slot slot) {
 		transform.position.x += 1.0f * (item_grid.x + 14.0f);
 		transform.position.y += 2.0f * (item_grid.y + 14.0f);
 		break;
-	default:
+	case equipment_slot::feet:
+		transform.position.x += 1.0f * (item_grid.x + 14.0f);
+		transform.position.y += 3.0f * (item_grid.y + 14.0f);
 		break;
+	default:
+		return {};
 	}
 	return transform;
 }

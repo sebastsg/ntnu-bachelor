@@ -1,8 +1,12 @@
 #include "ui_dialogue.hpp"
+#include "ui_tabs.hpp"
 #include "game.hpp"
 #include "game_assets.hpp"
 #include "script.hpp"
 #include "ui.hpp"
+
+static const no::vector4f dialogue_background_uv{ 34.0f, 868.0f, 358.0f, 80.0f };
+static const no::vector4f dialogue_choice_uv{ 60.0f, 959.0f, 306.0f, 25.0f };
 
 struct dialogue_view {
 
@@ -18,10 +22,16 @@ struct dialogue_view {
 	std::vector<node_choice_info> current_choices;
 	no::transform2 transform;
 
+	no::rectangle background_rectangle;
+	no::rectangle choice_rectangle;
 	no::text_view message_view;
 	std::vector<no::text_view> choice_views;
+	std::vector<no::transform2> choice_transforms;
 
-	dialogue_view(game_state& game) : game{ game }, message_view{ game, game.ui_camera_2x } {}
+	dialogue_view(game_state& game) : game{ game }, message_view{ game, game.ui_camera_2x } {
+		set_ui_uv(background_rectangle, dialogue_background_uv);
+		set_ui_uv(choice_rectangle, dialogue_choice_uv);
+	}
 
 	~dialogue_view() {
 		game.keyboard().press.ignore(key_listener);
@@ -54,6 +64,7 @@ void open_dialogue(game_state& game, int id) {
 		dialogue->choice_views.clear();
 		for (auto& choice : event.choices) {
 			dialogue->choice_views.emplace_back(dialogue->game, dialogue->game.ui_camera_2x).render(fonts().leo_10, choice.text);
+			dialogue->choice_transforms.emplace_back();
 		}
 	});
 	tree.process_entry_point();
@@ -106,16 +117,16 @@ void update_dialogue() {
 		close_dialogue();
 		return;
 	}
-	dialogue->transform.position = dialogue->game.ui_camera_2x.transform.position;
-	dialogue->transform.scale = dialogue->game.ui_camera_2x.transform.scale;
-	dialogue->transform.position += dialogue->transform.scale / 2.0f;
-	dialogue->transform.scale /= 2.0f;
-	dialogue->transform.position -= dialogue->transform.scale / 2.0f;
-	dialogue->message_view.transform.position = dialogue->transform.position + 16.0f;
+	dialogue->transform.scale = dialogue_background_uv.zw;
+	dialogue->transform.position = dialogue->game.ui_camera_2x.size() / 2.0f - dialogue->transform.scale / 2.0f;
+	dialogue->message_view.transform.position = dialogue->transform.position + 32.0f;
 	for (int i = 0; i < (int)dialogue->choice_views.size(); i++) {
+		dialogue->choice_transforms[i].position.x = dialogue->transform.position.x + 26.0f;
+		dialogue->choice_transforms[i].position.y = dialogue->transform.position.y - 2.0f + dialogue_background_uv.w + (float)i * dialogue_choice_uv.w;
+		dialogue->choice_transforms[i].scale = dialogue_choice_uv.zw;
 		dialogue->choice_views[i].transform.position = {
-			dialogue->transform.position.x + 32.0f,
-			dialogue->transform.position.y + 64.0f + (float)i * 20.0f
+			dialogue->choice_transforms[i].position.x + 6.0f,
+			dialogue->choice_transforms[i].position.y + 8.0f
 		};
 	}
 }
@@ -124,11 +135,17 @@ void draw_dialogue() {
 	if (!dialogue) {
 		return;
 	}
+	no::bind_texture(sprites().ui);
+	no::draw_shape(dialogue->background_rectangle, dialogue->transform);
+	
 	const no::vector4f active{ 1.0f, 0.9f, 0.5f, 1.0f };
 	const no::vector4f inactive{ 0.8f };
+	
 	dialogue->message_view.draw(shapes().rectangle);
 	for (int i = 0; i < (int)dialogue->choice_views.size(); i++) {
 		shaders().sprite.color.set(dialogue->current_choice == i ? active : inactive);
+		no::bind_texture(sprites().ui);
+		no::draw_shape(dialogue->choice_rectangle, dialogue->choice_transforms[i]);
 		dialogue->choice_views[i].draw(shapes().rectangle);
 	}
 }

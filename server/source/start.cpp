@@ -11,5 +11,6 @@ void configure() {
 }
 
 void start() {
-	no::create_state<server_state>("Server", 800, 600, 4, false);
+	//no::create_state<server_state>("Server");
+	no::create_state<server_state>("Server", 400, 400, 2, false);
 }

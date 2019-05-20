@@ -8,6 +8,8 @@ enum class message_type { message, warning, critical, info };
 
 }
 
+std::ostream& operator<<(std::ostream& out, no::debug::message_type message);
+
 #if ENABLE_DEBUG
 
 #include "io.hpp"
